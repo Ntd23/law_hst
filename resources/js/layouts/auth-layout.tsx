@@ -51,7 +51,7 @@ export default function AuthLayout({
     useFavicon();
     const { t } = useTranslation();
     const [mounted, setMounted] = useState(false);
-    const { logoLight, logoDark, themeColor, customColor } = useBrand();
+    const { logoLight, logoDark, logoSize, themeColor, customColor } = useBrand();
     const { appearance } = useAppearance();
     const globalSettings = (usePage().props as any).globalSettings;
     const userLanguage = (usePage().props as any).userLanguage;
@@ -70,7 +70,7 @@ export default function AuthLayout({
     }
     
     const isDark = themeMode === 'dark';
-    const currentLogo = isDark ? logoLight : logoDark;
+    const currentLogo = isDark ? (logoLight || logoDark) : (logoDark || logoLight);
     const primaryColor = themeColor === 'custom' ? customColor : THEME_COLORS[themeColor as keyof typeof THEME_COLORS];
 
     useEffect(() => {
@@ -185,7 +185,12 @@ export default function AuthLayout({
                     <div className="text-center mb-8">
                         <div className="relative lg:inline-block pb-2 lg:px-6">
                             {currentLogo ? (
-                                <img src={currentLogo} alt="Logo" className=" w-auto mx-auto" />
+                                <img
+                                    src={currentLogo}
+                                    alt="Logo"
+                                    style={{ height: `${logoSize || 36}px`, width: 'auto' }}
+                                    className="w-auto mx-auto object-contain max-h-[80px]"
+                                />
                             ) : (
                                 <CreditCard className="h-8 w-8 mx-auto" style={{ color: primaryColor }} />
                             )}

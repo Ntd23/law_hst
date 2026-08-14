@@ -394,10 +394,10 @@ export function RolePermissionCheckboxGroup({ permissions, selectedPermissions, 
 
             {/* Search Box */}
             <div className="mb-4 flex items-center gap-4">
-                <label className="whitespace-nowrap">Search:</label>
+                <label className="whitespace-nowrap">{t('Search:')}</label>
                 <Input
                     type="text"
-                    placeholder="Search modules or permissions..."
+                    placeholder={t('Search modules or permissions...')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="flex-1"
@@ -425,7 +425,7 @@ export function RolePermissionCheckboxGroup({ permissions, selectedPermissions, 
                                     </Label>
                                 </div>
                                 <div className="text-xs text-gray-500">
-                                    {modulePermissions.filter((p) => selected.includes(p.id.toString())).length} of {modulePermissions.length}{' '}
+                                    {modulePermissions.filter((p) => selected.includes(p.id.toString())).length} {t('of')} {modulePermissions.length}{' '}
                                     {t('selected')}
                                 </div>
                             </div>
@@ -458,7 +458,7 @@ export function RolePermissionCheckboxGroup({ permissions, selectedPermissions, 
                         <div className="flex flex-col items-center space-y-3">
                             <Ban className="h-12 w-12 text-gray-400" />
                             <p className="font-medium text-gray-500">{t('No permissions found')}</p>
-                            <p className="text-sm text-gray-400">Try adjusting your search criteria</p>
+                            <p className="text-sm text-gray-400">{t('Try adjusting your search criteria')}</p>
                         </div>
                     </Card>
                 )}

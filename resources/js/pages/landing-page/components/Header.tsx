@@ -33,6 +33,7 @@ export default function Header({ settings, sectionData, customPages = [], brandC
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const { auth } = usePage().props as any;
+    const { logoLight, logoDark, logoSize } = useBrand();
 
     useEffect(() => {
         const handleScroll = () => {
@@ -98,31 +99,34 @@ export default function Header({ settings, sectionData, customPages = [], brandC
             className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ${getHeaderClasses()}`}
             style={getHeaderStyle()}
         >
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-16">
+            <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center h-16 gap-4">
                     {/* Logo */}
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 mr-2 sm:mr-4">
                         <Link
                             href={route("home")}
-                            className="text-2xl font-bold lg:max-w-[180px] max-w-[140px]"
+                            className="text-2xl font-bold flex items-center"
                             onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
                             onMouseLeave={(e) => e.currentTarget.style.color = ''}
                         >
                             {(() => {
                                 const isDark = document.documentElement.classList.contains('dark');
-                                const currentLogo = isDark ? settings.config_sections.theme.logo_light : settings.config_sections.theme.logo_dark;
-                                const displayUrl = currentLogo ? getImagePath(currentLogo) : '';
+                                const brandLogo = isDark ? (logoLight || logoDark) : (logoDark || logoLight);
+                                const fallbackLogo = isDark ? settings?.config_sections?.theme?.logo_light : settings?.config_sections?.theme?.logo_dark;
+                                const logoSrc = brandLogo || fallbackLogo;
+                                const displayUrl = logoSrc ? getImagePath(logoSrc) : '';
 
                                 return displayUrl ? (
                                     <img
-                                        key={`${currentLogo}-${Date.now()}`}
+                                        key={`${logoSrc}-${logoSize}-${Date.now()}`}
                                         src={displayUrl}
-                                        alt="Logo"
-                                        className="h-8 w-auto transition-all duration-200"
+                                        alt={settings?.company_name || "Logo"}
+                                        style={{ height: `${logoSize || 36}px`, width: 'auto' }}
+                                        className="transition-all duration-200 object-contain max-h-[80px]"
                                     />
                                 ) : (
                                     <div className="h-12 text-inherit font-semibold flex items-center text-lg tracking-tight">
-                                        Advocate Saas
+                                        {settings?.company_name || 'Advocate Saas'}
                                     </div>
                                 );
                             })()}
@@ -130,10 +134,10 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                     </div>
 
                     {/* Desktop Navigation */}
-                    <nav className="hidden md:flex items-center space-x-8" role="navigation" aria-label="Main navigation">
+                    <nav className="hidden md:flex items-center gap-3 lg:gap-5 whitespace-nowrap overflow-x-auto" role="navigation" aria-label="Main navigation">
                         <Link
                             href={route('home')}
-                            className="text-sm font-medium transition-colors relative group"
+                            className="text-sm font-medium transition-colors relative group whitespace-nowrap"
                             style={{ color: textColor }}
                             onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
                             onMouseLeave={(e) => e.currentTarget.style.color = textColor}
@@ -149,12 +153,12 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                             <Link
                                 key={item.name}
                                 href={item.href}
-                                className="text-sm font-medium transition-colors relative group"
+                                className="text-sm font-medium transition-colors relative group whitespace-nowrap"
                                 style={{ color: textColor }}
                                 onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
                                 onMouseLeave={(e) => e.currentTarget.style.color = textColor}
                             >
-                                {item.name}
+                                {t(item.name)}
                                 <span
                                     className="absolute -bottom-1 left-0 w-0 h-0.5 transition-all group-hover:w-full"
                                     style={{ backgroundColor: brandColor }}
@@ -165,12 +169,12 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                     </nav>
 
                     {/* Auth Buttons */}
-                    <div className="hidden md:flex items-center gap-4">
+                    <div className="hidden md:flex items-center gap-3 flex-shrink-0 whitespace-nowrap">
                         {!auth?.user ?
                             <>
                                 <Link
                                     href={route('login')}
-                                    className="text-sm font-medium transition-colors"
+                                    className="text-sm font-medium transition-colors whitespace-nowrap"
                                     style={{ color: textColor }}
                                     onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
                                     onMouseLeave={(e) => e.currentTarget.style.color = textColor}
@@ -179,7 +183,7 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                                 </Link>
                                 {isUserRegistrationEnabled() && <Link
                                     href={route('register')}
-                                    className="px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors border"
+                                    className="px-5 py-2 rounded-lg text-sm font-semibold transition-colors border whitespace-nowrap"
                                     style={btnStyles.default}
                                     onMouseEnter={(e) => { Object.assign(e.currentTarget.style, btnStyles.hover); }}
                                     onMouseLeave={(e) => { Object.assign(e.currentTarget.style, btnStyles.hoverLeave); }}
@@ -188,7 +192,7 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                                 </Link>}
                             </> : <Link
                                 href={route('dashboard')}
-                                className="px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors border"
+                                className="px-5 py-2 rounded-lg text-sm font-semibold transition-colors border whitespace-nowrap"
                                 style={btnStyles.default}
                                 onMouseEnter={(e) => { Object.assign(e.currentTarget.style, btnStyles.hover); }}
                                 onMouseLeave={(e) => { Object.assign(e.currentTarget.style, btnStyles.hoverLeave); }}
@@ -236,7 +240,7 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                                     style={{ color: textColor }}
                                     onClick={() => setIsMenuOpen(false)}
                                 >
-                                    {item.name}
+                                    {t(item.name)}
                                 </Link>
                             ))}
                             <div className="pt-4 space-y-3 border-t border-gray-200">
