@@ -90,12 +90,11 @@ jobs:
 
     steps:
       - name: Deploy application over SSH
-        uses: appleboy/ssh-action@v1.2.2
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
-          port: 22
           script: |
             set -e
             cd "${{ secrets.DEPLOY_PATH }}"
