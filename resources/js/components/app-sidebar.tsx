@@ -362,7 +362,7 @@ export function AppSidebar() {
     const mainNavItems = userRole === 'superadmin' ? getSuperAdminNavItems() : getCompanyNavItems();
     const { position, effectivePosition } = useLayout();
     const { variant, collapsible, style } = useSidebarSettings();
-    const { logoLight, logoDark, favicon, updateBrandSettings } = useBrand();
+    const { logoLight, logoDark, favicon, logoSize, updateBrandSettings } = useBrand();
     const [sidebarStyle, setSidebarStyle] = useState({});
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -433,15 +433,16 @@ export function AppSidebar() {
                         <div className="group-data-[collapsible=icon]:hidden flex items-center">
                             {(() => {
                                 const isDark = document.documentElement.classList.contains('dark');
-                                const currentLogo = isDark ? logoLight : logoDark;
-                                const displayUrl = getImagePath(currentLogo) ?? currentLogo;
+                                const currentLogo = isDark ? (logoLight || logoDark) : (logoDark || logoLight);
+                                const displayUrl = currentLogo ? getImagePath(currentLogo) : '';
 
                                 return displayUrl ? (
                                     <img
-                                        key={`${currentLogo}-${Date.now()}`}
+                                        key={`${currentLogo}-${logoSize}-${Date.now()}`}
                                         src={displayUrl}
                                         alt="Logo"
-                                        className="w-auto transition-all duration-200"
+                                        style={{ height: `${logoSize || 36}px`, width: 'auto' }}
+                                        className="transition-all duration-200 object-contain max-h-[80px]"
                                         onError={() => updateBrandSettings({ [isDark ? 'logoLight' : 'logoDark']: '' })}
                                     />
                                 ) : (
