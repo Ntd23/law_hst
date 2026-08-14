@@ -30,13 +30,15 @@ jobs:
           extensions: mbstring, dom, fileinfo, sqlite3
           coverage: none
 
-      - name: Restore Composer packages
+      - name: Restore Composer download cache
         uses: actions/cache@v4
         with:
-          path: vendor
-          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-${{ runner.os }}-
+          path: ~/.cache/composer/files
+          key: composer-downloads-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-downloads-${{ runner.os }}-
 
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
