@@ -94,5 +94,11 @@
         "name": "中文",
         "countryCode": "CN",
         "enabled": true
+    },
+    {
+        "code": "vi",
+        "name": "Tiếng Việt",
+        "countryCode": "VN",
+        "enabled": true
     }
 ]
