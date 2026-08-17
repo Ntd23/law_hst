@@ -267,7 +267,6 @@ Route::withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
         Route::post('payfast/create-invoice-payment', [PayfastPaymentController::class, 'createInvoicePayment'])->name('payfast.create-invoice-payment');
         Route::post('paytr/create-invoice-payment', [PayTRPaymentController::class, 'createInvoicePayment'])->name('paytr.create-invoice-payment');
         Route::post('iyzipay/create-invoice-payment', [IyzipayPaymentController::class, 'createInvoicePayment'])->name('iyzipay.create-invoice-payment');
-        Route::match(['GET', 'POST'], 'iyzipay/invoice/callback', [IyzipayPaymentController::class, 'invoiceCallback'])->name('iyzipay.invoice.callback');
 
 
 
