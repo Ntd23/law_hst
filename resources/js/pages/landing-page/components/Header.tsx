@@ -3,8 +3,8 @@ import { Link, usePage } from '@inertiajs/react';
 import { Menu, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '@/contexts/BrandContext';
-import { useBrandTheme } from '@/hooks/use-brand-theme';
 import { getImagePath, isUserRegistrationEnabled } from '@/utils/helpers';
+import { LanguageSwitcher } from '@/components/language-switcher';
 
 interface CustomPage {
     id: number;
@@ -16,13 +16,12 @@ interface HeaderProps {
     brandColor?: string;
     settings: {
         company_name: string;
-        config_sections:
-        {
+        config_sections: {
             theme: {
                 logo_dark: string;
                 logo_light: string;
-            }
-        }
+            };
+        };
     };
     sectionData?: any;
     customPages?: CustomPage[];
@@ -43,7 +42,18 @@ export default function Header({ settings, sectionData, customPages = [], brandC
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    const menuItems = customPages.map(page => ({
+    // Filter out "FAQ" and "Refund Policy"
+    const filteredPages = customPages.filter(page => {
+        const slug = (page.slug || '').toLowerCase();
+        const title = (page.title || '').toLowerCase();
+        return !['faq', 'refund-policy', 'refund'].includes(slug) &&
+               !title.includes('faq') &&
+               !title.includes('refund') &&
+               !title.includes('câu hỏi thường gặp') &&
+               !title.includes('chính sách hoàn tiền');
+    });
+
+    const menuItems = filteredPages.map(page => ({
         name: page.title,
         href: route('custom-page.show', page.slug)
     }));
@@ -56,12 +66,12 @@ export default function Header({ settings, sectionData, customPages = [], brandC
     const getHeaderClasses = () => {
         if (isTransparent) {
             return isScrolled
-                ? 'bg-white/95 backdrop-blur-xl shadow-lg border-b border-gray-200/50'
+                ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl shadow-md border-b border-gray-200/80 dark:border-gray-800'
                 : 'bg-transparent';
         }
         return isScrolled
-            ? 'shadow-lg border-b border-gray-200/50'
-            : '';
+            ? 'shadow-md border-b border-gray-200/80 dark:border-gray-800'
+            : 'border-b border-gray-100 dark:border-gray-800/60';
     };
 
     const getHeaderStyle = () => {
@@ -99,18 +109,16 @@ export default function Header({ settings, sectionData, customPages = [], brandC
             className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ${getHeaderClasses()}`}
             style={getHeaderStyle()}
         >
-            <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-16 gap-4">
-                    {/* Logo */}
-                    <div className="flex-shrink-0 mr-2 sm:mr-4">
+            <div className="max-w-[92rem] mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center h-20 gap-6">
+                    {/* Left: Brand Logo */}
+                    <div className="flex-shrink-0">
                         <Link
                             href={route("home")}
-                            className="text-2xl font-bold flex items-center"
-                            onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
-                            onMouseLeave={(e) => e.currentTarget.style.color = ''}
+                            className="text-2xl font-bold flex items-center group"
                         >
                             {(() => {
-                                const isDark = document.documentElement.classList.contains('dark');
+                                const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
                                 const brandLogo = isDark ? (logoLight || logoDark) : (logoDark || logoLight);
                                 const fallbackLogo = isDark ? settings?.config_sections?.theme?.logo_light : settings?.config_sections?.theme?.logo_dark;
                                 const logoSrc = brandLogo || fallbackLogo;
@@ -118,14 +126,14 @@ export default function Header({ settings, sectionData, customPages = [], brandC
 
                                 return displayUrl ? (
                                     <img
-                                        key={`${logoSrc}-${logoSize}-${Date.now()}`}
+                                        key={`${logoSrc}-${logoSize}`}
                                         src={displayUrl}
                                         alt={settings?.company_name || "Logo"}
-                                        style={{ height: `${logoSize || 36}px`, width: 'auto' }}
-                                        className="transition-all duration-200 object-contain max-h-[80px]"
+                                        style={{ height: `${Math.max(logoSize || 42, 42)}px`, width: 'auto' }}
+                                        className="transition-transform duration-200 group-hover:scale-105 object-contain max-h-[85px]"
                                     />
                                 ) : (
-                                    <div className="h-12 text-inherit font-semibold flex items-center text-lg tracking-tight">
+                                    <div className="h-12 text-gray-900 dark:text-white font-extrabold flex items-center text-xl tracking-tight">
                                         {settings?.company_name || 'Advocate Saas'}
                                     </div>
                                 );
@@ -133,100 +141,109 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                         </Link>
                     </div>
 
-                    {/* Desktop Navigation */}
-                    <nav className="hidden md:flex items-center gap-3 lg:gap-5 whitespace-nowrap overflow-x-auto" role="navigation" aria-label="Main navigation">
+                    {/* Center: Balanced, Larger Desktop Navigation Menu */}
+                    <nav 
+                        className="hidden md:flex flex-1 justify-center items-center gap-6 lg:gap-8 whitespace-nowrap" 
+                        role="navigation" 
+                        aria-label="Main navigation"
+                    >
                         <Link
                             href={route('home')}
-                            className="text-sm font-medium transition-colors relative group whitespace-nowrap"
+                            className="text-base font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 relative group whitespace-nowrap"
                             style={{ color: textColor }}
                             onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
                             onMouseLeave={(e) => e.currentTarget.style.color = textColor}
                         >
                             {t("Home")}
                             <span
-                                className="absolute -bottom-1 left-0 w-0 h-0.5 transition-all group-hover:w-full"
+                                className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100"
                                 style={{ backgroundColor: brandColor }}
-                                aria-hidden="true"
                             ></span>
                         </Link>
+
                         {menuItems.map((item) => (
                             <Link
                                 key={item.name}
                                 href={item.href}
-                                className="text-sm font-medium transition-colors relative group whitespace-nowrap"
+                                className="text-base font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 relative group whitespace-nowrap"
                                 style={{ color: textColor }}
                                 onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
                                 onMouseLeave={(e) => e.currentTarget.style.color = textColor}
                             >
                                 {t(item.name)}
                                 <span
-                                    className="absolute -bottom-1 left-0 w-0 h-0.5 transition-all group-hover:w-full"
+                                    className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100"
                                     style={{ backgroundColor: brandColor }}
-                                    aria-hidden="true"
                                 ></span>
                             </Link>
                         ))}
                     </nav>
 
-                    {/* Auth Buttons */}
-                    <div className="hidden md:flex items-center gap-3 flex-shrink-0 whitespace-nowrap">
-                        {!auth?.user ?
+                    {/* Right: Auth Action Buttons & Language Switcher */}
+                    <div className="hidden md:flex items-center gap-4 flex-shrink-0 whitespace-nowrap">
+                        <LanguageSwitcher />
+                        
+                        {!auth?.user ? (
                             <>
                                 <Link
                                     href={route('login')}
-                                    className="text-sm font-medium transition-colors whitespace-nowrap"
+                                    className="text-base font-semibold px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap"
                                     style={{ color: textColor }}
                                     onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
                                     onMouseLeave={(e) => e.currentTarget.style.color = textColor}
                                 >
                                     {t("Login")}
                                 </Link>
-                                {isUserRegistrationEnabled() && <Link
-                                    href={route('register')}
-                                    className="px-5 py-2 rounded-lg text-sm font-semibold transition-colors border whitespace-nowrap"
-                                    style={btnStyles.default}
-                                    onMouseEnter={(e) => { Object.assign(e.currentTarget.style, btnStyles.hover); }}
-                                    onMouseLeave={(e) => { Object.assign(e.currentTarget.style, btnStyles.hoverLeave); }}
-                                >
-                                    {t("Get Started")}
-                                </Link>}
-                            </> : <Link
+                                {isUserRegistrationEnabled() && (
+                                    <Link
+                                        href={route('register')}
+                                        className="px-6 py-2.5 rounded-xl text-base font-bold transition-all shadow-sm hover:shadow-md border whitespace-nowrap"
+                                        style={btnStyles.default}
+                                        onMouseEnter={(e) => { Object.assign(e.currentTarget.style, btnStyles.hover); }}
+                                        onMouseLeave={(e) => { Object.assign(e.currentTarget.style, btnStyles.hoverLeave); }}
+                                    >
+                                        {t("Get Started")}
+                                    </Link>
+                                )}
+                            </>
+                        ) : (
+                            <Link
                                 href={route('dashboard')}
-                                className="px-5 py-2 rounded-lg text-sm font-semibold transition-colors border whitespace-nowrap"
+                                className="px-6 py-2.5 rounded-xl text-base font-bold transition-all shadow-sm hover:shadow-md border whitespace-nowrap"
                                 style={btnStyles.default}
                                 onMouseEnter={(e) => { Object.assign(e.currentTarget.style, btnStyles.hover); }}
                                 onMouseLeave={(e) => { Object.assign(e.currentTarget.style, btnStyles.hoverLeave); }}
                             >
                                 {t("Dashboard")}
                             </Link>
-                        }
+                        )}
                     </div>
 
-                    {/* Mobile menu button */}
+                    {/* Mobile menu toggle */}
                     <div className="md:hidden">
                         <button
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                            className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors cursor-pointer"
                             style={{ color: textColor }}
                             aria-label={isMenuOpen ? t('Close navigation menu') : t('Open navigation menu')}
                             aria-expanded={isMenuOpen}
                             aria-controls="mobile-menu"
                         >
-                            {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
                         </button>
                     </div>
                 </div>
 
-                {/* Mobile Navigation */}
+                {/* Mobile Navigation Dropdown */}
                 {isMenuOpen && (
-                    <div className="md:hidden border-t border-gray-200" id="mobile-menu">
+                    <div className="md:hidden border-t border-gray-200 dark:border-gray-800" id="mobile-menu">
                         <div
-                            className="px-4 py-6 space-y-4"
+                            className="px-5 py-6 space-y-4"
                             style={isTransparent ? { backgroundColor: 'white' } : { backgroundColor }}
                         >
                             <Link
                                 href={route('home')}
-                                className="block text-base font-medium transition-colors"
+                                className="block text-lg font-bold transition-colors py-1"
                                 style={{ color: textColor }}
                                 onClick={() => setIsMenuOpen(false)}
                             >
@@ -236,32 +253,46 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                                 <Link
                                     key={item.name}
                                     href={item.href}
-                                    className="block text-base font-medium transition-colors"
+                                    className="block text-lg font-bold transition-colors py-1"
                                     style={{ color: textColor }}
                                     onClick={() => setIsMenuOpen(false)}
                                 >
                                     {t(item.name)}
                                 </Link>
                             ))}
-                            <div className="pt-4 space-y-3 border-t border-gray-200">
-                                <Link
-                                    href={route('login')}
-                                    className="block w-full text-center py-2.5 text-sm font-medium transition-colors"
-                                    style={{ color: textColor }}
-                                    onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
-                                    onMouseLeave={(e) => e.currentTarget.style.color = textColor}
-                                >
-                                    {t("Login")}
-                                </Link>
-                                <Link
-                                    href={route('register')}
-                                    className="block w-full text-center py-2.5 rounded-lg text-sm font-semibold transition-colors border"
-                                    style={btnStyles.default}
-                                    onMouseEnter={(e) => { Object.assign(e.currentTarget.style, btnStyles.hover); }}
-                                    onMouseLeave={(e) => { Object.assign(e.currentTarget.style, btnStyles.hoverLeave); }}
-                                >
-                                    {t("Get Started")}
-                                </Link>
+                            <div className="pt-4 space-y-3 border-t border-gray-200 dark:border-gray-800">
+                                <div className="flex justify-center pb-2">
+                                    <LanguageSwitcher />
+                                </div>
+                                {!auth?.user ? (
+                                    <>
+                                        <Link
+                                            href={route('login')}
+                                            className="block w-full text-center py-3 text-base font-semibold transition-colors"
+                                            style={{ color: textColor }}
+                                            onClick={() => setIsMenuOpen(false)}
+                                        >
+                                            {t("Login")}
+                                        </Link>
+                                        <Link
+                                            href={route('register')}
+                                            className="block w-full text-center py-3 rounded-xl text-base font-bold transition-colors border shadow-sm"
+                                            style={btnStyles.default}
+                                            onClick={() => setIsMenuOpen(false)}
+                                        >
+                                            {t("Get Started")}
+                                        </Link>
+                                    </>
+                                ) : (
+                                    <Link
+                                        href={route('dashboard')}
+                                        className="block w-full text-center py-3 rounded-xl text-base font-bold transition-colors border shadow-sm"
+                                        style={btnStyles.default}
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        {t("Dashboard")}
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { usePage, Head } from '@inertiajs/react';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import ConsultingLawyersDirectory from './components/ConsultingLawyersDirectory';
 import { useFavicon } from '@/hooks/use-favicon';
 
 interface CustomPage {
@@ -201,21 +202,25 @@ React.useEffect(() => {
         />
 
         <main className="pt-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div className="max-w-4xl mx-auto">
-              <header className="text-center mb-12">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4 text-center">{page.title}</h1>
-                <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-purple-600 mx-auto rounded-full"></div>
-              </header>
+          {page.slug === 'about-us' || page.slug === 'luat-su-tu-van' || page.title.toLowerCase().includes('luật sư') || page.title.toLowerCase().includes('about') ? (
+            <ConsultingLawyersDirectory brandColor={primaryColor} />
+          ) : (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+              <div className="max-w-4xl mx-auto">
+                <header className="text-center mb-12">
+                  <h1 className="text-4xl font-bold text-gray-900 mb-4 text-center">{page.title}</h1>
+                  <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-purple-600 mx-auto rounded-full"></div>
+                </header>
 
-              <article className="prose prose-lg max-w-none">
-                <div
-                  className="text-gray-700 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: page.content }}
-                />
-              </article>
+                <article className="prose prose-lg max-w-none">
+                  <div
+                    className="text-gray-700 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: page.content }}
+                  />
+                </article>
+              </div>
             </div>
-          </div>
+          )}
         </main>
 
         <Footer

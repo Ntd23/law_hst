@@ -83,7 +83,7 @@ export function Pagination({
                     {links && links.length > 0 ? (
                         links.map((link: any, i: number) => {
                             // Check if the link is "Next" or "Previous" to use text instead of icon
-                            const isTextLink = link.label === "&laquo; Previous" || link.label === "Next &raquo;";
+                            const isTextLink = link.label === "&laquo; Previous" || link.label === "Next &raquo;" || link.label?.includes("Previous") || link.label?.includes("Next");
 
                             return (
                                 <Button
@@ -94,7 +94,7 @@ export function Pagination({
                                     disabled={!link.url}
                                     onClick={() => link.url && handlePageChange(link.url)}
                                 >
-                                    <span dangerouslySetInnerHTML={{ __html: link.label }} />
+                                    <span dangerouslySetInnerHTML={{ __html: t(link.label) }} />
                                 </Button>
                             );
                         })
@@ -111,7 +111,7 @@ export function Pagination({
                                     <ChevronLeft className="h-4 w-4" />
                                 </Button>
                                 <span className="px-3 py-1 dark:text-white">
-                                    {currentPage} of {lastPage}
+                                    {currentPage} {t('of')} {lastPage}
                                 </span>
                                 <Button
                                     variant="outline"
