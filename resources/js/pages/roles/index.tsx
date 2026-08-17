@@ -105,7 +105,7 @@ export default function RolesIndex() {
     ];
 
     const columns = [
-        { key: 'label', label: t('Name'), sortable: true, render: (value) => <span className="font-semibold">{value || '-'}</span> },
+        { key: 'label', label: t('Name'), sortable: true, render: (value) => <span className="font-semibold">{t(value) || '-'}</span> },
         {
             key: 'permissions',
             label: t('Permissions'),

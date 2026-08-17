@@ -12,4 +12,9 @@ class Contact extends BaseModel
         'subject',
         'message'
     ];
+
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 }

@@ -3,6 +3,8 @@ import { Head, usePage } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
+import TopLawyersSection from './components/TopLawyersSection';
+import PracticeAreasSection from './components/PracticeAreasSection';
 import FeaturesSection from './components/FeaturesSection';
 import ScreenshotsSection from './components/ScreenshotsSection';
 import WhyChooseUs from './components/WhyChooseUs';
@@ -14,6 +16,7 @@ import PlansSection from './components/PlansSection';
 import FaqSection from './components/FaqSection';
 import NewsletterSection from './components/NewsletterSection';
 import ContactSection from './components/ContactSection';
+import LegalNewsSection from './components/LegalNewsSection';
 import Footer from './components/Footer';
 import { useBrand } from '@/contexts/BrandContext';
 import { THEME_COLORS } from '@/hooks/use-appearance';
@@ -260,10 +263,37 @@ export default function LandingPage() {
     };
 
     // Get section order or use default
-    const sectionOrder = settings.config_sections?.section_order || [
-        'header', 'hero', 'features', 'screenshots', 'why_choose_us', 'templates', 'about',
+    const rawSectionOrder = settings.config_sections?.section_order || [
+        'header', 'hero', 'top_lawyers', 'features', 'screenshots', 'why_choose_us', 'templates', 'about',
         'team', 'testimonials', 'plans', 'faq', 'newsletter', 'contact', 'footer'
     ];
+
+    const removedSections = ['newsletter', 'faq', 'plans', 'testimonials', 'why_choose_us', 'screenshots', 'features', 'team', 'about'];
+
+    // Ensure top_lawyers, practice_areas, and legal_news are included and unwanted sections are filtered out
+    const sectionOrder = (() => {
+        let order = rawSectionOrder.filter(key => !removedSections.includes(key));
+
+        if (!order.includes('top_lawyers')) {
+            const heroIdx = order.indexOf('hero');
+            if (heroIdx !== -1) order.splice(heroIdx + 1, 0, 'top_lawyers');
+            else order.splice(1, 0, 'top_lawyers');
+        }
+
+        if (!order.includes('practice_areas')) {
+            const lawyersIdx = order.indexOf('top_lawyers');
+            if (lawyersIdx !== -1) order.splice(lawyersIdx + 1, 0, 'practice_areas');
+            else order.splice(2, 0, 'practice_areas');
+        }
+
+        if (!order.includes('legal_news')) {
+            const contactIdx = order.indexOf('contact');
+            if (contactIdx !== -1) order.splice(contactIdx, 0, 'legal_news');
+            else order.splice(order.length - 1, 0, 'legal_news');
+        }
+
+        return order;
+    })();
 
     // Component mapping
     const sectionComponents = {
@@ -282,6 +312,12 @@ export default function LandingPage() {
                 brandColor={primaryColor}
                 globalSettings={globalSettings}
             />
+        ),
+        top_lawyers: () => (
+            <TopLawyersSection brandColor={primaryColor} />
+        ),
+        practice_areas: () => (
+            <PracticeAreasSection brandColor={primaryColor} />
         ),
         features: () => isSectionVisible('features') && (
             <FeaturesSection
@@ -357,6 +393,9 @@ export default function LandingPage() {
                 sectionData={getSectionData('newsletter')}
                 brandColor={primaryColor}
             />
+        ),
+        legal_news: () => (
+            <LegalNewsSection brandColor={primaryColor} />
         ),
         contact: () => isSectionVisible('contact') && (
             <ContactSection

@@ -77,7 +77,7 @@ export default function View({ record }: ViewProps) {
                         {record.roles && record.roles.length > 0 ? (
                             record.roles.map((role: any) => (
                                 <span key={role.id} className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
-                                    {role.label || role.name}
+                                    {t(role.label || role.name)}
                                 </span>
                             ))
                         ) : (

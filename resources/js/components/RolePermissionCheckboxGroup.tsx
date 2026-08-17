@@ -421,7 +421,7 @@ export function RolePermissionCheckboxGroup({ permissions, selectedPermissions, 
                                         disabled={disabled}
                                     />
                                     <Label htmlFor={`module-checkbox-${module.replace(/\s+/g, '-').toLowerCase()}`} className="font-medium">
-                                        {module.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        {t(module.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))}
                                     </Label>
                                 </div>
                                 <div className="text-xs text-gray-500">
@@ -445,7 +445,7 @@ export function RolePermissionCheckboxGroup({ permissions, selectedPermissions, 
                                                 htmlFor={`permission-checkbox-${permission.id.toString().replace(/\s+/g, '-').toLowerCase()}`}
                                                 className="truncate text-sm"
                                             >
-                                                {permission.label}
+                                                {t(permission.label)}
                                             </Label>
                                         </div>
                                     ))}

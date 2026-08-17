@@ -325,10 +325,10 @@ export default function Users() {
             key: 'roles',
             label: t('Roles'),
             render: (value: any) => {
-                if (!value || !value.length) return <span className="text-muted-foreground">No roles assigned</span>;
+                if (!value || !value.length) return <span className="text-muted-foreground">{t('No roles assigned')}</span>;
 
                 return value.map((role: any) => {
-                    return <span key={role.id} className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 mr-1">{role.label || role.name}</span>;
+                    return <span key={role.id} className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 mr-1">{t(role.label || role.name)}</span>;
                 });
             }
         },
@@ -405,7 +405,7 @@ export default function Users() {
                                 { value: '_empty_', label: t('All Roles') },
                                 ...(roles || []).map((role: any) => ({
                                     value: role.id.toString(),
-                                    label: role.label || role.name
+                                    label: t(role.label || role.name)
                                 }))
                             ]
                         }
@@ -573,7 +573,7 @@ export default function Users() {
                                         <div>
                                             {user.roles && user.roles.length > 0 ? (
                                                 <span className="inline-flex items-center rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white capitalize">
-                                                    {user.roles[0].label || user.roles[0].name}
+                                                    {t(user.roles[0].label || user.roles[0].name)}
                                                 </span>
                                             ) : (
                                                 <span className="inline-flex items-center rounded-md bg-gray-100 dark:bg-gray-700 px-2.5 py-1 text-xs font-medium text-gray-500 dark:text-gray-400">
@@ -654,7 +654,7 @@ export default function Users() {
                             type: 'select',
                             options: roles ? roles.map((role: any) => ({
                                 value: role.id.toString(),
-                                label: role.label || role.name
+                                label: t(role.label || role.name)
                             })) : [],
                             required: true,
                             emptyNote: !roles?.filter(role => role !== 'client')?.length ? { link: route('roles.index'), linkText: t('Roles') } : undefined

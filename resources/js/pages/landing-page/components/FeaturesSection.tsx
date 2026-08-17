@@ -1,5 +1,8 @@
 import React from 'react';
-import { QrCode, Smartphone, Share2, BarChart3, Globe, Shield, Star, Zap, Users, Lock, Wifi, Heart, TrendingUp } from 'lucide-react';
+import { 
+    Briefcase, Scale, Users, Calendar, DollarSign, ShieldCheck, 
+    FileText, Clock, Lock, Sparkles, CheckCircle2, Gavel, FolderKanban
+} from 'lucide-react';
 import { useScrollAnimation } from '../../../hooks/useScrollAnimation';
 import { useTranslation } from 'react-i18next';
 import { getImagePath } from '@/utils/helpers';
@@ -25,21 +28,25 @@ interface FeaturesSectionProps {
     };
 }
 
-// Icon mapping for dynamic icons
+// Legal Icon mapping
 const iconMap: Record<string, React.ComponentType<any>> = {
-    'qr-code': QrCode,
-    'smartphone': Smartphone,
-    'share': Share2,
-    'bar-chart': BarChart3,
-    'globe': Globe,
-    'shield': Shield,
-    'star': Star,
-    'zap': Zap,
+    'briefcase': Briefcase,
+    'scale': Scale,
     'users': Users,
+    'calendar': Calendar,
+    'dollar-sign': DollarSign,
+    'shield-check': ShieldCheck,
+    'file-text': FileText,
+    'clock': Clock,
     'lock': Lock,
-    'wifi': Wifi,
-    'heart': Heart,
-    'trending-up': TrendingUp
+    'gavel': Gavel,
+    'folder-kanban': FolderKanban,
+    'qr-code': Briefcase,
+    'smartphone': Calendar,
+    'share': Users,
+    'bar-chart': DollarSign,
+    'globe': Scale,
+    'shield': ShieldCheck,
 };
 
 export default function FeaturesSection({ settings, sectionData, brandColor = '#3b82f6' }: FeaturesSectionProps) {
@@ -47,152 +54,96 @@ export default function FeaturesSection({ settings, sectionData, brandColor = '#
     const { t } = useTranslation();
 
     const sectionImage = getImagePath(sectionData.image);
-    const backgroundColor = sectionData.background_color || '#f9fafb';
     const columns = sectionData.columns || 3;
-    const layout = sectionData.layout || 'grid';
 
-    const defaultFeatures = [
-    {
-      icon: 'qr-code',
-      title: 'QR Code Generation',
-      description: 'Generate unique QR codes for instant contact sharing. Perfect for business cards, flyers, and networking events.'
-    },
-    {
-      icon: 'smartphone',
-      title: 'NFC Technology',
-      description: 'Tap-to-share functionality with NFC-enabled devices. Modern networking made simple and professional.'
-    },
-    {
-      icon: 'share',
-      title: 'Easy Sharing',
-      description: 'Share your digital card via email, SMS, social media, or direct links. Multiple sharing options available.'
-    },
-    {
-      icon: 'bar-chart',
-      title: 'Analytics & Insights',
-      description: 'Track views, clicks, and engagement metrics. Understand how your network interacts with your card.'
-    },
-    {
-      icon: 'globe',
-      title: 'Custom Domains',
-      description: 'Use your own domain for a professional branded experience. Build trust with custom URLs.'
-    },
-    {
-      icon: 'shield',
-      title: 'Secure & Private',
-      description: 'Enterprise-grade security with privacy controls. Your data is protected and under your control.'
-    }
-  ];
+    const defaultLegalFeatures: Feature[] = [
+        {
+            icon: 'briefcase',
+            title: t('Comprehensive Case Management'),
+            description: t('Centralize all lawsuit records, court timelines, documents, and litigation history in one secure workspace.')
+        },
+        {
+            icon: 'calendar',
+            title: t('Court Hearing & Timeline Tracking'),
+            description: t('Never miss a court trial or deadline. Automated reminders for hearings, pleadings, and procedural milestones.')
+        },
+        {
+            icon: 'users',
+            title: t('Client & Contact Database'),
+            description: t('Manage corporate clients and individual litigants with complete case logs, contact info, and history.')
+        },
+        {
+            icon: 'file-text',
+            title: t('Document & Contract Vault'),
+            description: t('Store, categorize, and share legal templates, evidence files, and powers of attorney with role access control.')
+        },
+        {
+            icon: 'dollar-sign',
+            title: t('Legal Billing & Expense Tracking'),
+            description: t('Track attorney billable hours, retainer deposits, court fee receipts, and generate professional invoices.')
+        },
+        {
+            icon: 'shield-check',
+            title: t('Role-Based Security & Audit Logs'),
+            description: t('Bank-grade data encryption, granular permissions for attorneys, partners, and clients with full activity audit trails.')
+        }
+    ];
 
-    const features = sectionData.features_list && sectionData.features_list.length > 0
+    const rawFeatures = sectionData.features_list && sectionData.features_list.length > 0
         ? sectionData.features_list
-        : defaultFeatures;
-
-    // Render based on layout
-    const renderFeatures = () => {
-        if (layout === 'list') {
-            return (
-                <div className="space-y-6">
-                    {features.map((feature, index) => {
-                        const IconComponent = iconMap[feature.icon] || QrCode;
-                        return (
-                            <div key={index} className="flex gap-6 bg-white p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-all">
-                                {sectionData.show_icons && <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${brandColor}15` }}>
-                                    <IconComponent className="w-6 h-6" style={{ color: brandColor }} />
-                                </div>}
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-900 mb-2">{feature.title}</h3>
-                                    <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            );
-        }
-
-        if (layout === 'cards') {
-            return (
-                <div className={`grid grid-cols-1 ${columns >= 2 ? 'sm:grid-cols-2' : ''} ${columns >= 3 ? 'lg:grid-cols-3' : ''} ${columns >= 4 ? 'xl:grid-cols-4' : ''} gap-6 sm:gap-8`}>
-                    {features.map((feature, index) => {
-                        const IconComponent = iconMap[feature.icon] || QrCode;
-                        return (
-                            <div key={index} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 border-t-4" style={{ borderTopColor: brandColor }}>
-                                {sectionData.show_icons && <div className="w-14 h-14 rounded-full flex items-center justify-center mb-6 mx-auto" style={{ backgroundColor: `${brandColor}15` }}>
-                                    <IconComponent className="w-7 h-7" style={{ color: brandColor }} />
-                                </div>}
-                                <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">{feature.title}</h3>
-                                <p className="text-gray-600 leading-relaxed text-center">{feature.description}</p>
-                            </div>
-                        );
-                    })}
-                </div>
-            );
-        }
-
-        if (layout === 'alternating') {
-            return (
-                <div className="space-y-12">
-                    {features.map((feature, index) => {
-                        const IconComponent = iconMap[feature.icon] || QrCode;
-                        const isEven = index % 2 === 0;
-                        return (
-                            <div key={index} className={`flex flex-col ${isEven ? 'lg:flex-row' : 'lg:flex-row-reverse'} gap-8 items-center bg-white p-8 rounded-xl border border-gray-200`}>
-                                <div className="w-full lg:w-1/3 flex justify-center">
-                                    {sectionData.show_icons && <div className="w-24 h-24 rounded-2xl flex items-center justify-center" style={{ backgroundColor: `${brandColor}15` }}>
-                                        <IconComponent className="w-12 h-12" style={{ color: brandColor }} />
-                                    </div>}
-                                </div>
-                                <div className="w-full lg:w-2/3">
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-4">{feature.title}</h3>
-                                    <p className="text-gray-600 leading-relaxed text-lg">{feature.description}</p>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            );
-        }
-
-        // Default: grid layout
-        return (
-            <div className={`grid grid-cols-1 ${columns >= 2 ? 'sm:grid-cols-2' : ''} ${columns >= 3 ? 'lg:grid-cols-3' : ''} ${columns >= 4 ? 'xl:grid-cols-4' : ''} gap-6 sm:gap-8`}>
-                {features.map((feature, index) => {
-                    const IconComponent = iconMap[feature.icon] || QrCode;
-                    return (
-                        <div key={index} className="bg-white p-8 rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-200" role="article" aria-labelledby={`feature-${index}-title`}>
-                            {sectionData.show_icons && <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-6" style={{ backgroundColor: `${brandColor}15` }} role="img" aria-label={`${feature.title} icon`}>
-                                <IconComponent className="w-6 h-6" style={{ color: brandColor }} aria-hidden="true" />
-                            </div>}
-                            <h3 className="text-xl font-bold text-gray-900 mb-4" id={`feature-${index}-title`}>{feature.title}</h3>
-                            <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-                        </div>
-                    );
-                })}
-            </div>
-        );
-    };
+        : defaultLegalFeatures;
 
     return (
-        <section id="features" className="py-12 sm:py-16 lg:py-20" style={{ backgroundColor }} ref={ref}>
+        <section id="features" className="py-16 sm:py-20 bg-gray-50/80 dark:bg-gray-900/40 border-t border-b border-gray-200/60 dark:border-gray-800 transition-colors" ref={ref}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className={`text-center mb-8 sm:mb-12 lg:mb-16 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-                    <h2 className="text-3xl md:text-4xl font-bold dark:text-gray-400 mb-4">
-                        {sectionData.title || t('Powerful Features for Modern Networking')}
+                {/* Section Header */}
+                <div className={`text-center max-w-3xl mx-auto mb-12 sm:mb-16 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 mb-4 border border-blue-200 dark:border-blue-800">
+                        <FolderKanban className="w-3.5 h-3.5" />
+                        <span>{t('Legal Practice Features')}</span>
+                    </div>
+                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                        {t(sectionData.title || 'Comprehensive Legal Practice Management')}
                     </h2>
-                    <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed font-medium">
-                        {sectionData.description || t('Everything you need to create, share, and manage your digital business presence. Built for professionals who value efficiency and innovation.')}
+                    <p className="mt-4 text-base sm:text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+                        {t(sectionData.description || 'Everything you need to streamline law firm operations, manage court cases, and collaborate with clients efficiently.')}
                     </p>
                 </div>
 
+                {/* Optional Hero Feature Image */}
                 {sectionImage && (
-                    <div className="mb-8 sm:mb-12 text-center">
-                        <img src={sectionImage} alt={t('Features')} className="max-w-full h-auto rounded-xl shadow-lg mx-auto" />
+                    <div className="mb-12 text-center">
+                        <img 
+                            src={sectionImage} 
+                            alt={t('Comprehensive Legal Practice Management')} 
+                            className="max-w-full h-auto rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 mx-auto" 
+                        />
                     </div>
                 )}
 
-                <div className={`transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-                    {renderFeatures()}
+                {/* Grid Layout */}
+                <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+                    {rawFeatures.map((feature, index) => {
+                        const IconComponent = iconMap[feature.icon] || Briefcase;
+                        return (
+                            <div 
+                                key={index} 
+                                className="group relative bg-white dark:bg-gray-800/90 rounded-2xl p-8 border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between"
+                            >
+                                <div>
+                                    <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/50 border border-blue-100 dark:border-blue-900/40 text-primary flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm">
+                                        <IconComponent className="w-7 h-7" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-primary transition-colors">
+                                        {t(feature.title)}
+                                    </h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                                        {t(feature.description)}
+                                    </p>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </section>
