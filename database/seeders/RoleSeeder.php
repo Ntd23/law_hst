@@ -770,7 +770,7 @@ class RoleSeeder extends Seeder
                     'name' => 'attorney',
                     'label' => 'Attorney',
                     'description' => 'Attorney with case management access',
-                    'permissions' => ['manage-cases', 'view-cases', 'manage-clients', 'view-clients', 'manage-documents', 'view-documents']
+                    'permissions' => ['manage-cases', 'view-cases', 'manage-clients', 'view-clients', 'manage-documents', 'view-documents', 'manage-messages', 'view-messages', 'send-messages', 'delete-messages', 'manage-contact-us']
                 ]
             ];
         }

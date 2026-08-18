@@ -415,8 +415,8 @@ export default function LandingPage() {
     };
 
     const seo = settings.config_sections?.seo;
-    const pageTitle = seo?.meta_title || globalSettings?.titleText || 'Advocate';
-
+    const defaultHomepageTitle = 'Trang chủ - Văn Phòng Luật Sư Advocate & Partners';
+    const pageTitle = t(seo?.meta_title || defaultHomepageTitle);
 
     return (
         <>

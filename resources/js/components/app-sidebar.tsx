@@ -25,6 +25,7 @@ import {
     LayoutGrid,
     LogOut,
     Mail,
+    MessageSquare,
     Palette,
     Settings,
     UserCheck,
@@ -251,6 +252,9 @@ export function AppSidebar() {
         // 10. Communication
         if (hasPermission(permissions, 'manage-messages')) {
             items.push({ title: t('Communication'), href: route('communication.messages.index'), icon: Mail, group: t('Client & Communication') });
+        }
+        if (hasPermission(permissions, 'manage-contact-us') || auth.user?.type === 'company' || auth.user?.type === 'superadmin') {
+            items.push({ title: t('Contact Inquiries'), href: route('contact-us.index'), icon: MessageSquare, group: t('Client & Communication') });
         }
 
         // 11. Billing & Invoicing
