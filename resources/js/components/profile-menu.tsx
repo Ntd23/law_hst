@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { getImagePath } from '@/utils/helpers';
 import { Link, router, usePage } from '@inertiajs/react';
-import { ChevronDown, LogOut, Settings, User } from 'lucide-react';
+import { ChevronDown, Home, LogOut, Settings, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export function ProfileMenu() {
@@ -58,12 +58,17 @@ export function ProfileMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
+            <a href={route('home')}>
+              <Home className="mr-2 h-4 w-4" />
+              <span>{t("Home Page")}</span>
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
             <Link href={route('profile')}>
               <User className="mr-2 h-4 w-4" />
               <span>{t("Profile")}</span>
             </Link>
           </DropdownMenuItem>
-
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>

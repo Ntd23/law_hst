@@ -18,7 +18,7 @@ export default function RolesShow() {
         { title: t('Dashboard'), href: route('dashboard') },
         { title: t('Team Members'), href: route('users.index') },
         { title: t('Roles'), href: route('roles.index') },
-        { title: role.label || t('View Role') },
+        { title: t(role.label) || t('View Role') },
     ];
 
     const pageActions = [
@@ -32,7 +32,7 @@ export default function RolesShow() {
 
     return (
         <PageTemplate
-            title={role.label || t('View Role')}
+            title={t(role.label) || t('View Role')}
             description={t('View the permissions assigned to this role.')}
             url={`/roles/${role.id}`}
             actions={pageActions}
@@ -49,7 +49,7 @@ export default function RolesShow() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                             <div>
                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('Role Name')}</p>
-                                <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{role.label || '-'}</p>
+                                <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{t(role.label) || '-'}</p>
                             </div>
                             <div>
                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('Slug')}</p>
@@ -93,7 +93,7 @@ export default function RolesShow() {
                                         <div key={module} className="border dark:border-gray-700 rounded-lg overflow-hidden">
                                             <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-b dark:border-gray-700">
                                                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                                                    {capitalize(module)}
+                                                    {t(module.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))}
                                                 </span>
                                                 <span className="text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700 px-2 py-0.5 rounded-full border dark:border-gray-600">
                                                     {assignedInModule.length} / {modulePermissions.length}
@@ -106,7 +106,7 @@ export default function RolesShow() {
                                                         variant="outline"
                                                         className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 text-xs font-normal"
                                                     >
-                                                        {permission.label || permission.name}
+                                                        {t(permission.label || permission.name)}
                                                     </Badge>
                                                 ))}
                                             </div>

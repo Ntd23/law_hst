@@ -68,6 +68,7 @@ class SystemSettingsController extends Controller
                 'settings.logoDark' => 'nullable|string',
                 'settings.logoLight' => 'nullable|string',
                 'settings.favicon' => 'nullable|string',
+                'settings.logoSize' => 'nullable|numeric|min:16|max:200',
                 'settings.titleText' => 'nullable|string|max:255',
                 'settings.footerText' => 'nullable|string|max:500',
                 'settings.themeColor' => 'nullable|string|in:blue,green,purple,orange,red,custom',
@@ -76,9 +77,16 @@ class SystemSettingsController extends Controller
                 'settings.sidebarStyle' => 'nullable|string|in:plain,colored,gradient',
                 'settings.layoutDirection' => 'nullable|string|in:left,right,ltr,rtl',
                 'settings.themeMode' => 'nullable|string|in:light,dark,system',
+                'settings.bannerTitle' => 'nullable|string|max:255',
+                'settings.bannerSubtitle' => 'nullable|string|max:500',
+                'settings.bannerButtonText' => 'nullable|string|max:255',
+                'settings.bannerButtonLink' => 'nullable|string|max:500',
+                'settings.bannerImage' => 'nullable|string',
+                'settings.bannerEnabled' => 'nullable|boolean',
+                'settings.bannerLayout' => 'nullable|string|in:full,split-right,split-left',
             ]);
 
-            $imageKeys = ['logoDark', 'logoLight', 'favicon'];
+            $imageKeys = ['logoDark', 'logoLight', 'favicon', 'bannerImage'];
 
             $userId = auth()->id();
             foreach ($validated['settings'] as $key => $value) {

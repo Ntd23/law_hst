@@ -105,14 +105,27 @@ class LandingPageController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'subject' => 'required|string|max:255',
-            'message' => 'required|string'
+            'message' => 'required|string',
+            'phone' => 'nullable|string|max:255',
+            'address' => 'nullable|string|max:255',
+            'practice_area' => 'nullable|string|max:255',
         ]);
+
+        $fullMessage = $request->message;
+        $extraInfo = [];
+        if ($request->filled('phone')) $extraInfo[] = "Số điện thoại: " . $request->phone;
+        if ($request->filled('address')) $extraInfo[] = "Địa chỉ: " . $request->address;
+        if ($request->filled('practice_area')) $extraInfo[] = "Lĩnh vực quan tâm: " . $request->practice_area;
+
+        if (!empty($extraInfo)) {
+            $fullMessage = "[Thông Tin Tư Vấn]\n" . implode("\n", $extraInfo) . "\n\n[Mô Tả Nội Dung Câu Hỏi]\n" . $request->message;
+        }
 
         $contact = new contact();
         $contact->name = $request->name;
         $contact->email = $request->email;
         $contact->subject = $request->subject;
-        $contact->message = $request->message;
+        $contact->message = $fullMessage;
         $contact->save();
 
         return back()->with('success', __('Thank you for your message. We will get back to you soon!'));

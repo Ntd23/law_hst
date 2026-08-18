@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 import { useEffect, useState } from 'react';
 import { getCookie, setCookie } from '@/utils/cookies';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Home } from 'lucide-react';
 import { useAppearance } from '@/hooks/use-appearance';
 import { useBrand } from '@/contexts/BrandContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -98,6 +98,22 @@ export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: Breadcrum
                                 {t("Return Back")}
                             </button>
                         )}
+                        {/* Go to Home Page Button */}
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="outline" size="sm" asChild className="gap-1.5 shadow-sm text-xs font-medium cursor-pointer">
+                                        <a href={route('home')}>
+                                            <Home className="h-4 w-4 text-primary" />
+                                            <span className="hidden sm:inline">{t("Home")}</span>
+                                        </a>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{t("Go to Home Page")}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                         {/* Dark/Light Mode Toggle */}
                         <TooltipProvider>
                             <Tooltip>

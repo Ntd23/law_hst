@@ -103,9 +103,6 @@ Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
     Route::get('settings/slack-config', [SystemSettingsController::class, 'getSlackConfig'])->name('settings.slack-config.get');
     Route::post('settings/slack-notifications', [SystemSettingsController::class, 'updateSlackNotifications'])->name('settings.slack-notifications.update');
 
-
-        Route::get('settings/twilio-notifications', [SystemSettingsController::class, 'getSlackNotifications'])->name('settings.slack-notifications.get');
-
     // Twilio Settings routes
     Route::get('settings/twilio-notifications/available', [SystemSettingsController::class, 'getAvailableTwilioNotifications'])->name('settings.twilio-notifications.available');
     Route::get('settings/twilio-notifications', [SystemSettingsController::class, 'getTwilioNotifications'])->name('settings.twilio-notifications.get');
@@ -117,6 +114,6 @@ Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
     // Notification Template routes
     Route::get('notification-templates', [NotificationTemplateController::class, 'index'])->name('notification-templates.index');
     Route::get('notification-templates/{notificationTemplate}', [NotificationTemplateController::class, 'show'])->name('notification-templates.show');
-    Route::post('notification-templates/{notificationTemplate}/settings', [NotificationTemplateController::class, 'updateSettings'])->name('notification-templates.update-settings');
-    Route::post('notification-templates/{notificationTemplate}/content', [NotificationTemplateController::class, 'updateContent'])->name('notification-templates.update-content');
+    Route::match(['POST', 'PUT'], 'notification-templates/{notificationTemplate}/settings', [NotificationTemplateController::class, 'updateSettings'])->name('notification-templates.update-settings');
+    Route::match(['POST', 'PUT'], 'notification-templates/{notificationTemplate}/content', [NotificationTemplateController::class, 'updateContent'])->name('notification-templates.update-content');
 });

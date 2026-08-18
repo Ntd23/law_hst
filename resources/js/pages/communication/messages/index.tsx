@@ -64,6 +64,8 @@ export default function MessagesIndex({ conversations, users, filters }: Props) 
     const [userDetails, setUserDetails] = useState<any>(null);
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     const [conversationToDelete, setConversationToDelete] = useState<number | null>(null);
+    const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+    const [newChatSearch, setNewChatSearch] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -230,24 +232,49 @@ export default function MessagesIndex({ conversations, users, filters }: Props) 
                 {/* Sidebar - Conversations List */}
                 <div className="flex w-full flex-col border-r border-gray-200 bg-white md:w-80 dark:border-gray-700 dark:bg-gray-800">
                     {/* Header */}
-                    <div className="border-b border-gray-200 p-4 dark:border-gray-700 h-[65px] flex items-center">
-                        <div className="relative">
+                    <div className="border-b border-gray-200 p-3.5 dark:border-gray-700 h-[65px] flex items-center justify-between gap-2">
+                        <div className="relative flex-1">
                             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
                             <Input
                                 placeholder={t('Search conversations...')}
                                 value={search}
                                 onChange={handleSearchChange}
-                                className="pl-10"
+                                className="pl-9 text-xs"
                             />
                         </div>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button 
+                                        size="sm" 
+                                        onClick={() => setIsNewChatOpen(true)}
+                                        className="shrink-0 bg-primary hover:bg-blue-600 text-white rounded-xl p-2.5 h-9 w-9 flex items-center justify-center cursor-pointer shadow-sm"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{t('Start new conversation')}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     </div>
 
                     {/* Conversations */}
                     <div className="flex-1 overflow-y-auto">
-                        {conversations.data.length === 0 && users.length === 0 ? (
-                            <div className="flex h-full flex-col items-center justify-center text-gray-500 dark:text-gray-400">
-                                <MessageSquare className="mb-4 h-12 w-12 opacity-50" />
-                                <p>{t('No conversations found')}</p>
+                        {conversations.data.length === 0 ? (
+                            <div className="flex h-full flex-col items-center justify-center p-6 text-center text-gray-500 dark:text-gray-400">
+                                <MessageSquare className="mb-3 h-12 w-12 text-gray-300 dark:text-gray-600" />
+                                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">{t('No conversations yet')}</p>
+                                <p className="text-xs text-gray-500 mb-4 max-w-[200px]">{t('Select a client or team member to start messaging.')}</p>
+                                <Button
+                                    onClick={() => setIsNewChatOpen(true)}
+                                    size="sm"
+                                    className="bg-primary hover:bg-blue-600 text-white text-xs font-semibold gap-1.5 rounded-xl cursor-pointer shadow-sm"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    <span>{t('Tạo trò chuyện mới')}</span>
+                                </Button>
                             </div>
                         ) : (
                             <>
@@ -624,6 +651,73 @@ export default function MessagesIndex({ conversations, users, filters }: Props) 
                 </DialogContent>
             </Dialog>
 
+
+            {/* New Conversation Modal */}
+            <Dialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                            <Users className="w-5 h-5 text-primary" />
+                            <span>{t('Tạo cuộc trò chuyện mới')}</span>
+                        </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4 pt-2">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                                placeholder={t('Tìm tên thân chủ, email hoặc nhân sự...')}
+                                value={newChatSearch}
+                                onChange={(e) => setNewChatSearch(e.target.value)}
+                                className="pl-9 text-xs"
+                            />
+                        </div>
+
+                        <div className="max-h-72 overflow-y-auto space-y-1 divide-y divide-gray-100 dark:divide-gray-800">
+                            {users.filter(u => 
+                                !newChatSearch || 
+                                u.name.toLowerCase().includes(newChatSearch.toLowerCase()) || 
+                                u.email.toLowerCase().includes(newChatSearch.toLowerCase())
+                            ).length === 0 ? (
+                                <div className="py-8 text-center text-xs text-gray-500">
+                                    {t('Không tìm thấy danh bạ thân chủ hoặc nhân sự phù hợp.')}
+                                </div>
+                            ) : (
+                                users.filter(u => 
+                                    !newChatSearch || 
+                                    u.name.toLowerCase().includes(newChatSearch.toLowerCase()) || 
+                                    u.email.toLowerCase().includes(newChatSearch.toLowerCase())
+                                ).map((u) => (
+                                    <div
+                                        key={u.id}
+                                        onClick={() => {
+                                            setIsNewChatOpen(false);
+                                            handleUserStartMessage(u);
+                                        }}
+                                        className="flex items-center justify-between p-3 rounded-xl hover:bg-blue-50 dark:hover:bg-gray-800 cursor-pointer transition-colors group"
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <Avatar className="h-10 w-10 shrink-0">
+                                                <AvatarImage src={getImagePath((u as any).avatar) || getImagePath('/storage/media/avatars/avatar.png')} />
+                                                <AvatarFallback>{u.name?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-bold text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">
+                                                    {u.name}
+                                                </p>
+                                                <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                                            </div>
+                                        </div>
+                                        <Badge variant="outline" className="text-[10px] px-2 py-0.5 shrink-0 bg-white dark:bg-gray-900">
+                                            {u.type === 'client' ? t('Thân chủ') : t('Nhân sự')}
+                                        </Badge>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             <CrudDeleteModal
                 isOpen={isDeleteAlertOpen}

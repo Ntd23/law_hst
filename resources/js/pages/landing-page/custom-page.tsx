@@ -1,7 +1,11 @@
 import React from 'react';
 import { usePage, Head } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import ConsultingLawyersDirectory from './components/ConsultingLawyersDirectory';
+import ContactUsForm from './components/ContactUsForm';
+import AboutCompanyView from './components/AboutCompanyView';
 import { useFavicon } from '@/hooks/use-favicon';
 
 interface CustomPage {
@@ -172,10 +176,11 @@ React.useEffect(() => {
   const primaryColor = settings?.config_sections?.theme?.primary_color || '#3b82f6';
   const secondaryColor = settings?.config_sections?.theme?.secondary_color || '#8b5cf6';
   const accentColor = settings?.config_sections?.theme?.accent_color || '#10b77f';
+  const { t } = useTranslation();
   useFavicon();
   return (
     <>
-      <Head title={page.meta_title || page.title}>
+      <Head title={t(page.meta_title || page.title)}>
         {page.meta_description && (
           <meta name="description" content={page.meta_description} />
         )}
@@ -201,21 +206,29 @@ React.useEffect(() => {
         />
 
         <main className="pt-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div className="max-w-4xl mx-auto">
-              <header className="text-center mb-12">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4 text-center">{page.title}</h1>
-                <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-purple-600 mx-auto rounded-full"></div>
-              </header>
+          {page.slug === 'terms-of-service' || page.title.toLowerCase().includes('giới thiệu về công ty') || page.title.toLowerCase().includes('giới thiệu công ty') ? (
+            <AboutCompanyView brandColor={primaryColor} pageContent={page.content} />
+          ) : page.slug === 'contact-us' || page.slug.includes('contact') || page.title.toLowerCase().includes('liên hệ') ? (
+            <ContactUsForm settings={settings} brandColor={primaryColor} />
+          ) : page.slug === 'about-us' || page.slug === 'luat-su-tu-van' || page.title.toLowerCase().includes('luật sư') ? (
+            <ConsultingLawyersDirectory brandColor={primaryColor} />
+          ) : (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+              <div className="max-w-4xl mx-auto">
+                <header className="text-center mb-12">
+                  <h1 className="text-4xl font-bold text-gray-900 mb-4 text-center">{page.title}</h1>
+                  <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-purple-600 mx-auto rounded-full"></div>
+                </header>
 
-              <article className="prose prose-lg max-w-none">
-                <div
-                  className="text-gray-700 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: page.content }}
-                />
-              </article>
+                <article className="prose prose-lg max-w-none">
+                  <div
+                    className="text-gray-700 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: page.content }}
+                  />
+                </article>
+              </div>
             </div>
-          </div>
+          )}
         </main>
 
         <Footer

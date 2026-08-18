@@ -254,27 +254,31 @@ export default function Clients() {
   // Define table columns
   const columns = [
     {
-    key: 'user',
-    label: t('Client'),
-    render: (value: any, row: any) => {
+      key: 'name',
+      label: t('Client'),
+      render: (value: any, row: any) => {
+        const name = row.name || row.user?.name || '-';
+        const email = row.email || row.user?.email || '-';
+        const avatar = row.avatar || row.user?.avatar;
+
         return (
-            <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                    <AvatarImage
-                        src={value?.avatar}
-                        alt={value?.name}
-                    />
-                    <AvatarFallback className="text-lg">
-                        {getInitials(value?.name)}
-                    </AvatarFallback>
-                </Avatar>
-                <div>
-                    <div className="font-medium">{value?.name}</div>
-                    <div className="text-sm text-muted-foreground">{value?.email}</div>
-                </div>
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10">
+              <AvatarImage
+                src={avatar}
+                alt={name}
+              />
+              <AvatarFallback className="text-lg font-semibold">
+                {getInitials(name)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="font-medium text-gray-900 dark:text-white">{name}</div>
+              <div className="text-sm text-muted-foreground">{email}</div>
             </div>
+          </div>
         );
-    }
+      }
     },
     {
       key: 'phone',

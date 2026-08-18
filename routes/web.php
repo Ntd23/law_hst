@@ -208,14 +208,7 @@ Route::get('/initial-locale', [TranslationController::class, 'getInitialLocale']
 Route::post('/refresh-all-languages', [TranslationController::class, 'refreshAllLanguages'])->name('refresh-all-languages');
 
 
-// Email Templates routes (no middleware for testing)
-Route::middleware(['auth', 'verified'])->group(function () {
-    // Notification Templates routes (no middleware for testing)
-    Route::get('notification-templates', [\App\Http\Controllers\NotificationTemplateController::class, 'index'])->name('notification-templates.index');
-    Route::get('notification-templates/{notificationTemplate}', [\App\Http\Controllers\NotificationTemplateController::class, 'show'])->name('notification-templates.show');
-    Route::put('notification-templates/{notificationTemplate}/settings', [\App\Http\Controllers\NotificationTemplateController::class, 'updateSettings'])->name('notification-templates.update-settings');
-    Route::put('notification-templates/{notificationTemplate}/content', [\App\Http\Controllers\NotificationTemplateController::class, 'updateContent'])->name('notification-templates.update-content');
-});
+
 
 
 
@@ -254,7 +247,6 @@ Route::withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
         Route::post('easebuzz/create-invoice-payment', [EasebuzzPaymentController::class, 'createInvoicePayment'])->name('easebuzz.create-invoice-payment');
         Route::post('yookassa/create-invoice-payment', [YooKassaPaymentController::class, 'createInvoicePayment'])->name('yookassa.create-invoice-payment');
         Route::post('midtrans/create-invoice-payment', [MidtransPaymentController::class, 'createInvoicePayment'])->name('midtrans.create-invoice-payment');
-        Route::post('cashfree/create-invoice-payment', [CashfreeController::class, 'createInvoicePayment'])->name('cashfree.create-invoice-payment');
         Route::post('cashfree/verify-invoice-payment', [CashfreeController::class, 'verifyInvoicePayment'])->name('cashfree.verify-invoice-payment');
         Route::post('razorpay/create-invoice-order', [RazorpayController::class, 'createInvoiceOrder'])->name('razorpay.create-invoice-order');
         Route::post('razorpay/verify-invoice-payment', [RazorpayController::class, 'verifyInvoicePayment'])->name('razorpay.verify-invoice-payment');
@@ -267,7 +259,6 @@ Route::withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
         Route::post('payfast/create-invoice-payment', [PayfastPaymentController::class, 'createInvoicePayment'])->name('payfast.create-invoice-payment');
         Route::post('paytr/create-invoice-payment', [PayTRPaymentController::class, 'createInvoicePayment'])->name('paytr.create-invoice-payment');
         Route::post('iyzipay/create-invoice-payment', [IyzipayPaymentController::class, 'createInvoicePayment'])->name('iyzipay.create-invoice-payment');
-        Route::match(['GET', 'POST'], 'iyzipay/invoice/callback', [IyzipayPaymentController::class, 'invoiceCallback'])->name('iyzipay.invoice.callback');
 
 
 
@@ -371,7 +362,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('midtrans/create-payment', [MidtransPaymentController::class, 'createPayment'])->name('midtrans.create-payment');
 
     // Payment success/callback routes
-    Route::post('payments/skrill/callback', [SkrillPaymentController::class, 'callback'])->name('skrill.callback');
     Route::get('payments/paytr/success', [PayTRPaymentController::class, 'success'])->name('paytr.success');
     Route::get('payments/paytr/failure', [PayTRPaymentController::class, 'failure'])->name('paytr.failure');
     Route::get('payments/mollie/success', [MolliePaymentController::class, 'success'])->name('mollie.success');
@@ -379,7 +369,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::match(['GET', 'POST'], 'payments/toyyibpay/success', [ToyyibPayPaymentController::class, 'success'])->name('toyyibpay.success');
     Route::post('payments/toyyibpay/callback', [ToyyibPayPaymentController::class, 'callback'])->name('toyyibpay.callback');
     Route::post('payments/iyzipay/callback', [IyzipayPaymentController::class, 'callback'])->name('iyzipay.callback');
-    Route::match(['GET', 'POST'], 'payments/iyzipay/success', [IyzipayPaymentController::class, 'success'])->name('iyzipay.success');
 
     Route::get('payments/ozow/success', [OzowPaymentController::class, 'success'])->name('ozow.success');
     Route::post('payments/ozow/callback', [OzowPaymentController::class, 'callback'])->name('ozow.callback');
@@ -394,7 +383,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('payments/paiement/callback', [PaiementPaymentController::class, 'callback'])
         ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
         ->name('paiement.callback');
-    Route::post('payments/midtrans/callback', [MidtransPaymentController::class, 'callback'])->name('midtrans.callback');
     Route::post('authorizenet/test-connection', [AuthorizeNetPaymentController::class, 'testConnection'])->name('authorizenet.test-connection');
 
     // All other routes require plan access check
@@ -895,6 +883,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Contact Us routes
         Route::middleware('permission:manage-contact-us')->group(function () {
             Route::get('contact-us', [\App\Http\Controllers\ContactUsController::class, 'index'])->name('contact-us.index');
+            Route::get('contact-us/{contact}', [\App\Http\Controllers\ContactUsController::class, 'show'])->name('contact-us.show');
             Route::delete('contact-us/{contact}', [\App\Http\Controllers\ContactUsController::class, 'destroy'])->name('contact-us.destroy');
         });
 
@@ -1219,7 +1208,6 @@ Route::match(['GET', 'POST'], 'mollie/invoice/success/{token}', [MolliePaymentCo
 Route::post('mollie/invoice/callback', [MolliePaymentController::class, 'invoiceCallback'])->name('mollie.invoice.callback');
 Route::match(['GET', 'POST'], 'tap/invoice/success/{token}', [TapPaymentController::class, 'invoiceSuccess'])->name('tap.invoice.success');
 Route::post('tap/invoice/callback', [TapPaymentController::class, 'invoiceCallback'])->name('tap.invoice.callback');
-Route::match(['GET', 'POST'], 'easebuzz/invoice/success', [EasebuzzPaymentController::class, 'invoiceSuccess'])->name('easebuzz.invoice.success');
 Route::match(['GET', 'POST'], 'payhere/invoice/success/{token}', [PayHerePaymentController::class, 'invoiceSuccess'])->name('payhere.invoice.success');
 Route::post('payhere/invoice/notify', [PayHerePaymentController::class, 'invoiceNotify'])->name('payhere.invoice.notify');
 
@@ -1229,14 +1217,12 @@ Route::post('cinetpay/invoice/callback', [CinetPayPaymentController::class, 'inv
 Route::match(['GET', 'POST'], 'fedapay/invoice/callback', [FedaPayPaymentController::class, 'invoiceCallback'])->name('fedapay.invoice.callback');
 Route::match(['GET', 'POST'], 'paytabs/invoice/success', [PayTabsPaymentController::class, 'invoiceSuccess'])->name('paytabs.invoice.success');
 Route::post('paytabs/invoice/callback', [PayTabsPaymentController::class, 'invoiceCallback'])->name('paytabs.invoice.callback');
-Route::match(['GET', 'POST'], 'khalti/invoice/success', [KhaltiPaymentController::class, 'invoiceSuccess'])->name('khalti.invoice.success');
 Route::match(['GET', 'POST'], 'paiement/invoice/success', [PaiementPaymentController::class, 'invoiceSuccess'])
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
     ->name('paiement.invoice.success');
 Route::post('paiement/invoice/callback', [PaiementPaymentController::class, 'invoiceCallback'])
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
     ->name('paiement.invoice.callback');
-Route::match(['GET', 'POST'], 'cashfree/invoice/success', [CashfreeController::class, 'invoiceSuccess'])->name('cashfree.invoice.success');
 Route::get('cashfree/invoice/success/{token}', [CashfreeController::class, 'invoiceSuccess'])->name('cashfree.invoice.success.token');
 Route::post('cashfree/invoice/callback', [CashfreeController::class, 'invoiceCallback'])->name('cashfree.invoice.callback');
 Route::match(['GET', 'POST'], 'skrill/invoice/success', [SkrillPaymentController::class, 'invoiceSuccess'])->name('skrill.invoice.success');

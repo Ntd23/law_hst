@@ -49,7 +49,7 @@ export default function ContactUsPage() {
     if (action === 'delete') {
       setIsDeleteModalOpen(true);
     } else if (action === 'view') {
-      setIsViewModalOpen(true);
+      router.visit(route('contact-us.show', item.id));
     }
   };
 
@@ -99,7 +99,8 @@ export default function ContactUsPage() {
       action: 'view',
       icon: 'Eye',
       className: 'text-blue-500 hover:text-blue-700',
-      requiredPermission: 'manage-contact-us'
+      requiredPermission: 'manage-contact-us',
+      href: (row: any) => route('contact-us.show', row.id)
     },
     {
       label: t('Delete'),
