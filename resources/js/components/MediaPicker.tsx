@@ -90,7 +90,20 @@ export default function MediaPicker({
             const isDoc = url.toLowerCase().includes('.doc') || url.toLowerCase().includes('.docx') || url.includes('document');
 
             return (
-              <div key={index} className="relative">
+              <div key={index} className="relative group">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const newUrls = imageUrls.filter((_, i) => i !== index);
+                    onChange(newUrls.join(','));
+                  }}
+                  className="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md transition-all duration-200 z-10 opacity-90 group-hover:opacity-100 hover:scale-110"
+                  title="Xoá ảnh"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
                 {isPdf ? (
                   <div className="w-full h-20 bg-red-50 border border-red-200 rounded flex flex-col items-center justify-center">
                     <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center mb-1">
