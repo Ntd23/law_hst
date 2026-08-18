@@ -162,7 +162,7 @@ export default function TopLawyersSection({ brandColor = '#3b82f6' }: TopLawyers
                                     {/* Name & Ratings */}
                                     <div className="flex-1 min-w-0">
                                         <h3 className="text-lg font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
-                                            {lawyer.name}
+                                            {t(lawyer.name)}
                                         </h3>
 
                                         {/* Stars & Reviews */}
@@ -187,7 +187,7 @@ export default function TopLawyersSection({ brandColor = '#3b82f6' }: TopLawyers
                                         {/* Location */}
                                         <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
                                             <MapPin className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
-                                            <span className="truncate">{lawyer.location}</span>
+                                            <span className="truncate">{t(lawyer.location)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -203,7 +203,7 @@ export default function TopLawyersSection({ brandColor = '#3b82f6' }: TopLawyers
                                                 key={idx}
                                                 className="text-xs bg-gray-100 text-gray-700 font-medium px-2.5 py-1 rounded-md group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors"
                                             >
-                                                {area}
+                                                {t(area)}
                                             </span>
                                         ))}
                                     </div>
@@ -228,13 +228,13 @@ export default function TopLawyersSection({ brandColor = '#3b82f6' }: TopLawyers
                                         {t('Thông tin luật sư')}
                                     </span>
                                     <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">
-                                        {lawyer.bio}
+                                        {t(lawyer.bio)}
                                     </p>
                                 </div>
 
                                 <div className="mt-4 pt-3 flex items-center justify-between border-t border-gray-200/50">
                                     <span className="text-xs text-gray-500 font-medium truncate max-w-[200px]">
-                                        {lawyer.firm}
+                                        {t(lawyer.firm)}
                                     </span>
                                     <a
                                         href={`tel:${lawyer.phone.replace(/\s+/g, '')}`}

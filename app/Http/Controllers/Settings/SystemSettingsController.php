@@ -88,6 +88,23 @@ class SystemSettingsController extends Controller
                 'settings.enableAdminLogo' => 'nullable|boolean',
                 'settings.enableHeaderLogo' => 'nullable|boolean',
                 'settings.enableFooterLogo' => 'nullable|boolean',
+                'settings.footerCompanyName' => 'nullable|string|max:255',
+                'settings.footerDescription' => 'nullable|string|max:1000',
+                'settings.footerContactEmail' => 'nullable|string|max:255',
+                'settings.footerContactPhone' => 'nullable|string|max:100',
+                'settings.footerContactAddress' => 'nullable|string|max:500',
+                'settings.footerSocialFacebook' => 'nullable|string|max:500',
+                'settings.footerSocialTwitter' => 'nullable|string|max:500',
+                'settings.footerSocialLinkedin' => 'nullable|string|max:500',
+                'settings.footerSocialInstagram' => 'nullable|string|max:500',
+                'settings.footerProductTitle' => 'nullable|string|max:255',
+                'settings.footerCompanyTitle' => 'nullable|string|max:255',
+                'settings.footerSupportTitle' => 'nullable|string|max:255',
+                'settings.footerLegalTitle' => 'nullable|string|max:255',
+                'settings.footerProductLinks' => 'nullable|string|max:5000',
+                'settings.footerCompanyLinks' => 'nullable|string|max:5000',
+                'settings.footerSupportLinks' => 'nullable|string|max:5000',
+                'settings.footerLegalLinks' => 'nullable|string|max:5000',
             ]);
 
             $imageKeys = ['logoDark', 'logoLight', 'logoFooter', 'favicon', 'bannerImage'];

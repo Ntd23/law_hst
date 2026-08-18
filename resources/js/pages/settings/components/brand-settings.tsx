@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ThemePreview } from '@/components/theme-preview';
 import { useAppearance, type Appearance, type ThemeColor } from '@/hooks/use-appearance';
@@ -11,7 +12,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/components/custom-toast';
 import { Switch } from '@/components/ui/switch';
-import { Palette, Save, Upload, Check, Layout, Moon, FileText, Sidebar as SidebarIcon, Image as ImageIcon, Link as LinkIcon, X } from 'lucide-react';
+import { Palette, Save, Upload, Check, Layout, Moon, FileText, Sidebar as SidebarIcon, Image as ImageIcon, Link as LinkIcon, X, Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram, Globe, PanelBottom, Shield } from 'lucide-react';
 import { SettingsSection } from '@/components/settings-section';
 import { SidebarPreview } from '@/components/sidebar-preview';
 import MediaPicker from '@/components/MediaPicker';
@@ -46,6 +47,25 @@ export interface BrandSettings {
     enableAdminLogo?: boolean;
     enableHeaderLogo?: boolean;
     enableFooterLogo?: boolean;
+
+    // Footer Settings
+    footerCompanyName?: string;
+    footerDescription?: string;
+    footerContactEmail?: string;
+    footerContactPhone?: string;
+    footerContactAddress?: string;
+    footerSocialFacebook?: string;
+    footerSocialTwitter?: string;
+    footerSocialLinkedin?: string;
+    footerSocialInstagram?: string;
+    footerProductTitle?: string;
+    footerCompanyTitle?: string;
+    footerSupportTitle?: string;
+    footerLegalTitle?: string;
+    footerProductLinks?: string;
+    footerCompanyLinks?: string;
+    footerSupportLinks?: string;
+    footerLegalLinks?: string;
 }
 
 // Default brand settings
@@ -56,7 +76,7 @@ export const DEFAULT_BRAND_SETTINGS: BrandSettings = {
     favicon: '/storage/media/logos/favicon.png',
     logoSize: 36,
     titleText: 'WorkDo',
-    footerText: '© 2026 WorkDo. All rights reserved.',
+    footerText: '© 2026 Advocate & Partners. All rights reserved.',
     themeColor: 'green',
     customColor: '#10b77f',
     sidebarVariant: 'inset',
@@ -73,6 +93,25 @@ export const DEFAULT_BRAND_SETTINGS: BrandSettings = {
     enableAdminLogo: true,
     enableHeaderLogo: true,
     enableFooterLogo: true,
+
+    // Footer defaults
+    footerCompanyName: 'Văn Phòng Luật Sư Advocate & Partners',
+    footerDescription: 'Cung cấp giải pháp pháp lý toàn diện, bảo vệ quyền lợi tối đa cho cá nhân và doanh nghiệp.',
+    footerContactEmail: 'contact@advocate-law.vn',
+    footerContactPhone: '+84 (028) 3822 1234',
+    footerContactAddress: 'Tầng 12, Tòa nhà Bitexco, Q.1, TP. Hồ Chí Minh',
+    footerSocialFacebook: 'https://facebook.com',
+    footerSocialTwitter: 'https://twitter.com',
+    footerSocialLinkedin: 'https://linkedin.com',
+    footerSocialInstagram: 'https://instagram.com',
+    footerProductTitle: 'Dịch vụ & Sản phẩm',
+    footerCompanyTitle: 'Về chúng tôi',
+    footerSupportTitle: 'Hỗ trợ khách hàng',
+    footerLegalTitle: 'Chính sách & Pháp lý',
+    footerProductLinks: 'Tư vấn doanh nghiệp | #\nTranh tụng dân sự | #\nBảo hộ sở hữu trí tuệ | #\nLuật sư tranh chấp đất đai | #',
+    footerCompanyLinks: 'Trang chủ | /\nLuật sư tư vấn | #about\nĐội ngũ luật sư | #team\nLiên hệ | #contact',
+    footerSupportLinks: 'Trung tâm hỗ trợ | #\nTài liệu pháp lý | #\nĐặt lịch hẹn tư vấn | #\nTra cứu tiến độ vụ án | #',
+    footerLegalLinks: 'Chính sách bảo mật | #\nĐiều khoản dịch vụ | #\nQuy tắc đạo đức nghề nghiệp | #\nCam kết chất lượng | #',
 };
 
 // Default logo paths for reset functionality
@@ -123,6 +162,23 @@ export const getBrandSettings = (userSettings?: Record<string, string>, globalSe
                 enableAdminLogo: parsedBrand.enableAdminLogo !== undefined ? Boolean(parsedBrand.enableAdminLogo) : (userSettings?.enableAdminLogo !== undefined ? Boolean(userSettings.enableAdminLogo) : DEFAULT_BRAND_SETTINGS.enableAdminLogo),
                 enableHeaderLogo: parsedBrand.enableHeaderLogo !== undefined ? Boolean(parsedBrand.enableHeaderLogo) : (userSettings?.enableHeaderLogo !== undefined ? Boolean(userSettings.enableHeaderLogo) : DEFAULT_BRAND_SETTINGS.enableHeaderLogo),
                 enableFooterLogo: parsedBrand.enableFooterLogo !== undefined ? Boolean(parsedBrand.enableFooterLogo) : (userSettings?.enableFooterLogo !== undefined ? Boolean(userSettings.enableFooterLogo) : DEFAULT_BRAND_SETTINGS.enableFooterLogo),
+                footerCompanyName: parsedBrand.footerCompanyName || userSettings?.footerCompanyName || DEFAULT_BRAND_SETTINGS.footerCompanyName,
+                footerDescription: parsedBrand.footerDescription || userSettings?.footerDescription || DEFAULT_BRAND_SETTINGS.footerDescription,
+                footerContactEmail: parsedBrand.footerContactEmail || userSettings?.footerContactEmail || DEFAULT_BRAND_SETTINGS.footerContactEmail,
+                footerContactPhone: parsedBrand.footerContactPhone || userSettings?.footerContactPhone || DEFAULT_BRAND_SETTINGS.footerContactPhone,
+                footerContactAddress: parsedBrand.footerContactAddress || userSettings?.footerContactAddress || DEFAULT_BRAND_SETTINGS.footerContactAddress,
+                footerSocialFacebook: parsedBrand.footerSocialFacebook || userSettings?.footerSocialFacebook || DEFAULT_BRAND_SETTINGS.footerSocialFacebook,
+                footerSocialTwitter: parsedBrand.footerSocialTwitter || userSettings?.footerSocialTwitter || DEFAULT_BRAND_SETTINGS.footerSocialTwitter,
+                footerSocialLinkedin: parsedBrand.footerSocialLinkedin || userSettings?.footerSocialLinkedin || DEFAULT_BRAND_SETTINGS.footerSocialLinkedin,
+                footerSocialInstagram: parsedBrand.footerSocialInstagram || userSettings?.footerSocialInstagram || DEFAULT_BRAND_SETTINGS.footerSocialInstagram,
+                footerProductTitle: parsedBrand.footerProductTitle || userSettings?.footerProductTitle || DEFAULT_BRAND_SETTINGS.footerProductTitle,
+                footerCompanyTitle: parsedBrand.footerCompanyTitle || userSettings?.footerCompanyTitle || DEFAULT_BRAND_SETTINGS.footerCompanyTitle,
+                footerSupportTitle: parsedBrand.footerSupportTitle || userSettings?.footerSupportTitle || DEFAULT_BRAND_SETTINGS.footerSupportTitle,
+                footerLegalTitle: parsedBrand.footerLegalTitle || userSettings?.footerLegalTitle || DEFAULT_BRAND_SETTINGS.footerLegalTitle,
+                footerProductLinks: parsedBrand.footerProductLinks || userSettings?.footerProductLinks || DEFAULT_BRAND_SETTINGS.footerProductLinks,
+                footerCompanyLinks: parsedBrand.footerCompanyLinks || userSettings?.footerCompanyLinks || DEFAULT_BRAND_SETTINGS.footerCompanyLinks,
+                footerSupportLinks: parsedBrand.footerSupportLinks || userSettings?.footerSupportLinks || DEFAULT_BRAND_SETTINGS.footerSupportLinks,
+                footerLegalLinks: parsedBrand.footerLegalLinks || userSettings?.footerLegalLinks || DEFAULT_BRAND_SETTINGS.footerLegalLinks,
             };
         } catch (error) {
             // Fall through to normal logic if cookie parsing fails
@@ -134,6 +190,7 @@ export const getBrandSettings = (userSettings?: Record<string, string>, globalSe
         return {
             logoDark: userSettings.logoDark || DEFAULT_BRAND_SETTINGS.logoDark,
             logoLight: userSettings.logoLight || DEFAULT_BRAND_SETTINGS.logoLight,
+            logoFooter: userSettings.logoFooter || DEFAULT_BRAND_SETTINGS.logoFooter,
             favicon: userSettings.favicon || DEFAULT_BRAND_SETTINGS.favicon,
             logoSize: Number(userSettings.logoSize || DEFAULT_BRAND_SETTINGS.logoSize),
             titleText: userSettings.titleText || DEFAULT_BRAND_SETTINGS.titleText,
@@ -154,6 +211,23 @@ export const getBrandSettings = (userSettings?: Record<string, string>, globalSe
             enableAdminLogo: userSettings.enableAdminLogo !== undefined ? (String(userSettings.enableAdminLogo) === 'true' || String(userSettings.enableAdminLogo) === '1') : DEFAULT_BRAND_SETTINGS.enableAdminLogo,
             enableHeaderLogo: userSettings.enableHeaderLogo !== undefined ? (String(userSettings.enableHeaderLogo) === 'true' || String(userSettings.enableHeaderLogo) === '1') : DEFAULT_BRAND_SETTINGS.enableHeaderLogo,
             enableFooterLogo: userSettings.enableFooterLogo !== undefined ? (String(userSettings.enableFooterLogo) === 'true' || String(userSettings.enableFooterLogo) === '1') : DEFAULT_BRAND_SETTINGS.enableFooterLogo,
+            footerCompanyName: userSettings.footerCompanyName || DEFAULT_BRAND_SETTINGS.footerCompanyName,
+            footerDescription: userSettings.footerDescription || DEFAULT_BRAND_SETTINGS.footerDescription,
+            footerContactEmail: userSettings.footerContactEmail || DEFAULT_BRAND_SETTINGS.footerContactEmail,
+            footerContactPhone: userSettings.footerContactPhone || DEFAULT_BRAND_SETTINGS.footerContactPhone,
+            footerContactAddress: userSettings.footerContactAddress || DEFAULT_BRAND_SETTINGS.footerContactAddress,
+            footerSocialFacebook: userSettings.footerSocialFacebook || DEFAULT_BRAND_SETTINGS.footerSocialFacebook,
+            footerSocialTwitter: userSettings.footerSocialTwitter || DEFAULT_BRAND_SETTINGS.footerSocialTwitter,
+            footerSocialLinkedin: userSettings.footerSocialLinkedin || DEFAULT_BRAND_SETTINGS.footerSocialLinkedin,
+            footerSocialInstagram: userSettings.footerSocialInstagram || DEFAULT_BRAND_SETTINGS.footerSocialInstagram,
+            footerProductTitle: userSettings.footerProductTitle || DEFAULT_BRAND_SETTINGS.footerProductTitle,
+            footerCompanyTitle: userSettings.footerCompanyTitle || DEFAULT_BRAND_SETTINGS.footerCompanyTitle,
+            footerSupportTitle: userSettings.footerSupportTitle || DEFAULT_BRAND_SETTINGS.footerSupportTitle,
+            footerLegalTitle: userSettings.footerLegalTitle || DEFAULT_BRAND_SETTINGS.footerLegalTitle,
+            footerProductLinks: userSettings.footerProductLinks || DEFAULT_BRAND_SETTINGS.footerProductLinks,
+            footerCompanyLinks: userSettings.footerCompanyLinks || DEFAULT_BRAND_SETTINGS.footerCompanyLinks,
+            footerSupportLinks: userSettings.footerSupportLinks || DEFAULT_BRAND_SETTINGS.footerSupportLinks,
+            footerLegalLinks: userSettings.footerLegalLinks || DEFAULT_BRAND_SETTINGS.footerLegalLinks,
         };
     }
 
@@ -172,7 +246,7 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
     const [settings, setSettings] = useState<BrandSettings>(() => getBrandSettings(currentGlobalSettings || userSettings, currentGlobalSettings));
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [activeSection, setActiveSection] = useState<'logos' | 'text' | 'theme'>('logos');
+    const [activeSection, setActiveSection] = useState<'logos' | 'text' | 'theme' | 'footer'>('logos');
 
     // Get theme hooks
     const {
@@ -218,14 +292,12 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
     }, [currentGlobalSettings, userSettings, isSaving]);
 
     // Handle input changes
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setSettings(prev => ({ ...prev, [name]: value }));
 
-        // Update brand context if the input is for a logo
-        if (['logoLight', 'logoDark', 'favicon'].includes(name)) {
-            updateBrandSettings({ [name]: value });
-        }
+        // Update brand context
+        updateBrandSettings({ [name]: value });
     };
 
 
@@ -265,6 +337,7 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
     const [logoErrors, setLogoErrors] = useState({
         logoDark: false,
         logoLight: false,
+        logoFooter: false,
         favicon: false
     });
 
@@ -353,12 +426,15 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
             // Silently handle storage errors
         }
 
-        // Update brand context with all settings including theme
+        // Update brand context with all settings including theme and footer
         updateBrandSettings({
             logoLight: settings.logoLight,
             logoDark: settings.logoDark,
+            logoFooter: settings.logoFooter,
             favicon: settings.favicon,
             logoSize: settings.logoSize,
+            titleText: settings.titleText,
+            footerText: settings.footerText,
             themeColor: settings.themeColor,
             customColor: settings.customColor,
             themeMode: settings.themeMode,
@@ -375,6 +451,23 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
             enableAdminLogo: settings.enableAdminLogo,
             enableHeaderLogo: settings.enableHeaderLogo,
             enableFooterLogo: settings.enableFooterLogo,
+            footerCompanyName: settings.footerCompanyName,
+            footerDescription: settings.footerDescription,
+            footerContactEmail: settings.footerContactEmail,
+            footerContactPhone: settings.footerContactPhone,
+            footerContactAddress: settings.footerContactAddress,
+            footerSocialFacebook: settings.footerSocialFacebook,
+            footerSocialTwitter: settings.footerSocialTwitter,
+            footerSocialLinkedin: settings.footerSocialLinkedin,
+            footerSocialInstagram: settings.footerSocialInstagram,
+            footerProductTitle: settings.footerProductTitle,
+            footerCompanyTitle: settings.footerCompanyTitle,
+            footerSupportTitle: settings.footerSupportTitle,
+            footerLegalTitle: settings.footerLegalTitle,
+            footerProductLinks: settings.footerProductLinks,
+            footerCompanyLinks: settings.footerCompanyLinks,
+            footerSupportLinks: settings.footerSupportLinks,
+            footerLegalLinks: settings.footerLegalLinks,
         });
 
         // Save to database using Inertia
@@ -447,6 +540,15 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
                                     >
                                         <Palette className="h-4 w-4 mr-2" />
                                         {t("Theme")}
+                                    </Button>
+                                    <Button
+                                        variant={activeSection === 'footer' ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => setActiveSection('footer')}
+                                        className="flex-1"
+                                    >
+                                        <PanelBottom className="h-4 w-4 mr-2" />
+                                        {t("Footer")}
                                     </Button>
                                 </div>
 
@@ -963,6 +1065,348 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Footer Section */}
+                                {activeSection === 'footer' && (
+                                    <div className="space-y-6">
+                                        {/* Logo Website Footer */}
+                                        <div className="space-y-4 p-5 border rounded-2xl bg-card shadow-sm">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <Label className="text-base font-bold">{t("Logo Website Footer")}</Label>
+                                                    <p className="text-xs text-muted-foreground">{t("Hiển thị logo ở góc trái chân trang chủ website")}</p>
+                                                </div>
+                                                <Switch
+                                                    id="footerLogoToggle"
+                                                    checked={settings.enableFooterLogo !== false}
+                                                    onCheckedChange={(checked) => handleSettingChange('enableFooterLogo', checked)}
+                                                />
+                                            </div>
+
+                                            {settings.enableFooterLogo !== false && (
+                                                <div className="space-y-3 pt-3 border-t">
+                                                    <div className="border rounded-xl p-4 flex items-center justify-center bg-gray-950 h-32 relative group">
+                                                        {settings.logoFooter && !logoErrors.logoFooter ? (
+                                                            <>
+                                                                <img
+                                                                    key={`preview-footer-${Date.now()}`}
+                                                                    src={getImagePath(settings.logoFooter)}
+                                                                    alt="Footer Logo"
+                                                                    className="max-h-full max-w-full object-contain"
+                                                                    onError={() => setLogoErrors(prev => ({ ...prev, logoFooter: true }))}
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        handleMediaSelect('logoFooter', '');
+                                                                        setLogoErrors(prev => ({ ...prev, logoFooter: false }));
+                                                                    }}
+                                                                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full shadow-md transition-all duration-200 opacity-90 group-hover:opacity-100 hover:scale-110"
+                                                                    title={t("Xoá logo")}
+                                                                >
+                                                                    <X className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <div className="text-gray-400 flex flex-col items-center gap-1.5 text-center">
+                                                                <div className="h-10 w-24 bg-gray-800 flex items-center justify-center rounded border border-dashed border-gray-700">
+                                                                    <span className="font-semibold text-xs text-gray-300">{t("Logo Footer")}</span>
+                                                                </div>
+                                                                <span className="text-[11px] text-gray-500">{t("Chưa chọn logo (hệ thống sẽ hiển thị tên văn phòng)")}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <div className="flex-1">
+                                                            <MediaPicker
+                                                                label=""
+                                                                value={settings.logoFooter}
+                                                                onChange={(url) => handleMediaSelect('logoFooter', url)}
+                                                                placeholder={t("Chọn logo chân trang...")}
+                                                                showPreview={false}
+                                                                defaultValue={DEFAULT_LOGOS.logoFooter}
+                                                            />
+                                                        </div>
+                                                        <label htmlFor="file-logoFooter" className="px-3 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-md text-xs font-medium cursor-pointer border flex items-center gap-1.5 shrink-0 shadow-sm" title={t("Tải ảnh từ máy tính")}>
+                                                            <Upload className="w-3.5 h-3.5" />
+                                                            <span>{t("Tải từ máy")}</span>
+                                                            <input
+                                                                id="file-logoFooter"
+                                                                type="file"
+                                                                accept="image/*"
+                                                                className="hidden"
+                                                                onChange={(e) => e.target.files?.[0] && handleFileUpload('logoFooter', e.target.files[0])}
+                                                            />
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Thông tin thương hiệu & Giới thiệu */}
+                                        <div className="space-y-4 p-5 border rounded-2xl bg-card shadow-sm">
+                                            <h4 className="font-bold text-sm flex items-center gap-2 text-primary">
+                                                <FileText className="w-4 h-4" />
+                                                {t("Thông tin thương hiệu & Giới thiệu")}
+                                            </h4>
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <Label htmlFor="footerCompanyName" className="text-xs font-semibold">{t("Tên thương hiệu / Công ty ở Footer")}</Label>
+                                                    <Input
+                                                        id="footerCompanyName"
+                                                        name="footerCompanyName"
+                                                        value={settings.footerCompanyName || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder="Văn Phòng Luật Sư Advocate & Partners"
+                                                        className="mt-1"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label htmlFor="footerDescription" className="text-xs font-semibold">{t("Mô tả / Lời giới thiệu chân trang")}</Label>
+                                                    <Textarea
+                                                        id="footerDescription"
+                                                        name="footerDescription"
+                                                        value={settings.footerDescription || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder="Cung cấp giải pháp pháp lý toàn diện, bảo vệ quyền lợi tối đa cho cá nhân và doanh nghiệp."
+                                                        className="mt-1 min-h-[75px] leading-relaxed"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Thông tin liên hệ */}
+                                        <div className="space-y-4 p-5 border rounded-2xl bg-card shadow-sm">
+                                            <h4 className="font-bold text-sm flex items-center gap-2 text-primary">
+                                                <Phone className="w-4 h-4" />
+                                                {t("Thông tin liên hệ chân trang")}
+                                            </h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <Label htmlFor="footerContactEmail" className="text-xs font-semibold flex items-center gap-1.5">
+                                                        <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                                                        {t("Email liên hệ")}
+                                                    </Label>
+                                                    <Input
+                                                        id="footerContactEmail"
+                                                        name="footerContactEmail"
+                                                        type="email"
+                                                        value={settings.footerContactEmail || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder="contact@advocate-law.vn"
+                                                        className="mt-1"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label htmlFor="footerContactPhone" className="text-xs font-semibold flex items-center gap-1.5">
+                                                        <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+                                                        {t("Số điện thoại / Hotline")}
+                                                    </Label>
+                                                    <Input
+                                                        id="footerContactPhone"
+                                                        name="footerContactPhone"
+                                                        value={settings.footerContactPhone || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder="+84 (028) 3822 1234"
+                                                        className="mt-1"
+                                                    />
+                                                </div>
+                                                <div className="md:col-span-2">
+                                                    <Label htmlFor="footerContactAddress" className="text-xs font-semibold flex items-center gap-1.5">
+                                                        <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                                                        {t("Địa chỉ văn phòng")}
+                                                    </Label>
+                                                    <Input
+                                                        id="footerContactAddress"
+                                                        name="footerContactAddress"
+                                                        value={settings.footerContactAddress || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder="Tầng 12, Tòa nhà Bitexco, Q.1, TP. Hồ Chí Minh"
+                                                        className="mt-1"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Bản quyền & Mạng xã hội */}
+                                        <div className="space-y-4 p-5 border rounded-2xl bg-card shadow-sm">
+                                            <h4 className="font-bold text-sm flex items-center gap-2 text-primary">
+                                                <Globe className="w-4 h-4" />
+                                                {t("Bản quyền & Mạng xã hội")}
+                                            </h4>
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <Label htmlFor="footerText" className="text-xs font-semibold">{t("Văn bản bản quyền (Copyright)")}</Label>
+                                                    <Input
+                                                        id="footerText"
+                                                        name="footerText"
+                                                        value={settings.footerText || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder="© 2026 Advocate & Partners. All rights reserved."
+                                                        className="mt-1"
+                                                    />
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                                                    <div>
+                                                        <Label htmlFor="footerSocialFacebook" className="text-xs font-semibold flex items-center gap-1.5">
+                                                            <Facebook className="w-3.5 h-3.5 text-blue-500" />
+                                                            {t("Facebook URL")}
+                                                        </Label>
+                                                        <Input
+                                                            id="footerSocialFacebook"
+                                                            name="footerSocialFacebook"
+                                                            value={settings.footerSocialFacebook || ''}
+                                                            onChange={handleInputChange}
+                                                            placeholder="https://facebook.com/..."
+                                                            className="mt-1 text-xs"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label htmlFor="footerSocialTwitter" className="text-xs font-semibold flex items-center gap-1.5">
+                                                            <Twitter className="w-3.5 h-3.5 text-sky-400" />
+                                                            {t("Twitter / X URL")}
+                                                        </Label>
+                                                        <Input
+                                                            id="footerSocialTwitter"
+                                                            name="footerSocialTwitter"
+                                                            value={settings.footerSocialTwitter || ''}
+                                                            onChange={handleInputChange}
+                                                            placeholder="https://twitter.com/..."
+                                                            className="mt-1 text-xs"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label htmlFor="footerSocialLinkedin" className="text-xs font-semibold flex items-center gap-1.5">
+                                                            <Linkedin className="w-3.5 h-3.5 text-blue-700" />
+                                                            {t("LinkedIn URL")}
+                                                        </Label>
+                                                        <Input
+                                                            id="footerSocialLinkedin"
+                                                            name="footerSocialLinkedin"
+                                                            value={settings.footerSocialLinkedin || ''}
+                                                            onChange={handleInputChange}
+                                                            placeholder="https://linkedin.com/in/..."
+                                                            className="mt-1 text-xs"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label htmlFor="footerSocialInstagram" className="text-xs font-semibold flex items-center gap-1.5">
+                                                            <Instagram className="w-3.5 h-3.5 text-pink-500" />
+                                                            {t("Instagram URL")}
+                                                        </Label>
+                                                        <Input
+                                                            id="footerSocialInstagram"
+                                                            name="footerSocialInstagram"
+                                                            value={settings.footerSocialInstagram || ''}
+                                                            onChange={handleInputChange}
+                                                            placeholder="https://instagram.com/..."
+                                                            className="mt-1 text-xs"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Các cột đường dẫn chân trang */}
+                                        <div className="space-y-4 p-5 border rounded-2xl bg-card shadow-sm">
+                                            <div>
+                                                <h4 className="font-bold text-sm flex items-center gap-2 text-primary">
+                                                    <LinkIcon className="w-4 h-4" />
+                                                    {t("Các cột đường dẫn chân trang (4 Cột)")}
+                                                </h4>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {t("Nhập mỗi dòng 1 liên kết theo cú pháp: Tên hiển thị | Đường dẫn URL (Ví dụ: Tư vấn | /about hoặc Trang chủ | /)")}
+                                                </p>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {/* Cột 1 */}
+                                                <div className="space-y-2 border p-3.5 rounded-xl bg-muted/20">
+                                                    <Label htmlFor="footerProductTitle" className="text-xs font-bold text-primary">{t("Cột 1: Tiêu đề")}</Label>
+                                                    <Input
+                                                        id="footerProductTitle"
+                                                        name="footerProductTitle"
+                                                        value={settings.footerProductTitle || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder="Dịch vụ & Sản phẩm"
+                                                    />
+                                                    <Label htmlFor="footerProductLinks" className="text-xs text-muted-foreground block pt-1">{t("Danh sách đường dẫn (Mỗi dòng 1 link)")}</Label>
+                                                    <Textarea
+                                                        id="footerProductLinks"
+                                                        name="footerProductLinks"
+                                                        value={settings.footerProductLinks || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder={"Tư vấn doanh nghiệp | #\nTranh tụng dân sự | #\nBảo hộ sở hữu trí tuệ | #"}
+                                                        className="font-mono text-xs min-h-[90px]"
+                                                    />
+                                                </div>
+
+                                                {/* Cột 2 */}
+                                                <div className="space-y-2 border p-3.5 rounded-xl bg-muted/20">
+                                                    <Label htmlFor="footerCompanyTitle" className="text-xs font-bold text-primary">{t("Cột 2: Tiêu đề")}</Label>
+                                                    <Input
+                                                        id="footerCompanyTitle"
+                                                        name="footerCompanyTitle"
+                                                        value={settings.footerCompanyTitle || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder="Về chúng tôi"
+                                                    />
+                                                    <Label htmlFor="footerCompanyLinks" className="text-xs text-muted-foreground block pt-1">{t("Danh sách đường dẫn (Mỗi dòng 1 link)")}</Label>
+                                                    <Textarea
+                                                        id="footerCompanyLinks"
+                                                        name="footerCompanyLinks"
+                                                        value={settings.footerCompanyLinks || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder={"Trang chủ | /\nLuật sư tư vấn | #about\nĐội ngũ luật sư | #team\nLiên hệ | #contact"}
+                                                        className="font-mono text-xs min-h-[90px]"
+                                                    />
+                                                </div>
+
+                                                {/* Cột 3 */}
+                                                <div className="space-y-2 border p-3.5 rounded-xl bg-muted/20">
+                                                    <Label htmlFor="footerSupportTitle" className="text-xs font-bold text-primary">{t("Cột 3: Tiêu đề")}</Label>
+                                                    <Input
+                                                        id="footerSupportTitle"
+                                                        name="footerSupportTitle"
+                                                        value={settings.footerSupportTitle || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder="Hỗ trợ khách hàng"
+                                                    />
+                                                    <Label htmlFor="footerSupportLinks" className="text-xs text-muted-foreground block pt-1">{t("Danh sách đường dẫn (Mỗi dòng 1 link)")}</Label>
+                                                    <Textarea
+                                                        id="footerSupportLinks"
+                                                        name="footerSupportLinks"
+                                                        value={settings.footerSupportLinks || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder={"Trung tâm hỗ trợ | #\nTài liệu pháp lý | #\nĐặt lịch hẹn tư vấn | #"}
+                                                        className="font-mono text-xs min-h-[90px]"
+                                                    />
+                                                </div>
+
+                                                {/* Cột 4 */}
+                                                <div className="space-y-2 border p-3.5 rounded-xl bg-muted/20">
+                                                    <Label htmlFor="footerLegalTitle" className="text-xs font-bold text-primary">{t("Cột 4: Tiêu đề")}</Label>
+                                                    <Input
+                                                        id="footerLegalTitle"
+                                                        name="footerLegalTitle"
+                                                        value={settings.footerLegalTitle || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder="Chính sách & Pháp lý"
+                                                    />
+                                                    <Label htmlFor="footerLegalLinks" className="text-xs text-muted-foreground block pt-1">{t("Danh sách đường dẫn (Mỗi dòng 1 link)")}</Label>
+                                                    <Textarea
+                                                        id="footerLegalLinks"
+                                                        name="footerLegalLinks"
+                                                        value={settings.footerLegalLinks || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder={"Chính sách bảo mật | #\nĐiều khoản dịch vụ | #\nQuy tắc đạo đức nghề nghiệp | #"}
+                                                        className="font-mono text-xs min-h-[90px]"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Preview Column */}
@@ -971,17 +1415,79 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
                                     <div className="border rounded-md p-4">
                                         <div className="flex items-center gap-2 mb-4">
                                             <Palette className="h-4 w-4" />
-                                            <h3 className="font-medium">{t("Live Preview")}</h3>
+                                            <h3 className="font-medium">{activeSection === 'footer' ? t("Footer Live Preview") : t("Live Preview")}</h3>
                                         </div>
 
-                                        {/* Comprehensive Theme Preview */}
-                                        <ThemePreview />
+                                        {activeSection === 'footer' ? (
+                                            <div className="space-y-4">
+                                                {/* Mini Footer Box */}
+                                                <div className="bg-slate-900 text-white rounded-xl p-4 text-xs space-y-3 shadow-inner">
+                                                    <div className="flex items-center gap-2">
+                                                        {settings.enableFooterLogo !== false && settings.logoFooter ? (
+                                                            <img
+                                                                src={getImagePath(settings.logoFooter)}
+                                                                alt="Footer Logo"
+                                                                className="h-6 object-contain"
+                                                            />
+                                                        ) : (
+                                                            <div className="font-bold text-sm text-primary tracking-wide">
+                                                                {settings.footerCompanyName || settings.titleText || 'Văn Phòng Luật'}
+                                                            </div>
+                                                        )}
+                                                    </div>
 
-                                        {/* Text Preview */}
-                                        <div className="mt-4 pt-4 border-t">
-                                            <div className="text-xs mb-2 text-muted-foreground">{t("Title:")} <span className="font-medium text-foreground">{settings.titleText}</span></div>
-                                            <div className="text-xs text-muted-foreground">{t("Footer:")} <span className="font-medium text-foreground">{settings.footerText}</span></div>
-                                        </div>
+                                                    <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">
+                                                        {settings.footerDescription || t("Cung cấp giải pháp pháp lý toàn diện...")}
+                                                    </p>
+
+                                                    <div className="space-y-1 text-[11px] text-gray-300 pt-2 border-t border-slate-800">
+                                                        {settings.footerContactEmail && (
+                                                            <div className="flex items-center gap-1.5 truncate">
+                                                                <Mail className="w-3 h-3 text-primary shrink-0" />
+                                                                <span className="truncate">{settings.footerContactEmail}</span>
+                                                            </div>
+                                                        )}
+                                                        {settings.footerContactPhone && (
+                                                            <div className="flex items-center gap-1.5 truncate">
+                                                                <Phone className="w-3 h-3 text-primary shrink-0" />
+                                                                <span>{settings.footerContactPhone}</span>
+                                                            </div>
+                                                        )}
+                                                        {settings.footerContactAddress && (
+                                                            <div className="flex items-center gap-1.5 truncate">
+                                                                <MapPin className="w-3 h-3 text-primary shrink-0" />
+                                                                <span className="truncate">{settings.footerContactAddress}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-gray-400">
+                                                        <span className="truncate">{settings.footerText || "© 2026 Advocate & Partners"}</span>
+                                                        <div className="flex gap-1.5 shrink-0">
+                                                            {settings.footerSocialFacebook && <Facebook className="w-3 h-3 text-blue-400" />}
+                                                            {settings.footerSocialTwitter && <Twitter className="w-3 h-3 text-sky-400" />}
+                                                            {settings.footerSocialLinkedin && <Linkedin className="w-3 h-3 text-blue-600" />}
+                                                            {settings.footerSocialInstagram && <Instagram className="w-3 h-3 text-pink-400" />}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="text-[11px] text-muted-foreground bg-muted/30 p-2.5 rounded-lg border">
+                                                    💡 {t("Mẹo: Dữ liệu này sẽ tự động cập nhật chân trang Landing Page ngay khi bạn bấm 'Lưu thay đổi'.")}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {/* Comprehensive Theme Preview */}
+                                                <ThemePreview />
+
+                                                {/* Text Preview */}
+                                                <div className="mt-4 pt-4 border-t">
+                                                    <div className="text-xs mb-2 text-muted-foreground">{t("Title:")} <span className="font-medium text-foreground">{settings.titleText}</span></div>
+                                                    <div className="text-xs text-muted-foreground">{t("Footer:")} <span className="font-medium text-foreground">{settings.footerText}</span></div>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>

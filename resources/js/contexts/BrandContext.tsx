@@ -112,6 +112,7 @@ export function BrandProvider({ children, globalSettings, user }: { children: Re
       ...updatedSettings,
       logoDark: getImagePath(updatedSettings.logoDark || (isDemo ? '/storage/media/logos/logo-dark.png' : '')),
       logoLight: getImagePath(updatedSettings.logoLight || (isDemo ? '/storage/media/logos/logo-light.png' : '')),
+      logoFooter: getImagePath(updatedSettings.logoFooter || (isDemo ? '/storage/media/logos/logo-light.png' : '')),
       favicon: getImagePath(updatedSettings.favicon || (isDemo ? '/storage/media/logos/favicon.png' : ''))
     });
   }, [globalSettings, user]);
@@ -126,6 +127,9 @@ export function BrandProvider({ children, globalSettings, user }: { children: Re
     }
     if (newSettings.logoLight) {
       processedSettings.logoLight = getImagePath(newSettings.logoLight);
+    }
+    if (newSettings.logoFooter) {
+      processedSettings.logoFooter = getImagePath(newSettings.logoFooter);
     }
     if (newSettings.favicon) {
       processedSettings.favicon = getImagePath(newSettings.favicon);
