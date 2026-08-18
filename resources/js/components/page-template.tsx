@@ -1,4 +1,5 @@
 import { Head, usePage } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ export function PageTemplate({
   noPadding = false,
   breadcrumbs
 }: PageTemplateProps) {
+  const { t } = useTranslation();
   // Default breadcrumbs if none provided
   const pageBreadcrumbs: BreadcrumbItem[] = breadcrumbs || [
     {
@@ -41,9 +43,12 @@ export function PageTemplate({
     },
   ];
 
+  const appTitle = (usePage().props as any).globalSettings?.titleText || 'Văn Phòng Luật Sư Advocate & Partners';
+  const fullTabTitle = `${t(title)} - ${t(appTitle)}`;
+
   return (
     <AppLayout breadcrumbs={pageBreadcrumbs}>
-      <Head title={`${title} - ${(usePage().props as any).globalSettings?.titleText || 'Advocate'}`} />
+      <Head title={fullTabTitle} />
 
       <div className="flex flex-1 flex-col gap-4 pt-4 pb-[50px] px-[50px]">
         {/* Header with action buttons */}

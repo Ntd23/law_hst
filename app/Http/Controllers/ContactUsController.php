@@ -38,6 +38,13 @@ class ContactUsController extends Controller
         ]);
     }
 
+    public function show(contact $contact)
+    {
+        return Inertia::render('contact-us/show', [
+            'contact' => $contact,
+        ]);
+    }
+
     public function destroy(contact $contact)
     {
         $contact->delete();

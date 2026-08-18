@@ -188,32 +188,30 @@ export default function LegalNewsSection({ brandColor = '#3b82f6' }: LegalNewsSe
         <section id="legal-news" className="pt-16 pb-8 bg-gray-50 dark:bg-gray-900/50 border-t border-b border-gray-200/60 dark:border-gray-800 transition-colors overflow-hidden">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Section Header */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
-                    <div className="max-w-2xl">
-                        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 mb-4 border border-blue-200 dark:border-blue-800">
-                            <Newspaper className="w-3.5 h-3.5" />
-                            <span>{t('Legal News & Insights')}</span>
-                        </div>
-                        <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-                            {t('Stay Informed With Latest Legal Updates')}
-                        </h2>
-                        <p className="mt-3 text-base text-gray-600 dark:text-gray-300 leading-relaxed">
-                            {t('Explore expert commentary, legislative updates, and comprehensive guides curated by top attorneys.')}
-                        </p>
+                <div className="mb-10 space-y-4">
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                        <Newspaper className="w-3.5 h-3.5" />
+                        <span>{t('Legal News & Insights')}</span>
                     </div>
+                    <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight w-full">
+                        {t('Stay Informed With Latest Legal Updates')}
+                    </h2>
+                    <p className="text-base text-gray-600 dark:text-gray-300 leading-relaxed w-full">
+                        {t('Explore expert commentary, legislative updates, and comprehensive guides curated by top attorneys.')}
+                    </p>
 
-                    {/* Category Filter Tabs & Slider Controls */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                        {/* Categories Dropdown or Pills */}
-                        <div className="flex flex-wrap items-center gap-1.5">
+                    {/* Category Filter Tabs & Navigation Arrows in 1 Row Under Description */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-3">
+                        {/* Category Pills in 1 horizontal row */}
+                        <div className="flex flex-wrap items-center gap-2">
                             {categories.map(cat => (
                                 <button
                                     key={cat.key}
                                     onClick={() => setSelectedCategory(cat.key)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                                    className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
                                         selectedCategory === cat.key
-                                            ? 'bg-primary text-white shadow-sm shadow-primary/25'
-                                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                            ? 'bg-primary text-white shadow-md shadow-primary/25'
+                                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
                                     }`}
                                 >
                                     {cat.label}
@@ -223,18 +221,18 @@ export default function LegalNewsSection({ brandColor = '#3b82f6' }: LegalNewsSe
 
                         {/* Navigation Arrows */}
                         {filteredArticles.length > itemsPerPage && (
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                                 <button
                                     onClick={handlePrev}
                                     aria-label="Previous articles"
-                                    className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-primary hover:text-white hover:border-primary dark:hover:bg-primary dark:hover:border-primary transition-all duration-200 shadow-sm"
+                                    className="p-2.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-primary hover:text-white hover:border-primary dark:hover:bg-primary dark:hover:border-primary transition-all duration-200 shadow-sm cursor-pointer"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
                                 </button>
                                 <button
                                     onClick={handleNext}
                                     aria-label="Next articles"
-                                    className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-primary hover:text-white hover:border-primary dark:hover:bg-primary dark:hover:border-primary transition-all duration-200 shadow-sm"
+                                    className="p-2.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-primary hover:text-white hover:border-primary dark:hover:bg-primary dark:hover:border-primary transition-all duration-200 shadow-sm cursor-pointer"
                                 >
                                     <ChevronRight className="w-4 h-4" />
                                 </button>

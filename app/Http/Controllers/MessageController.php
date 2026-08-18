@@ -182,11 +182,11 @@ class MessageController extends Controller
         ]);
 
         $clients = $clients->map(fn($c) => [
-            'id' => $c->user_id,
+            'id' => $c->user_id ?? $c->id,
             'name' => $c->name,
             'email' => $c->email,
             'type' => 'client',
-            'avatar' => $c->user->avatar,
+            'avatar' => $c->user?->avatar,
         ]);
 
         $users = $users->concat($clients)->unique('email')->sortBy('name')->values();
@@ -197,8 +197,6 @@ class MessageController extends Controller
                 str_contains(strtolower($u['name']), $search) ||
                 str_contains(strtolower($u['email']), $search)
             )->values();
-        } else {
-            $users = collect();
         }
 
         return Inertia::render('communication/messages/index', [
