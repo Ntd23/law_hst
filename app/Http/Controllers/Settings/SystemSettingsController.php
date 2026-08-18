@@ -67,6 +67,7 @@ class SystemSettingsController extends Controller
                 'settings' => 'required|array',
                 'settings.logoDark' => 'nullable|string',
                 'settings.logoLight' => 'nullable|string',
+                'settings.logoFooter' => 'nullable|string',
                 'settings.favicon' => 'nullable|string',
                 'settings.logoSize' => 'nullable|numeric|min:16|max:200',
                 'settings.titleText' => 'nullable|string|max:255',
@@ -84,9 +85,12 @@ class SystemSettingsController extends Controller
                 'settings.bannerImage' => 'nullable|string',
                 'settings.bannerEnabled' => 'nullable|boolean',
                 'settings.bannerLayout' => 'nullable|string|in:full,split-right,split-left',
+                'settings.enableAdminLogo' => 'nullable|boolean',
+                'settings.enableHeaderLogo' => 'nullable|boolean',
+                'settings.enableFooterLogo' => 'nullable|boolean',
             ]);
 
-            $imageKeys = ['logoDark', 'logoLight', 'favicon', 'bannerImage'];
+            $imageKeys = ['logoDark', 'logoLight', 'logoFooter', 'favicon', 'bannerImage'];
 
             $userId = auth()->id();
             foreach ($validated['settings'] as $key => $value) {
