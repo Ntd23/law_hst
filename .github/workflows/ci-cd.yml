@@ -92,8 +92,32 @@ jobs:
             cd "${{ secrets.DEPLOY_PATH }}"
             git fetch origin main
             git pull --ff-only origin main
+
+            prepare_laravel_storage() {
+              mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+
+              WEB_USER="hisotechgroup"
+
+              if ! id "$WEB_USER" >/dev/null 2>&1; then
+                echo "Configured web user '$WEB_USER' does not exist on the server."
+                exit 1
+              fi
+
+              WEB_GROUP="$(id -gn "$WEB_USER")"
+
+              if [ "$(id -u)" -ne 0 ]; then
+                echo "The deploy user must be root to update Laravel storage ownership."
+                exit 1
+              fi
+
+              chown -R "$WEB_USER:$WEB_GROUP" storage bootstrap/cache
+              chmod -R ug+rwX storage bootstrap/cache
+            }
+
+            prepare_laravel_storage
             npm ci
             npm run build
             php artisan migrate --force
             php artisan optimize:clear
+            prepare_laravel_storage
             php artisan optimize
