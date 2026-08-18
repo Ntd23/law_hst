@@ -217,6 +217,34 @@ export default function MediaLibraryModal({
 
 
 
+  const handleDeleteMedia = async (id: number, name: string) => {
+    if (!confirm(`Bạn có chắc chắn muốn xoá file "${name}" khỏi hệ thống?`)) return;
+
+    try {
+      const response = await fetch(route('api.media.destroy', id), {
+        method: 'DELETE',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        toast.success('Đã xoá file thành công');
+        setMedia(prev => prev.filter(item => item.id !== id));
+        setFilteredMedia(prev => prev.filter(item => item.id !== id));
+        setSelectedItems(prev => prev.filter(url => !url.includes(String(id))));
+      } else {
+        const data = await response.json();
+        toast.error(data.message || 'Không thể xoá file này');
+      }
+    } catch (error) {
+      toast.error('Lỗi khi xoá file');
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden">
@@ -384,20 +412,34 @@ export default function MediaLibraryModal({
                           </div>
                         )}
 
-                        {/* Copy Link Button */}
-                        {canViewMedia && (
+                        {/* Action Buttons (Copy link & Delete X) */}
+                        <div className="absolute top-1.5 right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                          {canViewMedia && (
+                            <button
+                              type="button"
+                              className="bg-white/90 hover:bg-white text-gray-700 rounded p-1 cursor-pointer shadow-md hover:scale-110 transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(item.url);
+                                toast.success('Link copied to clipboard');
+                              }}
+                              title="Copy link"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </button>
+                          )}
                           <button
-                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 hover:bg-white rounded p-1 cursor-pointer"
+                            type="button"
+                            className="bg-red-500 hover:bg-red-600 text-white rounded p-1 cursor-pointer shadow-md hover:scale-110 transition-all"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigator.clipboard.writeText(item.url);
-                              toast.success('Link copied to clipboard');
+                              handleDeleteMedia(item.id, item.name);
                             }}
-                            title="Copy link"
+                            title="Xoá file khỏi hệ thống"
                           >
-                            <Copy className="h-3 w-3 text-gray-600" />
+                            <X className="h-3 w-3" />
                           </button>
-                        )}
+                        </div>
 
                         {/* Hover Overlay */}
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />

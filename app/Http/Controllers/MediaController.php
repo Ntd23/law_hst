@@ -89,7 +89,6 @@ class MediaController extends Controller
         ];
 
         $media = [];
-        $baseUrl = request()->getSchemeAndHttpHost();
 
         foreach ($demoImages as $index => $image) {
             if (file_exists(public_path('storage/media/' . $image))) {
@@ -97,8 +96,8 @@ class MediaController extends Controller
                     'id' => $index + 1,
                     'name' => $this->getDemoImageName($image),
                     'file_name' => $image,
-                    'url' => config('app.url') . '/public/storage/media/' . $image,
-                    'thumb_url' => config('app.url') . '/public/storage/media/' . $image,
+                    'url' => '/storage/media/' . $image,
+                    'thumb_url' => '/storage/media/' . $image,
                     'size' => filesize(public_path('storage/media/' . $image)),
                     'mime_type' => 'image/png',
                     'user_id' => 1,
@@ -135,12 +134,8 @@ class MediaController extends Controller
 
     private function getFullUrl($url)
     {
-        if (str_starts_with($url, 'http')) {
-            return $url;
-        }
-
-        $baseUrl = request()->getSchemeAndHttpHost();
-        return $baseUrl . $url;
+        if (!$url) return '';
+        return convertToRelativePath($url);
     }
 
     private function getUserFriendlyError(\Exception $e, $fileName): string

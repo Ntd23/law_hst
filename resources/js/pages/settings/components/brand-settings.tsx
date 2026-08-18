@@ -11,7 +11,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/components/custom-toast';
 import { Switch } from '@/components/ui/switch';
-import { Palette, Save, Upload, Check, Layout, Moon, FileText, Sidebar as SidebarIcon, Image as ImageIcon, Link as LinkIcon } from 'lucide-react';
+import { Palette, Save, Upload, Check, Layout, Moon, FileText, Sidebar as SidebarIcon, Image as ImageIcon, Link as LinkIcon, X } from 'lucide-react';
 import { SettingsSection } from '@/components/settings-section';
 import { SidebarPreview } from '@/components/sidebar-preview';
 import MediaPicker from '@/components/MediaPicker';
@@ -457,15 +457,28 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
                                             <div className="space-y-3">
                                                 <Label>{t("Logo Dark")}</Label>
                                                 <div className="flex flex-col gap-3">
-                                                    <div className="border rounded-md p-4 flex items-center justify-center dark:bg-white  bg-muted/30 h-32">
+                                                    <div className="border rounded-md p-4 flex items-center justify-center dark:bg-white bg-muted/30 h-32 relative group">
                                                         {settings.logoDark && !logoErrors.logoDark ? (
-                                                            <img
-                                                                key={`preview-dark-${Date.now()}`}
-                                                                src={getImagePath(settings.logoDark)}
-                                                                alt="Dark Logo"
-                                                                className="max-h-full max-w-full object-contain"
-                                                                onError={() => setLogoErrors(prev => ({ ...prev, logoDark: true }))}
-                                                            />
+                                                            <>
+                                                                <img
+                                                                    key={`preview-dark-${Date.now()}`}
+                                                                    src={getImagePath(settings.logoDark)}
+                                                                    alt="Dark Logo"
+                                                                    className="max-h-full max-w-full object-contain"
+                                                                    onError={() => setLogoErrors(prev => ({ ...prev, logoDark: true }))}
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        handleMediaSelect('logoDark', '');
+                                                                        setLogoErrors(prev => ({ ...prev, logoDark: false }));
+                                                                    }}
+                                                                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full shadow-md transition-all duration-200 opacity-90 group-hover:opacity-100 hover:scale-110"
+                                                                    title={t("Xoá logo")}
+                                                                >
+                                                                    <X className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </>
                                                         ) : (
                                                             <div className="text-muted-foreground flex flex-col items-center gap-2">
                                                                 <div className="h-12 w-24 bg-muted flex items-center justify-center rounded border border-dashed">
@@ -506,15 +519,28 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
                                             <div className="space-y-3">
                                                 <Label>{t("Logo Light")}</Label>
                                                 <div className="flex flex-col gap-3">
-                                                    <div className="border rounded-md p-4 flex items-center justify-center bg-black h-32">
+                                                    <div className="border rounded-md p-4 flex items-center justify-center bg-black h-32 relative group">
                                                         {settings.logoLight && !logoErrors.logoLight ? (
-                                                            <img
-                                                                key={`preview-light-${Date.now()}`}
-                                                                src={getImagePath(settings.logoLight)}
-                                                                alt="Light Logo"
-                                                                className="max-h-full max-w-full object-contain"
-                                                                onError={() => setLogoErrors(prev => ({ ...prev, logoLight: true }))}
-                                                             />
+                                                            <>
+                                                                <img
+                                                                    key={`preview-light-${Date.now()}`}
+                                                                    src={getImagePath(settings.logoLight)}
+                                                                    alt="Light Logo"
+                                                                    className="max-h-full max-w-full object-contain"
+                                                                    onError={() => setLogoErrors(prev => ({ ...prev, logoLight: true }))}
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        handleMediaSelect('logoLight', '');
+                                                                        setLogoErrors(prev => ({ ...prev, logoLight: false }));
+                                                                    }}
+                                                                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full shadow-md transition-all duration-200 opacity-90 group-hover:opacity-100 hover:scale-110"
+                                                                    title={t("Xoá logo")}
+                                                                >
+                                                                    <X className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </>
                                                         ) : (
                                                             <div className="text-muted-foreground flex flex-col items-center gap-2">
                                                                 <div className="h-12 w-24 bg-muted flex items-center justify-center rounded border border-dashed">
@@ -555,15 +581,28 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
                                             <div className="space-y-3">
                                                 <Label>{t("Favicon")}</Label>
                                                 <div className="flex flex-col gap-3">
-                                                    <div className="border rounded-md p-4 flex items-center justify-center bg-muted/30 h-20">
+                                                    <div className="border rounded-md p-4 flex items-center justify-center bg-muted/30 h-20 relative group">
                                                         {settings.favicon && !logoErrors.favicon ? (
-                                                            <img
-                                                                key={`preview-favicon-${Date.now()}`}
-                                                                src={getImagePath(settings.favicon)}
-                                                                alt="Favicon"
-                                                                className="h-16 w-16 object-contain"
-                                                                onError={() => setLogoErrors(prev => ({ ...prev, favicon: true }))}
-                                                             />
+                                                            <>
+                                                                <img
+                                                                    key={`preview-favicon-${Date.now()}`}
+                                                                    src={getImagePath(settings.favicon)}
+                                                                    alt="Favicon"
+                                                                    className="h-16 w-16 object-contain"
+                                                                    onError={() => setLogoErrors(prev => ({ ...prev, favicon: true }))}
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        handleMediaSelect('favicon', '');
+                                                                        setLogoErrors(prev => ({ ...prev, favicon: false }));
+                                                                    }}
+                                                                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full shadow-md transition-all duration-200 opacity-90 group-hover:opacity-100 hover:scale-110"
+                                                                    title={t("Xoá favicon")}
+                                                                >
+                                                                    <X className="w-3 h-3" />
+                                                                </button>
+                                                            </>
                                                         ) : (
                                                             <div className="text-muted-foreground flex flex-col items-center gap-1">
                                                                 <div className="h-10 w-10 bg-muted flex items-center justify-center rounded border border-dashed">
