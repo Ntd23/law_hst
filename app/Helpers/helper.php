@@ -1329,7 +1329,7 @@ if (! function_exists('defaultSettings')) {
             'logoLight' => '/storage/media/logos/logo-light.png',
             'favicon' => '/storage/media/logos/favicon.png',
             'titleText' => 'Advocate',
-            'footerText' => '© 2026 Advocate. All rights reserved.',
+          
             'themeColor' => 'green',
             'customColor' => '#10b77f',
             'sidebarVariant' => 'inset',

@@ -25,6 +25,7 @@ import { Card, CardContent } from '@/components/ui/card';
 export interface BrandSettings {
     logoDark: string;
     logoLight: string;
+    logoFooter?: string;
     favicon: string;
     logoSize: number;
     titleText: string;
@@ -42,12 +43,16 @@ export interface BrandSettings {
     bannerImage?: string;
     bannerEnabled?: boolean;
     bannerLayout?: string;
+    enableAdminLogo?: boolean;
+    enableHeaderLogo?: boolean;
+    enableFooterLogo?: boolean;
 }
 
 // Default brand settings
 export const DEFAULT_BRAND_SETTINGS: BrandSettings = {
     logoDark: '/storage/media/logos/logo-dark.png',
     logoLight: '/storage/media/logos/logo-light.png',
+    logoFooter: '/storage/media/logos/logo-light.png',
     favicon: '/storage/media/logos/favicon.png',
     logoSize: 36,
     titleText: 'WorkDo',
@@ -65,12 +70,16 @@ export const DEFAULT_BRAND_SETTINGS: BrandSettings = {
     bannerImage: '',
     bannerEnabled: true,
     bannerLayout: 'split-right',
+    enableAdminLogo: true,
+    enableHeaderLogo: true,
+    enableFooterLogo: true,
 };
 
 // Default logo paths for reset functionality
 export const DEFAULT_LOGOS = {
     logoDark: '/storage/media/logos/logo-dark.png',
     logoLight: '/storage/media/logos/logo-light.png',
+    logoFooter: '/storage/media/logos/logo-light.png',
     favicon: '/storage/media/logos/favicon.png',
 };
 
@@ -93,6 +102,7 @@ export const getBrandSettings = (userSettings?: Record<string, string>, globalSe
             return {
                 logoDark: parsedBrand.logoDark || userSettings?.logoDark || DEFAULT_BRAND_SETTINGS.logoDark,
                 logoLight: parsedBrand.logoLight || userSettings?.logoLight || DEFAULT_BRAND_SETTINGS.logoLight,
+                logoFooter: parsedBrand.logoFooter || userSettings?.logoFooter || DEFAULT_BRAND_SETTINGS.logoFooter,
                 favicon: parsedBrand.favicon || userSettings?.favicon || DEFAULT_BRAND_SETTINGS.favicon,
                 logoSize: Number(parsedBrand.logoSize || userSettings?.logoSize || DEFAULT_BRAND_SETTINGS.logoSize),
                 titleText: parsedBrand.titleText || userSettings?.titleText || DEFAULT_BRAND_SETTINGS.titleText,
@@ -110,6 +120,9 @@ export const getBrandSettings = (userSettings?: Record<string, string>, globalSe
                 bannerImage: parsedBrand.bannerImage || userSettings?.bannerImage || DEFAULT_BRAND_SETTINGS.bannerImage,
                 bannerEnabled: parsedBrand.bannerEnabled !== undefined ? Boolean(parsedBrand.bannerEnabled) : (userSettings?.bannerEnabled !== undefined ? Boolean(userSettings.bannerEnabled) : DEFAULT_BRAND_SETTINGS.bannerEnabled),
                 bannerLayout: parsedBrand.bannerLayout || userSettings?.bannerLayout || DEFAULT_BRAND_SETTINGS.bannerLayout,
+                enableAdminLogo: parsedBrand.enableAdminLogo !== undefined ? Boolean(parsedBrand.enableAdminLogo) : (userSettings?.enableAdminLogo !== undefined ? Boolean(userSettings.enableAdminLogo) : DEFAULT_BRAND_SETTINGS.enableAdminLogo),
+                enableHeaderLogo: parsedBrand.enableHeaderLogo !== undefined ? Boolean(parsedBrand.enableHeaderLogo) : (userSettings?.enableHeaderLogo !== undefined ? Boolean(userSettings.enableHeaderLogo) : DEFAULT_BRAND_SETTINGS.enableHeaderLogo),
+                enableFooterLogo: parsedBrand.enableFooterLogo !== undefined ? Boolean(parsedBrand.enableFooterLogo) : (userSettings?.enableFooterLogo !== undefined ? Boolean(userSettings.enableFooterLogo) : DEFAULT_BRAND_SETTINGS.enableFooterLogo),
             };
         } catch (error) {
             // Fall through to normal logic if cookie parsing fails
@@ -138,6 +151,9 @@ export const getBrandSettings = (userSettings?: Record<string, string>, globalSe
             bannerImage: userSettings.bannerImage || DEFAULT_BRAND_SETTINGS.bannerImage,
             bannerEnabled: userSettings.bannerEnabled !== undefined ? Boolean(userSettings.bannerEnabled) : DEFAULT_BRAND_SETTINGS.bannerEnabled,
             bannerLayout: userSettings.bannerLayout || DEFAULT_BRAND_SETTINGS.bannerLayout,
+            enableAdminLogo: userSettings.enableAdminLogo !== undefined ? (String(userSettings.enableAdminLogo) === 'true' || String(userSettings.enableAdminLogo) === '1') : DEFAULT_BRAND_SETTINGS.enableAdminLogo,
+            enableHeaderLogo: userSettings.enableHeaderLogo !== undefined ? (String(userSettings.enableHeaderLogo) === 'true' || String(userSettings.enableHeaderLogo) === '1') : DEFAULT_BRAND_SETTINGS.enableHeaderLogo,
+            enableFooterLogo: userSettings.enableFooterLogo !== undefined ? (String(userSettings.enableFooterLogo) === 'true' || String(userSettings.enableFooterLogo) === '1') : DEFAULT_BRAND_SETTINGS.enableFooterLogo,
         };
     }
 
@@ -218,6 +234,28 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
     const handleMediaSelect = (name: string, url: string) => {
         setSettings(prev => ({ ...prev, [name]: url }));
         updateBrandSettings({ [name]: url });
+        setLogoErrors(prev => ({ ...prev, [name]: false }));
+    };
+
+    // Handle setting change for switches & general inputs
+    const handleSettingChange = (name: keyof BrandSettings, value: any) => {
+        setSettings(prev => ({ ...prev, [name]: value }));
+        updateBrandSettings({ [name]: value });
+    };
+
+    // Handle direct file upload from local computer
+    const handleFileUpload = (name: string, file: File) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const result = e.target?.result as string;
+            if (result) {
+                setSettings(prev => ({ ...prev, [name]: result }));
+                updateBrandSettings({ [name]: result });
+                setLogoErrors(prev => ({ ...prev, [name]: false }));
+                toast.success(t('Đã tải ảnh lên thành công! Bấm "Lưu thay đổi" để hoàn tất.'));
+            }
+        };
+        reader.readAsDataURL(file);
     };
 
     // Import useBrand hook
@@ -334,6 +372,9 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
             bannerImage: settings.bannerImage,
             bannerEnabled: settings.bannerEnabled,
             bannerLayout: settings.bannerLayout,
+            enableAdminLogo: settings.enableAdminLogo,
+            enableHeaderLogo: settings.enableHeaderLogo,
+            enableFooterLogo: settings.enableFooterLogo,
         });
 
         // Save to database using Inertia
@@ -436,14 +477,29 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <MediaPicker
-                                                        label=""
-                                                        value={settings.logoDark}
-                                                        onChange={(url) => handleMediaSelect('logoDark', url)}
-                                                        placeholder="Select dark mode logo..."
-                                                        showPreview={false}
-                                                        defaultValue={DEFAULT_LOGOS.logoDark}
-                                                    />
+                                                    <div className="flex gap-2">
+                                                        <div className="flex-1">
+                                                            <MediaPicker
+                                                                label=""
+                                                                value={settings.logoDark}
+                                                                onChange={(url) => handleMediaSelect('logoDark', url)}
+                                                                placeholder="Select dark mode logo..."
+                                                                showPreview={false}
+                                                                defaultValue={DEFAULT_LOGOS.logoDark}
+                                                            />
+                                                        </div>
+                                                        <label htmlFor="file-logoDark" className="px-3 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-md text-xs font-medium cursor-pointer border flex items-center gap-1 shrink-0" title={t("Tải ảnh từ máy tính")}>
+                                                            <Upload className="w-3.5 h-3.5" />
+                                                            <span>{t("Tải từ máy")}</span>
+                                                            <input
+                                                                id="file-logoDark"
+                                                                type="file"
+                                                                accept="image/*"
+                                                                className="hidden"
+                                                                onChange={(e) => e.target.files?.[0] && handleFileUpload('logoDark', e.target.files[0])}
+                                                            />
+                                                        </label>
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -458,7 +514,7 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
                                                                 alt="Light Logo"
                                                                 className="max-h-full max-w-full object-contain"
                                                                 onError={() => setLogoErrors(prev => ({ ...prev, logoLight: true }))}
-                                                            />
+                                                             />
                                                         ) : (
                                                             <div className="text-muted-foreground flex flex-col items-center gap-2">
                                                                 <div className="h-12 w-24 bg-muted flex items-center justify-center rounded border border-dashed">
@@ -470,14 +526,29 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <MediaPicker
-                                                        label=""
-                                                        value={settings.logoLight}
-                                                        onChange={(url) => handleMediaSelect('logoLight', url)}
-                                                        placeholder="Select light mode logo..."
-                                                        showPreview={false}
-                                                        defaultValue={DEFAULT_LOGOS.logoLight}
-                                                    />
+                                                    <div className="flex gap-2">
+                                                        <div className="flex-1">
+                                                            <MediaPicker
+                                                                label=""
+                                                                value={settings.logoLight}
+                                                                onChange={(url) => handleMediaSelect('logoLight', url)}
+                                                                placeholder="Select light mode logo..."
+                                                                showPreview={false}
+                                                                defaultValue={DEFAULT_LOGOS.logoLight}
+                                                            />
+                                                        </div>
+                                                        <label htmlFor="file-logoLight" className="px-3 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-md text-xs font-medium cursor-pointer border flex items-center gap-1 shrink-0" title={t("Tải ảnh từ máy tính")}>
+                                                            <Upload className="w-3.5 h-3.5" />
+                                                            <span>{t("Tải từ máy")}</span>
+                                                            <input
+                                                                id="file-logoLight"
+                                                                type="file"
+                                                                accept="image/*"
+                                                                className="hidden"
+                                                                onChange={(e) => e.target.files?.[0] && handleFileUpload('logoLight', e.target.files[0])}
+                                                            />
+                                                        </label>
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -492,7 +563,7 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
                                                                 alt="Favicon"
                                                                 className="h-16 w-16 object-contain"
                                                                 onError={() => setLogoErrors(prev => ({ ...prev, favicon: true }))}
-                                                            />
+                                                             />
                                                         ) : (
                                                             <div className="text-muted-foreground flex flex-col items-center gap-1">
                                                                 <div className="h-10 w-10 bg-muted flex items-center justify-center rounded border border-dashed">
@@ -504,14 +575,29 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <MediaPicker
-                                                        label=""
-                                                        value={settings.favicon}
-                                                        onChange={(url) => handleMediaSelect('favicon', url)}
-                                                        placeholder="Select favicon..."
-                                                        showPreview={false}
-                                                        defaultValue={DEFAULT_LOGOS.favicon}
-                                                    />
+                                                    <div className="flex gap-2">
+                                                        <div className="flex-1">
+                                                            <MediaPicker
+                                                                label=""
+                                                                value={settings.favicon}
+                                                                onChange={(url) => handleMediaSelect('favicon', url)}
+                                                                placeholder="Select favicon..."
+                                                                showPreview={false}
+                                                                defaultValue={DEFAULT_LOGOS.favicon}
+                                                            />
+                                                        </div>
+                                                        <label htmlFor="file-favicon" className="px-3 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-md text-xs font-medium cursor-pointer border flex items-center gap-1 shrink-0" title={t("Tải ảnh từ máy tính")}>
+                                                            <Upload className="w-3.5 h-3.5" />
+                                                            <span>{t("Tải từ máy")}</span>
+                                                            <input
+                                                                id="file-favicon"
+                                                                type="file"
+                                                                accept="image/*"
+                                                                className="hidden"
+                                                                onChange={(e) => e.target.files?.[0] && handleFileUpload('favicon', e.target.files[0])}
+                                                            />
+                                                        </label>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -858,6 +944,65 @@ export default function BrandSettings({ userSettings }: BrandSettingsProps) {
                                             <div className="text-xs text-muted-foreground">{t("Footer:")} <span className="font-medium text-foreground">{settings.footerText}</span></div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Full Width Logo Placement Toggles */}
+                        <div className="pt-6 border-t mt-8">
+                            <div className="space-y-1 mb-4">
+                                <Label className="text-base font-bold text-gray-900 dark:text-white">
+                                    {t("Cấu hình vị trí hiển thị Logo thương hiệu")}
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                    {t("Tích chọn các vị trí giao diện bạn muốn bật/tắt hiển thị Logo thương hiệu (bật/tắt ngay tức thì)")}
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+                                {/* Admin Sidebar Logo Toggle */}
+                                <div className="flex items-center justify-between p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-card hover:bg-muted/40 transition-all shadow-sm">
+                                    <div className="space-y-1 pr-3">
+                                        <Label className="text-sm font-bold cursor-pointer text-gray-900 dark:text-white block" htmlFor="enableAdminLogo">
+                                            {t("Logo Admin Sidebar")}
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground">{t("Bảng điều khiển Admin")}</p>
+                                    </div>
+                                    <Switch
+                                        id="enableAdminLogo"
+                                        checked={settings.enableAdminLogo !== false}
+                                        onCheckedChange={(checked) => handleSettingChange('enableAdminLogo', checked)}
+                                    />
+                                </div>
+
+                                {/* Header Logo Toggle */}
+                                <div className="flex items-center justify-between p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-card hover:bg-muted/40 transition-all shadow-sm">
+                                    <div className="space-y-1 pr-3">
+                                        <Label className="text-sm font-bold cursor-pointer text-gray-900 dark:text-white block" htmlFor="enableHeaderLogo">
+                                            {t("Logo Website Header")}
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground">{t("Đầu trang chủ website")}</p>
+                                    </div>
+                                    <Switch
+                                        id="enableHeaderLogo"
+                                        checked={settings.enableHeaderLogo !== false}
+                                        onCheckedChange={(checked) => handleSettingChange('enableHeaderLogo', checked)}
+                                    />
+                                </div>
+
+                                {/* Footer Logo Toggle */}
+                                <div className="flex items-center justify-between p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-card hover:bg-muted/40 transition-all shadow-sm">
+                                    <div className="space-y-1 pr-3">
+                                        <Label className="text-sm font-bold cursor-pointer text-gray-900 dark:text-white block" htmlFor="enableFooterLogo">
+                                            {t("Logo Website Footer")}
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground">{t("Chân trang chủ website")}</p>
+                                    </div>
+                                    <Switch
+                                        id="enableFooterLogo"
+                                        checked={settings.enableFooterLogo !== false}
+                                        onCheckedChange={(checked) => handleSettingChange('enableFooterLogo', checked)}
+                                    />
                                 </div>
                             </div>
                         </div>

@@ -51,7 +51,7 @@ export default function Footer({ settings, sectionData = {}, brandColor = '#3b82
     const { data, setData, post, processing, errors, reset } = useForm({
         email: ''
     });
-    const { logoLight, logoDark, logoSize, updateBrandSettings } = useBrand();
+    const { logoLight, logoDark, logoFooter, logoSize, enableFooterLogo, updateBrandSettings } = useBrand();
 
     const footerLinks = sectionData.links || {
     product: [
@@ -126,22 +126,23 @@ export default function Footer({ settings, sectionData = {}, brandColor = '#3b82
                         <div className="lg:col-span-2">
                             <Link href="/" className="text-2xl font-bold mb-4 inline-block">
                                 {(() => {
-                                    const brandLogo = logoLight || logoDark;
+                                    const isLogoEnabled = enableFooterLogo !== false;
                                     const fallbackLogo = settings?.config_sections?.theme?.logo_light || settings?.config_sections?.theme?.logo_dark;
-                                    const logoSrc = brandLogo || fallbackLogo;
-                                    const displayUrl = logoSrc ? getImagePath(logoSrc) : '';
+                                    const validBrandLogo = [logoFooter, logoLight, logoDark].find(l => l && !l.includes('logos/logo-light.png') && !l.includes('logos/logo-dark.png'));
+                                    const logoSrc = fallbackLogo || validBrandLogo || logoFooter || logoLight || logoDark;
+                                    const displayUrl = isLogoEnabled && logoSrc ? getImagePath(logoSrc) : '';
 
                                     return displayUrl ? (
                                         <img
-                                            key={`${logoSrc}-${logoSize}-${Date.now()}`}
+                                            key={`${logoSrc}-${logoSize}`}
                                             src={displayUrl}
                                             alt={settings?.company_name || 'Logo'}
-                                            style={{ height: `${logoSize || 36}px`, width: 'auto' }}
-                                            className="transition-all duration-200 object-contain max-h-[80px]"
+                                            style={{ height: `${logoSize || 42}px`, width: 'auto' }}
+                                            className="transition-all duration-200 object-contain max-h-[85px]"
                                         />
                                     ) : (
-                                        <div className="h-12 text-inherit font-semibold flex items-center text-lg tracking-tight">
-                                            {settings?.company_name || 'Advocate Saas'}
+                                        <div className="h-12 text-inherit font-extrabold flex items-center text-lg tracking-tight">
+                                            {settings?.company_name || 'Văn Phòng Luật Sư Advocate & Partners'}
                                         </div>
                                     );
                                 })()}
@@ -282,9 +283,11 @@ export default function Footer({ settings, sectionData = {}, brandColor = '#3b82
                 <div className="border-t border-gray-800 py-4 sm:py-6">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-3 sm:gap-4">
                         {/* Copyright */}
-                        <div className="text-gray-400 text-sm">
-                            {t(sectionData.footerText || '')}
-                        </div>
+                        {sectionData.footerText ? (
+                            <div className="text-gray-400 text-sm">
+                                {t(sectionData.footerText)}
+                            </div>
+                        ) : null}
 
                         {/* Social Links */}
                         {socialLinks.length > 0 && (

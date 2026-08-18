@@ -366,7 +366,7 @@ export function AppSidebar() {
     const mainNavItems = userRole === 'superadmin' ? getSuperAdminNavItems() : getCompanyNavItems();
     const { position, effectivePosition } = useLayout();
     const { variant, collapsible, style } = useSidebarSettings();
-    const { logoLight, logoDark, favicon, logoSize, updateBrandSettings } = useBrand();
+    const { logoLight, logoDark, favicon, logoSize, enableAdminLogo, updateBrandSettings } = useBrand();
     const [sidebarStyle, setSidebarStyle] = useState({});
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -436,9 +436,10 @@ export function AppSidebar() {
                         {/* Logo for expanded sidebar */}
                         <div className="group-data-[collapsible=icon]:hidden flex items-center">
                             {(() => {
+                                const isLogoEnabled = enableAdminLogo !== false;
                                 const isDark = document.documentElement.classList.contains('dark');
                                 const currentLogo = isDark ? (logoLight || logoDark) : (logoDark || logoLight);
-                                const displayUrl = currentLogo ? getImagePath(currentLogo) : '';
+                                const displayUrl = isLogoEnabled && currentLogo ? getImagePath(currentLogo) : '';
 
                                 return displayUrl ? (
                                     <img
@@ -450,8 +451,8 @@ export function AppSidebar() {
                                         onError={() => updateBrandSettings({ [isDark ? 'logoLight' : 'logoDark']: '' })}
                                     />
                                 ) : (
-                                    <div className="h-12 text-inherit font-semibold flex items-center text-lg tracking-tight">
-                                        WorkDo
+                                    <div className="h-12 text-inherit font-bold flex items-center text-lg tracking-tight">
+                                        {globalSettings?.titleText || 'Văn Phòng Luật'}
                                     </div>
                                 );
                             })()}
