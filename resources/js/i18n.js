@@ -131,9 +131,11 @@ i18n
   .use(initReactI18next)
   .init({
     lng: getInitialLanguage(),
-    fallbackLng: 'en',
+    fallbackLng: false,
     load: 'currentOnly',
-    debug: process.env.NODE_ENV === 'development',
+    debug: false,
+    keySeparator: false,
+    nsSeparator: false,
 
     interpolation: {
       escapeValue: false,

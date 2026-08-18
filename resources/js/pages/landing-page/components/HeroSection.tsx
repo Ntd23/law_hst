@@ -61,16 +61,16 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
   const bannerLayout = (isBannerEnabled && brand?.bannerLayout) ? brand.bannerLayout : 'split-right';
 
   const displayTitle = (isBannerEnabled && brand?.bannerTitle)
-    ? brand.bannerTitle
-    : (sectionData.title || t('Create Your Digital Business Card'));
+    ? t(brand.bannerTitle)
+    : (sectionData.title ? t(sectionData.title) : t('Create Your Digital Business Card'));
 
   const displaySubtitle = (isBannerEnabled && brand?.bannerSubtitle)
-    ? brand.bannerSubtitle
-    : (sectionData.subtitle || t('Manage leads, opportunities, quotes, orders, invoices, projects, and reports — all from one platform.'));
+    ? t(brand.bannerSubtitle)
+    : (sectionData.subtitle ? t(sectionData.subtitle) : t('Manage leads, opportunities, quotes, orders, invoices, projects, and reports — all from one platform.'));
 
   const displayBtnText = (isBannerEnabled && brand?.bannerButtonText)
-    ? brand.bannerButtonText
-    : (sectionData.primary_button_text || t('Start Free Trial'));
+    ? t(brand.bannerButtonText)
+    : (sectionData.primary_button_text ? t(sectionData.primary_button_text) : t('Start Free Trial'));
 
   const displayBtnLink = (isBannerEnabled && brand?.bannerButtonLink)
     ? brand.bannerButtonLink
