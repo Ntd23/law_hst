@@ -303,7 +303,7 @@ export default function LegalNewsSection({ brandColor = '#3b82f6' }: LegalNewsSe
                                             className="w-7 h-7 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700"
                                         />
                                         <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[120px]">
-                                            {article.author.name}
+                                            {t(article.author.name)}
                                         </span>
                                     </div>
                                     <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary group-hover:translate-x-1 transition-transform">
@@ -373,7 +373,7 @@ export default function LegalNewsSection({ brandColor = '#3b82f6' }: LegalNewsSe
                                         className="w-10 h-10 rounded-full object-cover ring-2 ring-primary/20"
                                     />
                                     <div>
-                                        <p className="font-semibold text-gray-900 dark:text-white">{activeArticle.author.name}</p>
+                                        <p className="font-semibold text-gray-900 dark:text-white">{t(activeArticle.author.name)}</p>
                                         <p className="text-xs text-gray-500">{activeArticle.author.role}</p>
                                     </div>
                                 </div>

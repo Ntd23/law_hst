@@ -51,35 +51,90 @@ export default function Footer({ settings, sectionData = {}, brandColor = '#3b82
     const { data, setData, post, processing, errors, reset } = useForm({
         email: ''
     });
-    const { logoLight, logoDark, logoFooter, logoSize, enableFooterLogo, updateBrandSettings } = useBrand();
+    const brand = useBrand();
+    const {
+        logoLight,
+        logoDark,
+        logoFooter,
+        logoSize,
+        enableFooterLogo,
+        footerCompanyName,
+        footerDescription,
+        footerContactEmail,
+        footerContactPhone,
+        footerContactAddress,
+        footerSocialFacebook,
+        footerSocialTwitter,
+        footerSocialLinkedin,
+        footerSocialInstagram,
+        footerProductTitle,
+        footerCompanyTitle,
+        footerSupportTitle,
+        footerLegalTitle,
+        footerProductLinks,
+        footerCompanyLinks,
+        footerSupportLinks,
+        footerLegalLinks,
+        footerText: brandFooterText
+    } = (brand || {}) as any;
 
-    const footerLinks = sectionData.links || {
-    product: [
-      { name: t('Features'), href: '#features' },
-      { name: t('Pricing'), href: '#pricing' },
-      { name: t('Templates'), href: '#' },
-      { name: t('Integrations'), href: '#' }
-    ],
-    company: [
-      { name: t('Home'), href: '/' },
-      { name: t('About Us'), href: '#about' },
-      { name: t('Careers'), href: '#' },
-      { name: t('Press'), href: '#' },
-      { name: t('Contact'), href: '#contact' }
-    ],
-    support: [
-      { name: t('Help Center'), href: '#' },
-      { name: t('Documentation'), href: '#' },
-      { name: t('API Reference'), href: '#' },
-      { name: t('Status'), href: '#' }
-    ],
-    legal: [
-      { name: t('Privacy Policy'), href: '#' },
-      { name: t('Terms of Service'), href: '#' },
-      { name: t('Cookie Policy'), href: '#' },
-      { name: t('GDPR'), href: '#' }
-    ]
-  };
+    const parseLinks = (linksRaw: string | undefined, defaultLinks: Array<{ name: string; href: string }>) => {
+        if (!linksRaw || !linksRaw.trim()) return defaultLinks;
+        try {
+            if (linksRaw.trim().startsWith('[')) {
+                const parsed = JSON.parse(linksRaw);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            }
+        } catch (e) {
+            // Not JSON, fallback to line-separated
+        }
+
+        const lines = linksRaw.split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length === 0) return defaultLinks;
+
+        return lines.map(line => {
+            if (line.includes('|')) {
+                const [name, href] = line.split('|').map(s => s.trim());
+                return { name: name || href, href: href || '#' };
+            }
+            return { name: line, href: '#' };
+        });
+    };
+
+    const defaultLinks = {
+        product: [
+            { name: t('Features'), href: '#features' },
+            { name: t('Pricing'), href: '#pricing' },
+            { name: t('Templates'), href: '#' },
+            { name: t('Integrations'), href: '#' }
+        ],
+        company: [
+            { name: t('Home'), href: '/' },
+            { name: t('About Us'), href: '#about' },
+            { name: t('Careers'), href: '#' },
+            { name: t('Press'), href: '#' },
+            { name: t('Contact'), href: '#contact' }
+        ],
+        support: [
+            { name: t('Help Center'), href: '#' },
+            { name: t('Documentation'), href: '#' },
+            { name: t('API Reference'), href: '#' },
+            { name: t('Status'), href: '#' }
+        ],
+        legal: [
+            { name: t('Privacy Policy'), href: '#' },
+            { name: t('Terms of Service'), href: '#' },
+            { name: t('Cookie Policy'), href: '#' },
+            { name: t('GDPR'), href: '#' }
+        ]
+    };
+
+    const footerLinks = {
+        product: parseLinks(footerProductLinks, sectionData.links?.product || defaultLinks.product),
+        company: parseLinks(footerCompanyLinks, sectionData.links?.company || defaultLinks.company),
+        support: parseLinks(footerSupportLinks, sectionData.links?.support || defaultLinks.support),
+        legal: parseLinks(footerLegalLinks, sectionData.links?.legal || defaultLinks.legal),
+    };
 
     const iconMap: Record<string, any> = {
         Facebook,
@@ -88,12 +143,29 @@ export default function Footer({ settings, sectionData = {}, brandColor = '#3b82
         Instagram
     };
 
-    const socialLinks = sectionData.social_links || [
-        { name: 'Facebook', icon: 'Facebook', href: '#' },
-        { name: 'Twitter', icon: 'Twitter', href: '#' },
-        { name: 'LinkedIn', icon: 'Linkedin', href: '#' },
-        { name: 'Instagram', icon: 'Instagram', href: '#' }
-    ];
+    const socialLinks = (() => {
+        const customSocial: Array<{ name: string; icon: string; href: string }> = [];
+        if (footerSocialFacebook) customSocial.push({ name: 'Facebook', icon: 'Facebook', href: footerSocialFacebook });
+        if (footerSocialTwitter) customSocial.push({ name: 'Twitter', icon: 'Twitter', href: footerSocialTwitter });
+        if (footerSocialLinkedin) customSocial.push({ name: 'LinkedIn', icon: 'Linkedin', href: footerSocialLinkedin });
+        if (footerSocialInstagram) customSocial.push({ name: 'Instagram', icon: 'Instagram', href: footerSocialInstagram });
+
+        if (customSocial.length > 0) return customSocial;
+        return sectionData.social_links || [
+            { name: 'Facebook', icon: 'Facebook', href: '#' },
+            { name: 'Twitter', icon: 'Twitter', href: '#' },
+            { name: 'LinkedIn', icon: 'Linkedin', href: '#' },
+            { name: 'Instagram', icon: 'Instagram', href: '#' }
+        ];
+    })();
+
+    const displayCompanyName = footerCompanyName || settings?.company_name || 'Văn Phòng Luật Sư Advocate & Partners';
+    const displayDescription = footerDescription
+        ? t(footerDescription)
+        : (sectionData.description ? t(sectionData.description) : t('Transforming professional networking with innovative digital business cards. Connect, share, and grow your network effortlessly.'));
+    const displayEmail = footerContactEmail || settings.contact_email;
+    const displayPhone = footerContactPhone || settings.contact_phone;
+    const displayAddress = footerContactAddress || settings.contact_address;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -136,44 +208,52 @@ export default function Footer({ settings, sectionData = {}, brandColor = '#3b82
                                         <img
                                             key={`${logoSrc}-${logoSize}`}
                                             src={displayUrl}
-                                            alt={settings?.company_name || 'Logo'}
+                                            alt={t(displayCompanyName) || 'Logo'}
                                             style={{ height: `${logoSize || 42}px`, width: 'auto' }}
                                             className="transition-all duration-200 object-contain max-h-[85px]"
                                         />
                                     ) : (
                                         <div className="h-12 text-inherit font-extrabold flex items-center text-lg tracking-tight">
-                                            {settings?.company_name || 'Văn Phòng Luật Sư Advocate & Partners'}
+                                            {t(displayCompanyName)}
                                         </div>
                                     );
                                 })()}
                             </Link>
                             <p className="text-gray-400 mb-8 leading-relaxed">
-                                {sectionData.description || t('Transforming professional networking with innovative digital business cards. Connect, share, and grow your network effortlessly.')}
+                                {t(displayDescription)}
                             </p>
 
                             {/* Contact Info */}
                             <div className="space-y-3">
-                                <div className="flex items-center gap-3">
-                                    <Mail className="w-4 h-4 text-gray-400" />
-                                    <span className="text-gray-400 text-sm">{settings.contact_email}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Phone className="w-4 h-4 text-gray-400" />
-                                    <span className="text-gray-400 text-sm">{settings.contact_phone}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <MapPin className="w-4 h-4 text-gray-400" />
-                                    <span className="text-gray-400 text-sm">{settings.contact_address}</span>
-                                </div>
+                                {displayEmail && (
+                                    <div className="flex items-center gap-3">
+                                        <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                                        <span className="text-gray-400 text-sm break-all">{displayEmail}</span>
+                                    </div>
+                                )}
+                                {displayPhone && (
+                                    <div className="flex items-center gap-3">
+                                        <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                                        <span className="text-gray-400 text-sm">{displayPhone}</span>
+                                    </div>
+                                )}
+                                {displayAddress && (
+                                    <div className="flex items-center gap-3">
+                                        <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                                        <span className="text-gray-400 text-sm">{t(displayAddress)}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
                         {/* Product Links */}
                         <div>
-                            <h3 className="text-white font-semibold mb-4">{t(sectionData.section_titles?.product || 'Product')}</h3>
+                            <h3 className="text-white font-semibold mb-4">
+                                {t(footerProductTitle || sectionData.section_titles?.product || 'Product')}
+                            </h3>
                             <ul className="space-y-3">
-                                {(footerLinks.product || []).map((link) => (
-                                    <li key={link.name}>
+                                {(footerLinks.product || []).map((link, idx) => (
+                                    <li key={`${link.name}-${idx}`}>
                                         <a
                                             href={link.href}
                                             className="text-gray-400 hover:text-white transition-colors text-sm"
@@ -187,10 +267,12 @@ export default function Footer({ settings, sectionData = {}, brandColor = '#3b82
 
                         {/* Company Links */}
                         <div>
-                            <h3 className="text-white font-semibold mb-4">{t(sectionData.section_titles?.company || 'Company')}</h3>
+                            <h3 className="text-white font-semibold mb-4">
+                                {t(footerCompanyTitle || sectionData.section_titles?.company || 'Company')}
+                            </h3>
                             <ul className="space-y-3">
-                                {(footerLinks.company || []).map((link) => (
-                                    <li key={link.name}>
+                                {(footerLinks.company || []).map((link, idx) => (
+                                    <li key={`${link.name}-${idx}`}>
                                         <a
                                             href={link.href}
                                             className="text-gray-400 hover:text-white transition-colors text-sm"
@@ -204,10 +286,12 @@ export default function Footer({ settings, sectionData = {}, brandColor = '#3b82
 
                         {/* Support Links */}
                         <div>
-                            <h3 className="text-white font-semibold mb-4">{t(sectionData.section_titles?.support || 'Support')}</h3>
+                            <h3 className="text-white font-semibold mb-4">
+                                {t(footerSupportTitle || sectionData.section_titles?.support || 'Support')}
+                            </h3>
                             <ul className="space-y-3">
-                                {(footerLinks.support || []).map((link) => (
-                                    <li key={link.name}>
+                                {(footerLinks.support || []).map((link, idx) => (
+                                    <li key={`${link.name}-${idx}`}>
                                         <a
                                             href={link.href}
                                             className="text-gray-400 hover:text-white transition-colors text-sm"
@@ -221,10 +305,12 @@ export default function Footer({ settings, sectionData = {}, brandColor = '#3b82
 
                         {/* Legal Links */}
                         <div>
-                            <h3 className="text-white font-semibold mb-4">{t(sectionData.section_titles?.legal || 'Legal')}</h3>
+                            <h3 className="text-white font-semibold mb-4">
+                                {t(footerLegalTitle || sectionData.section_titles?.legal || 'Legal')}
+                            </h3>
                             <ul className="space-y-3">
-                                {(footerLinks.legal || []).map((link) => (
-                                    <li key={link.name}>
+                                {(footerLinks.legal || []).map((link, idx) => (
+                                    <li key={`${link.name}-${idx}`}>
                                         <a
                                             href={link.href}
                                             className="text-gray-400 hover:text-white transition-colors text-sm"
@@ -283,11 +369,18 @@ export default function Footer({ settings, sectionData = {}, brandColor = '#3b82
                 <div className="border-t border-gray-800 py-4 sm:py-6">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-3 sm:gap-4">
                         {/* Copyright */}
-                        {sectionData.footerText ? (
-                            <div className="text-gray-400 text-sm">
-                                {t(sectionData.footerText)}
-                            </div>
-                        ) : null}
+                        {(() => {
+                            const displayFooterText = brandFooterText
+                                || sectionData.footerText
+                                || settings?.config_sections?.brand?.footerText
+                                || settings?.footerText
+                                || '© 2026 Advocate & Partners. All rights reserved.';
+                            return (
+                                <div className="text-gray-400 text-sm">
+                                    {t(displayFooterText)}
+                                </div>
+                            );
+                        })()}
 
                         {/* Social Links */}
                         {socialLinks.length > 0 && (
@@ -300,6 +393,8 @@ export default function Footer({ settings, sectionData = {}, brandColor = '#3b82
                                             <a
                                                 key={social.name}
                                                 href={social.href}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
                                                 className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors"
                                                 aria-label={social.name}
                                             >

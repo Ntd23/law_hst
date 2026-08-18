@@ -417,10 +417,10 @@ export default function ConsultingLawyersDirectory({ brandColor = '#3b82f6' }: {
                                         />
                                         <div className="min-w-0">
                                             <h3 className="text-base font-extrabold text-gray-900 dark:text-white truncate">
-                                                {lawyer.name}
+                                                {t(lawyer.name)}
                                             </h3>
                                             <p className="text-xs text-primary font-medium truncate">
-                                                {lawyer.role}
+                                                {t(lawyer.role)}
                                             </p>
                                             <div className="flex items-center gap-2 mt-1">
                                                 <span className="text-[11px] font-bold text-amber-500 flex items-center gap-0.5">
@@ -431,7 +431,7 @@ export default function ConsultingLawyersDirectory({ brandColor = '#3b82f6' }: {
                                                     iLAW {lawyer.ilawScore}
                                                 </span>
                                                 <span className="text-[11px] text-gray-400">
-                                                    • {lawyer.experienceYears} năm KN
+                                                    • {lawyer.experienceYears} {t('năm KN')}
                                                 </span>
                                             </div>
                                         </div>
@@ -439,7 +439,7 @@ export default function ConsultingLawyersDirectory({ brandColor = '#3b82f6' }: {
 
                                     {/* Bio */}
                                     <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2 leading-relaxed mb-3">
-                                        {lawyer.bio}
+                                        {t(lawyer.bio)}
                                     </p>
 
                                     {/* Speciality Badges */}
@@ -449,7 +449,7 @@ export default function ConsultingLawyersDirectory({ brandColor = '#3b82f6' }: {
                                                 key={idx}
                                                 className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-900/40"
                                             >
-                                                {badge}
+                                                {t(badge)}
                                             </span>
                                         ))}
                                     </div>
@@ -510,9 +510,9 @@ export default function ConsultingLawyersDirectory({ brandColor = '#3b82f6' }: {
                             />
                             <div>
                                 <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                                    {selectedLawyer.name}
+                                    {t(selectedLawyer.name)}
                                 </h3>
-                                <p className="text-xs text-primary font-medium">{selectedLawyer.role}</p>
+                                <p className="text-xs text-primary font-medium">{t(selectedLawyer.role)}</p>
                             </div>
                         </div>
 

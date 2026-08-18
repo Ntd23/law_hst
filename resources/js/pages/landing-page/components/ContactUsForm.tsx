@@ -179,7 +179,7 @@ export default function ContactUsForm({ settings, brandColor = '#3b82f6' }: Prop
                 >
                   {practiceAreasList.map((area, idx) => (
                     <option key={idx} value={area}>
-                      {area}
+                      {t(area)}
                     </option>
                   ))}
                 </select>
@@ -252,7 +252,7 @@ export default function ContactUsForm({ settings, brandColor = '#3b82f6' }: Prop
                   <MapPin className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-white">{t('Trụ sở chính')}</p>
-                    <p className="text-gray-600 dark:text-gray-300 text-xs mt-0.5">{contactAddress}</p>
+                    <p className="text-gray-600 dark:text-gray-300 text-xs mt-0.5">{t(contactAddress)}</p>
                   </div>
                 </div>
 

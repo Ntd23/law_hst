@@ -200,7 +200,7 @@ export default function PracticeAreasSection({ brandColor = '#3b82f6' }: Practic
                                 {selectedArea.title}
                             </h2>
                             <p className="text-xs sm:text-sm text-blue-100 mt-2">
-                                {t('Lead Counsel')}: <span className="font-semibold text-white">{selectedArea.leadAttorney}</span>
+                                {t('Lead Counsel')}: <span className="font-semibold text-white">{t(selectedArea.leadAttorney)}</span>
                             </p>
                         </div>
 
