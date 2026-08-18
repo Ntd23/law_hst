@@ -45,6 +45,7 @@ export function BrandProvider({ children, globalSettings, user }: { children: Re
       ...settings,
       logoDark: getImagePath(settings.logoDark || (isDemo ? '/storage/media/logos/logo-dark.png' : '')),
       logoLight: getImagePath(settings.logoLight || (isDemo ? '/storage/media/logos/logo-light.png' : '')),
+      logoFooter: getImagePath(settings.logoFooter || (isDemo ? '/storage/media/logos/logo-light.png' : '')),
       favicon: getImagePath(settings.favicon || (isDemo ? '/storage/media/logos/favicon.png' : ''))
     };
   });

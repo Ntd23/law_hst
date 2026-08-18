@@ -44,39 +44,39 @@ export const formatStatusText = (status: string) =>
 // Get full image path helper - consistent with reference project
 export const getImagePath = (path: string): string => {
     if (!path) return '';
-    if (path.startsWith('http')) return path;
-    const baseUrl = getBaseUrl();
-    // If path already contains public/screenshots, just prepend domain
+
+    // Strip localhost / 127.0.0.1 or APP_URL from path if present
+    if (path.startsWith('http://localhost') || path.startsWith('https://localhost') || path.startsWith('http://127.0.0.1')) {
+        path = path.replace(/^https?:\/\/[^\/]+/, '');
+    } else if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+    }
+
     if (path.includes('public/screenshots')) {
-        return path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+        return path.startsWith('/') ? path : `/${path}`;
     }
 
     try {
-        const dynamicPath = `${baseUrl}`;
-        const globalSettings = (window as any).page.props.globalSettings;
-        let imageUrlPrefix = globalSettings?.image_url || dynamicPath;
+        const globalSettings = (window as any).page?.props?.globalSettings;
+        let imageUrlPrefix = globalSettings?.image_url || '/storage/media';
+
+        if (imageUrlPrefix.startsWith('http://localhost') || imageUrlPrefix.startsWith('https://localhost') || imageUrlPrefix.startsWith('http://127.0.0.1')) {
+            imageUrlPrefix = imageUrlPrefix.replace(/^https?:\/\/[^\/]+/, '');
+        }
 
         if (!imageUrlPrefix.includes('storage/media')) {
-            imageUrlPrefix = imageUrlPrefix.endsWith('/') ? imageUrlPrefix  : imageUrlPrefix + '/';
+            imageUrlPrefix = imageUrlPrefix.endsWith('/') ? imageUrlPrefix : imageUrlPrefix + '/';
         }
 
-        path = path.replace('storage/media','');
+        path = path.replace(/^\/?storage\/media\/?/, '');
 
-        // Handle slash concatenation
         const prefixEndsWithSlash = imageUrlPrefix.endsWith('/');
-        const pathStartsWithSlash = path.startsWith('/');
+        const cleanPath = path.startsWith('/') ? path.substring(1) : path;
 
-        if (prefixEndsWithSlash && pathStartsWithSlash) {
-            return imageUrlPrefix + path.substring(1);
-        } else if (!prefixEndsWithSlash && !pathStartsWithSlash) {
-            return imageUrlPrefix + '/' + path;
-        } else {
-            return imageUrlPrefix + path;
-        }
+        return prefixEndsWithSlash ? `${imageUrlPrefix}${cleanPath}` : `${imageUrlPrefix}/${cleanPath}`;
     }
     catch {
-        const fallbackPrefix = `${window.location.origin}`;
-        return path.startsWith('/') ? fallbackPrefix + path.substring(1) : fallbackPrefix + path;
+        return path.startsWith('/') ? path : `/${path}`;
     }
 };
 

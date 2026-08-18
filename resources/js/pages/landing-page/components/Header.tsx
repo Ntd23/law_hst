@@ -32,7 +32,7 @@ export default function Header({ settings, sectionData, customPages = [], brandC
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const { auth } = usePage().props as any;
-    const { logoLight, logoDark, logoSize } = useBrand();
+    const { logoLight, logoDark, logoSize, enableHeaderLogo } = useBrand();
 
     useEffect(() => {
         const handleScroll = () => {
@@ -118,11 +118,12 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                             className="text-2xl font-bold flex items-center group"
                         >
                             {(() => {
+                                const isLogoEnabled = enableHeaderLogo !== false;
                                 const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
                                 const brandLogo = isDark ? (logoLight || logoDark) : (logoDark || logoLight);
                                 const fallbackLogo = isDark ? settings?.config_sections?.theme?.logo_light : settings?.config_sections?.theme?.logo_dark;
                                 const logoSrc = brandLogo || fallbackLogo;
-                                const displayUrl = logoSrc ? getImagePath(logoSrc) : '';
+                                const displayUrl = isLogoEnabled && logoSrc ? getImagePath(logoSrc) : '';
 
                                 return displayUrl ? (
                                     <img
@@ -134,7 +135,7 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                                     />
                                 ) : (
                                     <div className="h-12 text-gray-900 dark:text-white font-extrabold flex items-center text-xl tracking-tight">
-                                        {settings?.company_name || 'Advocate Saas'}
+                                        {settings?.company_name || 'Văn Phòng Luật'}
                                     </div>
                                 );
                             })()}

@@ -1329,7 +1329,7 @@ if (! function_exists('defaultSettings')) {
             'logoLight' => '/storage/media/logos/logo-light.png',
             'favicon' => '/storage/media/logos/favicon.png',
             'titleText' => 'Advocate',
-            'footerText' => '© 2026 Advocate. All rights reserved.',
+          
             'themeColor' => 'green',
             'customColor' => '#10b77f',
             'sidebarVariant' => 'inset',
@@ -2669,15 +2669,22 @@ if (! function_exists('convertToRelativePath')) {
     {
         if (!$url) return $url;
 
-        // If it's already a relative path, return as is
-        if (!str_starts_with($url, 'http')) {
-            return $url;
+        // If it's a comma-separated list of URLs
+        if (str_contains($url, ',')) {
+            $parts = explode(',', $url);
+            $relativeParts = array_map('convertToRelativePath', array_map('trim', $parts));
+            return implode(',', array_filter($relativeParts));
         }
 
-        // Extract the path after /storage/
+        // Extract path after /storage/
         $storageIndex = strpos($url, '/storage/');
         if ($storageIndex !== false) {
             return substr($url, $storageIndex);
+        }
+
+        // Strip domain from any http(s) URL
+        if (preg_match('/^https?:\/\/[^\/]+(\/.*)$/i', $url, $matches)) {
+            return $matches[1];
         }
 
         return $url;
@@ -3002,7 +3009,7 @@ if (!function_exists('getImageUrlPrefix')) {
 
             case 'local':
             default:
-                return url('/storage/media');
+                return '/storage/media';
         }
     }
 }
