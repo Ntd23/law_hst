@@ -19,7 +19,19 @@ class ClientController extends Controller
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
 
-        $query = Client::with(['clientType','user', 'creator'])->where(function ($q) {
+        $query = Client::with([
+            'clientType',
+            'user',
+            'creator',
+            'cases' => function ($q) {
+                $q->with([
+                    'caseStatus:id,name,color',
+                    'teamMembers' => function ($tm) {
+                        $tm->with('user:id,name')->where('status', 'active');
+                    },
+                ])->where('status', 'active')->orderBy('created_at', 'desc');
+            },
+        ])->where(function ($q) {
             if (Auth::user()->can('manage-any-clients')) {
                 $q->whereIn('created_by', getCompanyAndUsersId());
             } elseif (Auth::user()->can('manage-own-clients')) {
@@ -296,7 +308,21 @@ class ClientController extends Controller
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
 
-        $client = Client::with(['clientType', 'creator', 'billingInfo'])
+        $client = Client::with([
+                'clientType',
+                'creator',
+                'billingInfo',
+                'cases' => function ($q) {
+                    $q->with([
+                        'caseType:id,name,color',
+                        'caseStatus:id,name,color',
+                        'teamMembers' => function ($tm) {
+                            $tm->with('user:id,name,email,avatar,type')
+                               ->where('status', 'active');
+                        },
+                    ])->orderBy('created_at', 'desc');
+                },
+            ])
             ->where('id', $clientId)
             ->where(function ($q) {
                 if (Auth::user()->can('manage-any-clients')) {

@@ -24,9 +24,18 @@ interface CustomPageData {
   slug: string;
 }
 
+interface LawyerItem {
+  id: number;
+  name: string;
+  email?: string;
+  avatar?: string;
+  type?: string;
+}
+
 interface PageProps {
   page: CustomPage;
   customPages: CustomPageData[];
+  lawyers?: LawyerItem[];
   settings: {
     company_name: string;
     contact_email?: string;
@@ -44,7 +53,7 @@ interface PageProps {
 
 export default function CustomPage() {
   const pageProps = usePage<PageProps>();
-  const { page, customPages = [], settings } = pageProps.props;
+  const { page, customPages = [], settings, lawyers = [] } = pageProps.props;
   const globalSettings = (pageProps.props as any).globalSettings;
 
   // RTL Support for custom pages
@@ -209,7 +218,7 @@ React.useEffect(() => {
           {page.slug === 'terms-of-service' || page.title.toLowerCase().includes('giới thiệu về công ty') || page.title.toLowerCase().includes('giới thiệu công ty') ? (
             <AboutCompanyView brandColor={primaryColor} pageContent={page.content} />
           ) : page.slug === 'contact-us' || page.slug.includes('contact') || page.title.toLowerCase().includes('liên hệ') ? (
-            <ContactUsForm settings={settings} brandColor={primaryColor} />
+            <ContactUsForm settings={settings} brandColor={primaryColor} lawyers={lawyers} />
           ) : page.slug === 'about-us' || page.slug === 'luat-su-tu-van' || page.title.toLowerCase().includes('luật sư') ? (
             <ConsultingLawyersDirectory brandColor={primaryColor} />
           ) : (

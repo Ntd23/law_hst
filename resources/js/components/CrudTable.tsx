@@ -9,8 +9,9 @@ import { hasPermission } from '@/utils/authorization';
 import { capitalize, formatCurrency, getStatusIcon, getStatusLabel } from '@/utils/helpers';
 import { Link } from '@inertiajs/react';
 import * as LucidIcons from 'lucide-react';
-import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronsUpDown, MoreHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useState, useRef, useEffect } from 'react';
 
 interface CrudTableProps {
     columns: TableColumn[];
@@ -80,8 +81,22 @@ export function CrudTable({
 
     const renderActionButtons = (row: any) => {
         return (
-            <div className="flex items-center justify-end space-x-2">
+            <div className="flex items-center justify-end space-x-1">
                 {actions.map((action, index) => {
+                    // Handle dropdown type
+                    if ((action as any).type === 'dropdown') {
+                        const items = (action as any).items || [];
+                        // Filter items by permission
+                        const visibleItems = items.filter((item: any) => {
+                            if (!item.requiredPermission) return true;
+                            return hasPermission(permissions, item.requiredPermission);
+                        });
+                        if (visibleItems.length === 0) return null;
+                        return (
+                            <DropdownAction key={index} row={row} items={visibleItems} onAction={onAction} row_status={row.status} t={t} />
+                        );
+                    }
+
                     // Skip if user doesn't have permission
                     const permissionKey =
                         action.requiredPermission ||
@@ -257,33 +272,100 @@ export function CrudTable({
                             </TableHead>
                         ))}
                         {showActions && hasAnyActionPermission && <TableHead className="w-24 py-2.5 text-center font-semibold">{t('Actions')}</TableHead>}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {data.length > 0 ? (
-                        data.map((row, index) => (
-                            <TableRow key={row.id || index} className="border-b hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-700">
-                                <TableCell className="py-2.5 font-medium">{from + index}</TableCell>
-                                {columns.map((col) => (
-                                    <TableCell key={col.key} className={cn('py-2.5', col.className)}>
-                                        {renderCellContent(row, col)}
-                                    </TableCell>
-                                ))}
-                                {showActions && hasAnyActionPermission && <TableCell className="py-2.5 text-right">{renderActionButtons(row)}</TableCell>}
-                            </TableRow>
-                        ))
-                    ) : (
-                        <TableRow>
-                            <TableCell
-                                colSpan={columns.length + (showActions && hasAnyActionPermission ? 2 : 1)}
-                                className="text-muted-foreground h-24 text-center dark:text-gray-400"
-                            >
-                                {t('No results found.')}
-                            </TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-            </Table>
+                     </TableRow>
+                 </TableHeader>
+                 <TableBody>
+                     {data.length > 0 ? (
+                         data.map((row, index) => (
+                             <TableRow key={row.id || index} className="border-b hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-700">
+                                 <TableCell className="py-2.5 font-medium">{from + index}</TableCell>
+                                 {columns.map((col) => (
+                                     <TableCell key={col.key} className={cn('py-2.5', col.className)}>
+                                         {renderCellContent(row, col)}
+                                     </TableCell>
+                                 ))}
+                                 {showActions && hasAnyActionPermission && <TableCell className="py-2.5 text-right">{renderActionButtons(row)}</TableCell>}
+                             </TableRow>
+                         ))
+                     ) : (
+                         <TableRow>
+                             <TableCell
+                                 colSpan={columns.length + (showActions && hasAnyActionPermission ? 2 : 1)}
+                                 className="text-muted-foreground h-24 text-center dark:text-gray-400"
+                             >
+                                 {t('No results found.')}
+                             </TableCell>
+                         </TableRow>
+                     )}
+                 </TableBody>
+             </Table>
+         </div>
+     );
+}
+
+// ─── Dropdown Action Component ───────────────────────────────────────────────
+function DropdownAction({ row, items, onAction, row_status, t }: {
+    row: any;
+    items: any[];
+    onAction: (action: string, row: any) => void;
+    row_status?: string;
+    t: (key: string) => string;
+}) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    return (
+        <div className="relative" ref={ref}>
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                onClick={() => setOpen(!open)}
+            >
+                <MoreHorizontal size={16} />
+            </Button>
+
+            {open && (
+                <div className="absolute right-0 top-9 z-50 min-w-[170px] rounded-lg border bg-white dark:bg-gray-900 dark:border-gray-700 shadow-lg py-1">
+                    {items.map((item: any, idx: number) => {
+                        const IconComponent = (LucidIcons as any)[item.icon] as React.ElementType;
+                        const label = item.action === 'toggle-status'
+                            ? (row_status === 'active' ? t('Deactivate') : t('Activate'))
+                            : item.label;
+                        return (
+                            <div key={idx}>
+                                {item.separator && idx > 0 && (
+                                    <div className="my-1 border-t dark:border-gray-700" />
+                                )}
+                                <button
+                                    className={cn(
+                                        'flex w-full items-center gap-2.5 px-3.5 py-2 text-sm font-medium transition-colors hover:bg-gray-50 dark:hover:bg-gray-800',
+                                        item.className || 'text-gray-700 dark:text-gray-300'
+                                    )}
+                                    onClick={() => {
+                                        setOpen(false);
+                                        onAction(item.action, row);
+                                    }}
+                                >
+                                    {IconComponent && <IconComponent size={15} className="shrink-0" />}
+                                    {label}
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }
+

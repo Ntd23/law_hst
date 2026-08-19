@@ -220,10 +220,31 @@ export default function Clients() {
 
   const [pageInitialState, setPageInitialState] = useState(true);
 
-    useEffect(() => {
-        if (!pageInitialState) applyFilters();
-        setPageInitialState(false);
-    }, [selectedClientType, selectedStatus]);
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('create') === '1') {
+      const prefillName = urlParams.get('name') || '';
+      const prefillEmail = urlParams.get('email') || '';
+      const prefillPhone = urlParams.get('phone') || '';
+      const prefillAddress = urlParams.get('address') || '';
+
+      setCurrentItem({
+        name: prefillName,
+        email: prefillEmail,
+        phone: prefillPhone,
+        address: prefillAddress,
+        status: 'active',
+        tax_rate: 0,
+      });
+      setFormMode('create');
+      setIsFormModalOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!pageInitialState) applyFilters();
+    setPageInitialState(false);
+  }, [selectedClientType, selectedStatus]);
 
 
   const handleResetFilters = () => {
@@ -305,13 +326,86 @@ export default function Clients() {
           </span>
         );
       }
+    },
+    {
+      key: 'cases',
+      label: t('Luật sư phụ trách'),
+      render: (_: any, row: any) => {
+        const cases = row.cases || [];
+        // Collect all unique lawyers across all cases
+        const lawyerMap = new Map<number, string>();
+        cases.forEach((cas: any) => {
+          const members = cas.team_members || cas.teamMembers || [];
+          members.forEach((m: any) => {
+            if (m.user) lawyerMap.set(m.user.id, m.user.name);
+          });
+        });
+        const lawyers = Array.from(lawyerMap.values());
+        if (lawyers.length === 0) {
+          return <span className="text-xs text-gray-400 italic">{t('Chưa phân công')}</span>;
+        }
+        return (
+          <div className="flex flex-wrap gap-1">
+            {lawyers.slice(0, 2).map((name, i) => (
+              <span key={i} className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
+                {name}
+              </span>
+            ))}
+            {lawyers.length > 2 && (
+              <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                +{lawyers.length - 2}
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
+    {
+      key: 'cases',
+      label: t('Trạng thái vụ án'),
+      render: (_: any, row: any) => {
+        const cases = row.cases || [];
+        if (cases.length === 0) {
+          return <span className="text-xs text-gray-400 italic">{t('Không có vụ án')}</span>;
+        }
+        // Collect unique statuses
+        const statusMap = new Map<number, { name: string; color: string }>();
+        cases.forEach((cas: any) => {
+          if (cas.case_status) {
+            statusMap.set(cas.case_status.id, { name: cas.case_status.name, color: cas.case_status.color || '#6366f1' });
+          }
+        });
+        const statuses = Array.from(statusMap.values());
+        return (
+          <div className="flex flex-wrap gap-1">
+            {statuses.slice(0, 2).map((s, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-md"
+                style={{
+                  backgroundColor: `${s.color}1a`,
+                  color: s.color,
+                  border: `1px solid ${s.color}33`,
+                }}
+              >
+                {s.name}
+              </span>
+            ))}
+            {statuses.length > 2 && (
+              <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                +{statuses.length - 2}
+              </span>
+            )}
+          </div>
+        );
+      }
     }
   ];
 
   // Define table actions
   const actions = [
-      {
-          label: t('View'),
+    {
+      label: t('View'),
       icon: 'Eye',
       action: 'view',
       className: 'text-blue-500',
@@ -326,25 +420,34 @@ export default function Clients() {
       requiredPermission: 'edit-clients'
     },
     {
-     label: t('Reset Password'),
-     icon: 'KeyRound',
-     action: 'reset-password',
-     className: 'text-blue-500',
-     requiredPermission: 'reset-client-password'
-   },
-    {
-      label: t('Toggle Status'),
-      icon: 'Lock',
-      action: 'toggle-status',
-      className: 'text-amber-500',
-      requiredPermission: 'toggle-status-clients'
-    },
-    {
-      label: t('Delete'),
-      icon: 'Trash2',
-      action: 'delete',
-      className: 'text-red-500',
-      requiredPermission: 'delete-clients'
+      type: 'dropdown',
+      icon: 'MoreHorizontal',
+      label: '',
+      className: 'text-gray-500',
+      items: [
+        {
+          label: t('Reset Password'),
+          icon: 'KeyRound',
+          action: 'reset-password',
+          className: 'text-blue-600',
+          requiredPermission: 'reset-client-password'
+        },
+        {
+          label: t('Toggle Status'),
+          icon: 'Lock',
+          action: 'toggle-status',
+          className: 'text-amber-600',
+          requiredPermission: 'toggle-status-clients'
+        },
+        {
+          label: t('Delete'),
+          icon: 'Trash2',
+          action: 'delete',
+          className: 'text-red-600',
+          requiredPermission: 'delete-clients',
+          separator: true
+        }
+      ]
     }
   ];
 

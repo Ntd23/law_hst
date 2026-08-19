@@ -4,7 +4,7 @@ import { usePage, router } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 import { 
   ArrowLeft, Mail, Calendar, Phone, MapPin, 
-  Trash2, Send, Copy, ShieldCheck, Scale, FileText, Check, Tag 
+  Trash2, Send, Copy, ShieldCheck, Scale, FileText, Check, Tag, UserPlus, User 
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -16,6 +16,16 @@ interface ContactMessage {
   id: number;
   name: string;
   email: string;
+  phone?: string;
+  status?: string;
+  has_account?: boolean;
+  user_id?: number;
+  user?: {
+    id: number;
+    name: string;
+    email?: string;
+    avatar?: string;
+  };
   subject: string;
   message: string;
   created_at: string;
@@ -43,34 +53,73 @@ export default function ContactUsShow() {
     let phone = '';
     let address = '';
     let practiceArea = '';
+    let preferredLawyer = '';
     let questionContent = text;
 
-    const phoneMatch = text.match(/Số điện thoại:\s*(.+)/i);
-    if (phoneMatch) phone = phoneMatch[1].trim();
+    const phoneMatch = text.match(/Số điện thoại:\s*([^\n\r]+)/i);
+    if (!phone && phoneMatch) phone = phoneMatch[1].trim();
 
-    const addressMatch = text.match(/Địa chỉ:\s*(.+)/i);
+    const addressMatch = text.match(/Địa chỉ:\s*([^\n\r]+)/i);
     if (addressMatch) address = addressMatch[1].trim();
 
-    const practiceMatch = text.match(/Lĩnh vực quan tâm:\s*(.+)/i);
+    const practiceMatch = text.match(/Lĩnh vực quan tâm:\s*([^\n\r]+)/i);
     if (practiceMatch) practiceArea = practiceMatch[1].trim();
+
+    const lawyerMatch = text.match(/Luật sư mong muốn:\s*([^\n\r]+)/i);
+    if (lawyerMatch) preferredLawyer = lawyerMatch[1].trim();
 
     if (text.includes('[Mô Tả Nội Dung Câu Hỏi]')) {
       const parts = text.split('[Mô Tả Nội Dung Câu Hỏi]');
       questionContent = (parts[1] || parts[0]).trim();
     } else if (text.includes('[Thông Tin Tư Vấn]')) {
-      // Remove lines matching info fields
       questionContent = text
         .replace(/\[Thông Tin Tư Vấn\]/g, '')
         .replace(/Số điện thoại:.*/gi, '')
         .replace(/Địa chỉ:.*/gi, '')
         .replace(/Lĩnh vực quan tâm:.*/gi, '')
+        .replace(/Luật sư mong muốn:.*/gi, '')
         .trim();
     }
 
-    return { phone, address, practiceArea, questionContent };
+    return { phone, address, practiceArea, preferredLawyer, questionContent };
   };
 
   const parsed = parseMessageFields(rawMessage);
+  const displayPhone = contact.phone || parsed.phone;
+
+  const handleStatusChange = (newStatus: string) => {
+    router.put(route('contact-us.update-status', contact.id), {
+      status: newStatus
+    }, {
+      preserveScroll: true,
+      onSuccess: () => {
+        toast.success(t('Đã cập nhật trạng thái liên hệ thành công'));
+      },
+      onError: () => {
+        toast.error(t('Không thể cập nhật trạng thái'));
+      }
+    });
+  };
+
+  const handleCreateClient = () => {
+    router.visit(route('clients.index', {
+      create: '1',
+      name: contact.name || '',
+      email: contact.email || '',
+      phone: displayPhone || '',
+      address: parsed.address || '',
+    }));
+  };
+
+  const statusConfig: Record<string, { label: string; bg: string; text: string }> = {
+    pending: { label: t('Chờ xử lý'), bg: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300', text: 'text-amber-700' },
+    contacted: { label: t('Đã liên hệ'), bg: 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300', text: 'text-blue-700' },
+    resolved: { label: t('Đã giải quyết'), bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300', text: 'text-emerald-700' },
+    cancelled: { label: t('Đã hủy'), bg: 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400', text: 'text-gray-600' },
+  };
+
+  const currentStatus = (contact.status || 'pending').toLowerCase();
+  const statusInfo = statusConfig[currentStatus] || statusConfig.pending;
 
   const breadcrumbs = [
     { title: t('Dashboard'), href: route('dashboard') },
@@ -88,8 +137,8 @@ export default function ContactUsShow() {
   };
 
   const handleCopyPhone = () => {
-    if (parsed.phone) {
-      navigator.clipboard.writeText(parsed.phone);
+    if (displayPhone) {
+      navigator.clipboard.writeText(displayPhone);
       setCopiedPhone(true);
       toast.success(t('Đã sao chép số điện thoại'));
       setTimeout(() => setCopiedPhone(false), 2000);
@@ -115,6 +164,13 @@ export default function ContactUsShow() {
       variant: 'outline' as const,
       onClick: () => router.visit(route('contact-us.index'))
     },
+    ...(currentStatus === 'resolved' && !contact.has_account ? [{
+      label: t('Tạo Tài Khoản Thân Chủ'),
+      icon: <UserPlus className="w-4 h-4 mr-1.5" />,
+      variant: 'default' as const,
+      className: 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
+      onClick: () => handleCreateClient()
+    }] : []),
     {
       label: t('Xóa yêu cầu'),
       icon: <Trash2 className="w-4 h-4 mr-1.5" />,
@@ -156,13 +212,30 @@ export default function ContactUsShow() {
 
             <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-3.5 text-sm">
               
-              {/* Email */}
+              {/* Status Selector */}
               <div>
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">
-                  {t('Địa chỉ Email')}
+                  {t('Trạng thái xử lý')}
+                </span>
+                <select
+                  value={currentStatus}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  className={`w-full text-xs font-semibold rounded-xl border p-2.5 shadow-sm cursor-pointer ${statusInfo.bg}`}
+                >
+                  <option value="pending">{t('Chờ xử lý')}</option>
+                  <option value="contacted">{t('Đã liên hệ')}</option>
+                  <option value="resolved">{t('Đã giải quyết')}</option>
+                  <option value="cancelled">{t('Đã hủy')}</option>
+                </select>
+              </div>
+
+              {/* Email / Gmail */}
+              <div>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">
+                  {t('Gmail / Địa chỉ Email')}
                 </span>
                 <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/80 p-2.5 rounded-xl border border-gray-200/80 dark:border-gray-700">
-                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate mr-2">
+                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate mr-2 font-mono">
                     {contact.email}
                   </span>
                   <button
@@ -175,20 +248,24 @@ export default function ContactUsShow() {
                 </div>
               </div>
 
-              {/* Phone Number (If available) */}
-              {parsed.phone && (
-                <div>
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">
-                    {t('Số điện thoại')}
-                  </span>
-                  <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/80 p-2.5 rounded-xl border border-gray-200/80 dark:border-gray-700">
+              {/* Phone Number */}
+              <div>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">
+                  {t('Số điện thoại (Phone)')}
+                </span>
+                <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/80 p-2.5 rounded-xl border border-gray-200/80 dark:border-gray-700">
+                  {displayPhone ? (
                     <a
-                      href={`tel:${parsed.phone}`}
-                      className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1.5"
+                      href={`tel:${displayPhone}`}
+                      className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1.5 font-mono"
                     >
                       <Phone className="w-3.5 h-3.5" />
-                      <span>{parsed.phone}</span>
+                      <span>{displayPhone}</span>
                     </a>
+                  ) : (
+                    <span className="text-xs text-gray-400 italic font-normal">--</span>
+                  )}
+                  {displayPhone && (
                     <button
                       onClick={handleCopyPhone}
                       className="p-1 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
@@ -196,9 +273,9 @@ export default function ContactUsShow() {
                     >
                       {copiedPhone ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                     </button>
-                  </div>
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* Address (If available) */}
               {parsed.address && (
@@ -226,6 +303,22 @@ export default function ContactUsShow() {
                 </div>
               )}
 
+              {/* Preferred / Assigned Lawyer */}
+              <div>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">
+                  {t('Luật sư tư vấn')}
+                </span>
+                <div className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/80 p-2.5 rounded-xl border border-gray-200/80 dark:border-gray-700">
+                  <User className="w-4 h-4 text-indigo-500 shrink-0" />
+                  <span className={contact.user?.name || parsed.preferredLawyer ? 'font-semibold text-gray-900 dark:text-white' : 'text-gray-400 italic font-normal'}>
+                    {contact.user?.name || parsed.preferredLawyer || t('Không có')}
+                  </span>
+                  {contact.user?.email && (
+                    <span className="text-[11px] text-gray-400 font-normal truncate">({contact.user.email})</span>
+                  )}
+                </div>
+              </div>
+
               {/* Submission Time */}
               <div>
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">
@@ -241,8 +334,26 @@ export default function ContactUsShow() {
 
             </div>
 
-            {/* Email Reply Button */}
-            <div className="pt-2">
+            {/* Action Buttons */}
+            <div className="pt-2 space-y-2">
+              {currentStatus === 'resolved' && (
+                contact.has_account ? (
+                  <div className="w-full py-2.5 px-3 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold text-xs rounded-xl flex items-center justify-center gap-2 border border-blue-200 dark:border-blue-800">
+                    <Check className="w-4 h-4 text-blue-600" />
+                    <span>{t('Đã có tài khoản trong hệ thống')}</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleCreateClient}
+                    className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>{t('Tạo Tài Khoản Thân Chủ')}</span>
+                  </button>
+                )
+              )}
+
               <a
                 href={`mailto:${contact.email}?subject=Re: ${encodeURIComponent(contact.subject || 'Tư vấn pháp lý')}`}
                 className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"

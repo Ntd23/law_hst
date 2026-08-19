@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     ArrowLeft, FileText, User, Phone, Mail, MapPin,
     CreditCard, Calendar, Eye, Download, Hash, Tag,
+    Briefcase, Users, Scale, ExternalLink,
 } from 'lucide-react';
 import { hasPermission } from '@/utils/authorization';
 import { getImagePath } from '@/utils/helpers';
@@ -136,6 +137,114 @@ export default function ClientShow() {
 
                         </CardContent>
                     </Card>
+
+                {/* ── Cases & Lawyers ── */}
+                <Card className="shadow-sm">
+                    <CardHeader className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-800/60 dark:border-gray-700 rounded-t-lg shrink-0">
+                        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                            <Briefcase className="h-4 w-4 text-muted-foreground" />
+                            {t('Vụ Án & Luật Sư Phụ Trách')}
+                            {client?.cases?.length > 0 && (
+                                <span className="inline-flex items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-semibold w-5 h-5">
+                                    {client.cases.length}
+                                </span>
+                            )}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        {client?.cases && client.cases.length > 0 ? (
+                            <div className="divide-y dark:divide-gray-700">
+                                {client.cases.map((cas: any) => {
+                                    const lawyers = cas.team_members || cas.teamMembers || [];
+                                    return (
+                                        <div key={cas.id} className="px-5 py-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                                            {/* Case Header */}
+                                            <div className="flex items-start justify-between gap-3 mb-3">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <Scale className="h-4 w-4 text-blue-500 shrink-0" />
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{cas.title}</p>
+                                                        <span className="text-xs font-mono text-gray-400">#{cas.case_id}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    {cas.case_type && (
+                                                        <span
+                                                            className="text-[11px] font-semibold px-2 py-0.5 rounded-md"
+                                                            style={{
+                                                                backgroundColor: `${cas.case_type.color || '#6366f1'}18`,
+                                                                color: cas.case_type.color || '#6366f1',
+                                                                border: `1px solid ${cas.case_type.color || '#6366f1'}33`,
+                                                            }}
+                                                        >
+                                                            {cas.case_type.name}
+                                                        </span>
+                                                    )}
+                                                    {cas.case_status && (
+                                                        <span
+                                                            className="text-[11px] font-semibold px-2 py-0.5 rounded-md"
+                                                            style={{
+                                                                backgroundColor: `${cas.case_status.color || '#10b981'}18`,
+                                                                color: cas.case_status.color || '#10b981',
+                                                                border: `1px solid ${cas.case_status.color || '#10b981'}33`,
+                                                            }}
+                                                        >
+                                                            {cas.case_status.name}
+                                                        </span>
+                                                    )}
+                                                    <button
+                                                        onClick={() => router.get(route('advocate.cases.show', cas.id))}
+                                                        className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors cursor-pointer"
+                                                        title={t('Xem chi tiết vụ án')}
+                                                    >
+                                                        <ExternalLink className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Lawyers */}
+                                            <div className="flex items-center gap-2">
+                                                <Users className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                                                <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">{t('Luật sư phụ trách')}:</span>
+                                                {lawyers.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {lawyers.map((member: any) => (
+                                                            <span
+                                                                key={member.id}
+                                                                className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800"
+                                                            >
+                                                                <User className="h-3 w-3" />
+                                                                {member.user?.name || `#${member.user_id}`}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-gray-400 italic">{t('Chưa phân công')}</span>
+                                                )}
+                                            </div>
+
+                                            {/* Filing date */}
+                                            {cas.filing_date && (
+                                                <div className="flex items-center gap-1.5 mt-1.5">
+                                                    <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                                                    <span className="text-xs text-gray-500">{t('Ngày lập')}: {window.appSettings?.formatDateTime(cas.filing_date, false) || cas.filing_date}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-8 text-center">
+                                <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-3 mb-2">
+                                    <Briefcase className="h-5 w-5 text-gray-400" />
+                                </div>
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('Chưa có vụ án nào')}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">{t('Thân chủ này chưa có vụ án nào được tạo.')}</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
 
                 {/* ── Documents ── */}
                 {canManageDocs && (
