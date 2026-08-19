@@ -31,8 +31,9 @@ export default function Header({ settings, sectionData, customPages = [], brandC
     const { t } = useTranslation();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
+    const [imgError, setImgError] = useState(false);
     const { auth } = usePage().props as any;
-    const { logoLight, logoDark, logoSize, enableHeaderLogo } = useBrand();
+    const { logoLight, logoDark, logoSize, enableHeaderLogo, titleText } = useBrand();
 
     useEffect(() => {
         const handleScroll = () => {
@@ -120,22 +121,32 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                             {(() => {
                                 const isLogoEnabled = enableHeaderLogo !== false;
                                 const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
-                                const brandLogo = isDark ? (logoLight || logoDark) : (logoDark || logoLight);
-                                const fallbackLogo = isDark ? settings?.config_sections?.theme?.logo_light : settings?.config_sections?.theme?.logo_dark;
-                                const logoSrc = brandLogo || fallbackLogo;
+                                
+                                const validBrandLogo = [isDark ? logoLight : logoDark, isDark ? logoDark : logoLight, logoLight, logoDark].find(
+                                    l => l && !l.includes('logos/logo-light.png') && !l.includes('logos/logo-dark.png')
+                                );
+                                const fallbackLogo = isDark 
+                                    ? (settings?.config_sections?.theme?.logo_light || settings?.config_sections?.theme?.logo_dark) 
+                                    : (settings?.config_sections?.theme?.logo_dark || settings?.config_sections?.theme?.logo_light);
+                                const validFallback = fallbackLogo && !fallbackLogo.includes('logos/logo-light.png') && !fallbackLogo.includes('logos/logo-dark.png')
+                                    ? fallbackLogo
+                                    : null;
+
+                                const logoSrc = validBrandLogo || validFallback || (isDark ? (logoLight || logoDark) : (logoDark || logoLight)) || fallbackLogo;
                                 const displayUrl = isLogoEnabled && logoSrc ? getImagePath(logoSrc) : '';
 
-                                return displayUrl ? (
+                                return displayUrl && !imgError ? (
                                     <img
                                         key={`${logoSrc}-${logoSize}`}
                                         src={displayUrl}
-                                        alt={settings?.company_name || "Logo"}
+                                        alt={titleText || settings?.company_name || "Logo"}
                                         style={{ height: `${Math.max(logoSize || 42, 42)}px`, width: 'auto' }}
                                         className="transition-transform duration-200 group-hover:scale-105 object-contain max-h-[85px]"
+                                        onError={() => setImgError(true)}
                                     />
                                 ) : (
                                     <div className="h-12 text-gray-900 dark:text-white font-extrabold flex items-center text-xl tracking-tight">
-                                        {settings?.company_name || 'Văn Phòng Luật'}
+                                        {titleText || settings?.company_name || 'Văn Phòng Luật'}
                                     </div>
                                 );
                             })()}

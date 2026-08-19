@@ -74,11 +74,6 @@ export default function AboutCompanyView({ brandColor = '#3b82f6', pageContent }
       {/* 1. Hero Banner */}
       <section className="relative pt-6 pb-10 sm:pt-8 sm:pb-12 bg-gradient-to-b from-blue-50/70 via-white to-gray-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-950 border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold bg-blue-100/80 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-sm">
-            <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-            <span>{t('Văn Phòng Luật Sư Advocate & Partners')}</span>
-          </div>
-
           <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight max-w-4xl mx-auto">
             {t('Giới Thiệu Về Công Ty & Đội Ngũ Luật Sư Tranh Tụng')}
           </h1>

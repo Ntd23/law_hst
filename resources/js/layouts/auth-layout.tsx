@@ -51,7 +51,8 @@ export default function AuthLayout({
     useFavicon();
     const { t } = useTranslation();
     const [mounted, setMounted] = useState(false);
-    const { logoLight, logoDark, logoSize, themeColor, customColor } = useBrand();
+    const [imgError, setImgError] = useState(false);
+    const { logoLight, logoDark, logoSize, themeColor, customColor, titleText } = useBrand();
     const { appearance } = useAppearance();
     const globalSettings = (usePage().props as any).globalSettings;
     const userLanguage = (usePage().props as any).userLanguage;
@@ -184,15 +185,18 @@ export default function AuthLayout({
                     {/* Logo */}
                     <div className="text-center mb-8">
                         <div className="relative lg:inline-block pb-2 lg:px-6">
-                            {currentLogo ? (
+                            {currentLogo && !imgError ? (
                                 <img
                                     src={currentLogo}
-                                    alt="Logo"
+                                    alt={titleText || "Logo"}
                                     style={{ height: `${logoSize || 36}px`, width: 'auto' }}
                                     className="w-auto mx-auto object-contain max-h-[80px]"
+                                    onError={() => setImgError(true)}
                                 />
                             ) : (
-                                <CreditCard className="h-8 w-8 mx-auto" style={{ color: primaryColor }} />
+                                <div className="text-2xl font-black tracking-tight" style={{ color: primaryColor }}>
+                                    {titleText || 'Advocate'}
+                                </div>
                             )}
                         </div>
                     </div>

@@ -114,12 +114,21 @@ class CustomPageController extends Controller
         $page = LandingPageCustomPage::where('slug', $slug)->where('is_active', true)->firstOrFail();
         $landingSettings = \App\Models\LandingPageSetting::getSettings();
 
-
+        $lawyers = \App\Models\User::where(function($q) {
+                $q->whereNull('status')->orWhere('status', 1)->orWhere('status', 'active');
+            })
+            ->where(function($q) {
+                $q->where('type', '!=', 'client')->orWhereNull('type');
+            })
+            ->select('id', 'name', 'email', 'avatar', 'type')
+            ->orderBy('name', 'asc')
+            ->get();
 
         return Inertia::render('landing-page/custom-page', [
             'page' => $page,
             'customPages' => LandingPageCustomPage::active()->ordered()->get(),
-            'settings' => $landingSettings
+            'settings' => $landingSettings,
+            'lawyers' => $lawyers
         ]);
     }
 }

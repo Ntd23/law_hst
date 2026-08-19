@@ -70,12 +70,12 @@ export interface BrandSettings {
 
 // Default brand settings
 export const DEFAULT_BRAND_SETTINGS: BrandSettings = {
-    logoDark: '/storage/media/logos/logo-dark.png',
-    logoLight: '/storage/media/logos/logo-light.png',
-    logoFooter: '/storage/media/logos/logo-light.png',
+    logoDark: '/storage/media/1/logo-van-phong-luat.png',
+    logoLight: '/storage/media/1/logo-van-phong-luat.png',
+    logoFooter: '/storage/media/1/logo-van-phong-luat.png',
     favicon: '/storage/media/logos/favicon.png',
-    logoSize: 36,
-    titleText: 'WorkDo',
+    logoSize: 42,
+    titleText: 'Văn Phòng Luật Sư',
     footerText: '© 2026 Advocate & Partners. All rights reserved.',
     themeColor: 'green',
     customColor: '#10b77f',
@@ -116,9 +116,9 @@ export const DEFAULT_BRAND_SETTINGS: BrandSettings = {
 
 // Default logo paths for reset functionality
 export const DEFAULT_LOGOS = {
-    logoDark: '/storage/media/logos/logo-dark.png',
-    logoLight: '/storage/media/logos/logo-light.png',
-    logoFooter: '/storage/media/logos/logo-light.png',
+    logoDark: '/storage/media/1/logo-van-phong-luat.png',
+    logoLight: '/storage/media/1/logo-van-phong-luat.png',
+    logoFooter: '/storage/media/1/logo-van-phong-luat.png',
     favicon: '/storage/media/logos/favicon.png',
 };
 

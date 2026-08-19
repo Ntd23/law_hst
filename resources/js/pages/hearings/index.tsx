@@ -163,37 +163,45 @@ export default function Hearings() {
     {
       key: 'judge',
       label: t('Judge'),
-        render: (value: any, row: any) => {
-            return (
-                <UserColumn user={{name: value?.name , email: value?.email}} />
-            );
-        }
+      render: (value: any, row: any) => {
+        const judge = value || row?.judge;
+        if (!judge) return '-';
+        return (
+          <UserColumn user={{ name: judge.name, email: judge.email }} />
+        );
+      }
     },
     {
       key: 'court',
       label: t('Court'),
-        render: (value: any, row: any) => {
-            return (
-                <UserColumn user={row?.court} hideAvatar/>
-            );
-        }
+      render: (value: any, row: any) => {
+        const court = value || row?.court;
+        if (!court) return '-';
+        return (
+          <UserColumn user={court} hideAvatar />
+        );
+      }
     },
     {
       key: 'hearing_date',
       label: t('Date & Time'),
       sortable: true,
-      render: (value: string, row: any) => (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-left gap-2 whitespace-nowrap overflow-hidden text-ellipsis text-gray-500">
-            {value && <Calendar className="h-4 w-4" />}
-            <span>{window.appSettings?.formatDate(value) || '-'}</span>
+      render: (value: string, row: any) => {
+        const formattedDate = value ? (window.appSettings?.formatDate ? window.appSettings.formatDate(value) : value) : '-';
+        const formattedTime = row?.hearing_time ? (window.appSettings?.formatTime ? window.appSettings.formatTime(`2000-01-01T${row.hearing_time}`) : row.hearing_time) : '-';
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-left gap-2 whitespace-nowrap overflow-hidden text-ellipsis text-gray-500">
+              {value && <Calendar className="h-4 w-4" />}
+              <span>{formattedDate}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Clock className="h-4 w-4" />
+              <span>{formattedTime} {row?.duration_minutes ? `(${row.duration_minutes}min)` : ''}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <Clock className="h-4 w-4" />
-            <span>{window.appSettings?.formatTime(`2000-01-01T${row.hearing_time}`) || row.hearing_time} ({row.duration_minutes}min)</span>
-          </div>
-        </div>
-      )
+        );
+      }
     },
     {
       key: 'status',

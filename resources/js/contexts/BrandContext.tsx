@@ -21,9 +21,10 @@ export function BrandProvider({ children, globalSettings, user }: { children: Re
 
     const isPublicRoute = window.location.pathname.includes('/public/') ||
       window.location.pathname === '/' ||
+      window.location.pathname.startsWith('/page/') ||
       window.location.pathname.includes('/auth/');
 
-    // For public routes (landing page, auth pages), always use superadmin settings
+    // For public routes (landing page, auth pages, custom pages), always use superadmin / global settings
     if (isPublicRoute) {
       return globalSettings;
     }
@@ -39,14 +40,12 @@ export function BrandProvider({ children, globalSettings, user }: { children: Re
 
   const [brandSettings, setBrandSettings] = useState<BrandSettings>(() => {
     const settings = getBrandSettings(getEffectiveSettings(), globalSettings);
-    // In demo mode, ensure we have default logos if none are set
-    const isDemo = globalSettings?.is_demo || false;
     return {
       ...settings,
-      logoDark: getImagePath(settings.logoDark || (isDemo ? '/storage/media/logos/logo-dark.png' : '')),
-      logoLight: getImagePath(settings.logoLight || (isDemo ? '/storage/media/logos/logo-light.png' : '')),
-      logoFooter: getImagePath(settings.logoFooter || (isDemo ? '/storage/media/logos/logo-light.png' : '')),
-      favicon: getImagePath(settings.favicon || (isDemo ? '/storage/media/logos/favicon.png' : ''))
+      logoDark: getImagePath(settings.logoDark || '/storage/media/1/logo-van-phong-luat.png'),
+      logoLight: getImagePath(settings.logoLight || '/storage/media/1/logo-van-phong-luat.png'),
+      logoFooter: getImagePath(settings.logoFooter || '/storage/media/1/logo-van-phong-luat.png'),
+      favicon: getImagePath(settings.favicon || '/storage/media/logos/favicon.png')
     };
   });
 
@@ -107,13 +106,12 @@ export function BrandProvider({ children, globalSettings, user }: { children: Re
   useEffect(() => {
     const effectiveSettings = getEffectiveSettings();
     const updatedSettings = getBrandSettings(effectiveSettings, globalSettings);
-    const isDemo = globalSettings?.is_demo || false;
     setBrandSettings({
       ...updatedSettings,
-      logoDark: getImagePath(updatedSettings.logoDark || (isDemo ? '/storage/media/logos/logo-dark.png' : '')),
-      logoLight: getImagePath(updatedSettings.logoLight || (isDemo ? '/storage/media/logos/logo-light.png' : '')),
-      logoFooter: getImagePath(updatedSettings.logoFooter || (isDemo ? '/storage/media/logos/logo-light.png' : '')),
-      favicon: getImagePath(updatedSettings.favicon || (isDemo ? '/storage/media/logos/favicon.png' : ''))
+      logoDark: getImagePath(updatedSettings.logoDark || '/storage/media/1/logo-van-phong-luat.png'),
+      logoLight: getImagePath(updatedSettings.logoLight || '/storage/media/1/logo-van-phong-luat.png'),
+      logoFooter: getImagePath(updatedSettings.logoFooter || '/storage/media/1/logo-van-phong-luat.png'),
+      favicon: getImagePath(updatedSettings.favicon || '/storage/media/logos/favicon.png')
     });
   }, [globalSettings, user]);
 

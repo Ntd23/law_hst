@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Models\NotificationTemplate;
 use App\Models\UserNotificationTemplate;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -110,16 +111,49 @@ class SystemSettingsController extends Controller
             $imageKeys = ['logoDark', 'logoLight', 'logoFooter', 'favicon', 'bannerImage'];
 
             $userId = auth()->id();
+            $superAdmin = User::where('type', 'superadmin')->first();
+
             foreach ($validated['settings'] as $key => $value) {
                 if (in_array($key, $imageKeys)) {
                     $value = convertToRelativePath($value);
                 }
                 updateSetting($key, $value, $userId);
+
+                // Also sync to superadmin so public landing page sees the updated brand
+                if ($superAdmin && $userId != $superAdmin->id) {
+                    updateSetting($key, $value, $superAdmin->id);
+                }
             }
 
-            if(auth()?->user()?->type == 'superadmin'){
-                \Cache::forget('admin_settings');
+            // Sync theme logos and brand title to LandingPageSetting
+            try {
+                $landingSettings = \App\Models\LandingPageSetting::first();
+                if ($landingSettings) {
+                    $configSections = $landingSettings->config_sections ?? [];
+                    if (!isset($configSections['theme'])) {
+                        $configSections['theme'] = [];
+                    }
+                    if (isset($validated['settings']['logoDark'])) {
+                        $configSections['theme']['logo_dark'] = convertToRelativePath($validated['settings']['logoDark']);
+                    }
+                    if (isset($validated['settings']['logoLight'])) {
+                        $configSections['theme']['logo_light'] = convertToRelativePath($validated['settings']['logoLight']);
+                    }
+                    if (isset($validated['settings']['favicon'])) {
+                        $configSections['theme']['favicon'] = convertToRelativePath($validated['settings']['favicon']);
+                    }
+                    if (isset($validated['settings']['titleText']) && !empty($validated['settings']['titleText'])) {
+                        $landingSettings->company_name = $validated['settings']['titleText'];
+                    }
+                    $landingSettings->config_sections = $configSections;
+                    $landingSettings->save();
+                }
+            } catch (\Exception $e) {
+                // Ignore sync error if table/fields differ
             }
+
+            \Cache::forget('admin_settings');
+            \Cache::forget('landing_settings');
 
             return redirect()->back()->with('success', __('Brand settings updated successfully.'));
         } catch (\Exception $e) {

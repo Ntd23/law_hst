@@ -884,6 +884,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware('permission:manage-contact-us')->group(function () {
             Route::get('contact-us', [\App\Http\Controllers\ContactUsController::class, 'index'])->name('contact-us.index');
             Route::get('contact-us/{contact}', [\App\Http\Controllers\ContactUsController::class, 'show'])->name('contact-us.show');
+            Route::put('contact-us/{contact}/status', [\App\Http\Controllers\ContactUsController::class, 'updateStatus'])->name('contact-us.update-status');
             Route::delete('contact-us/{contact}', [\App\Http\Controllers\ContactUsController::class, 'destroy'])->name('contact-us.destroy');
         });
 

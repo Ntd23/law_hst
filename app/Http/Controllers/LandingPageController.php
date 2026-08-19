@@ -109,6 +109,8 @@ class LandingPageController extends Controller
             'phone' => 'nullable|string|max:255',
             'address' => 'nullable|string|max:255',
             'practice_area' => 'nullable|string|max:255',
+            'user_id' => 'nullable|exists:users,id',
+            'preferred_lawyer' => 'nullable|string|max:255',
         ]);
 
         $fullMessage = $request->message;
@@ -116,6 +118,16 @@ class LandingPageController extends Controller
         if ($request->filled('phone')) $extraInfo[] = "Số điện thoại: " . $request->phone;
         if ($request->filled('address')) $extraInfo[] = "Địa chỉ: " . $request->address;
         if ($request->filled('practice_area')) $extraInfo[] = "Lĩnh vực quan tâm: " . $request->practice_area;
+        
+        $userId = $request->filled('user_id') ? $request->user_id : null;
+        if ($userId) {
+            $selectedLawyer = User::find($userId);
+            if ($selectedLawyer) {
+                $extraInfo[] = "Luật sư mong muốn: " . $selectedLawyer->name;
+            }
+        } elseif ($request->filled('preferred_lawyer')) {
+            $extraInfo[] = "Luật sư mong muốn: " . $request->preferred_lawyer;
+        }
 
         if (!empty($extraInfo)) {
             $fullMessage = "[Thông Tin Tư Vấn]\n" . implode("\n", $extraInfo) . "\n\n[Mô Tả Nội Dung Câu Hỏi]\n" . $request->message;
@@ -124,8 +136,11 @@ class LandingPageController extends Controller
         $contact = new contact();
         $contact->name = $request->name;
         $contact->email = $request->email;
+        $contact->phone = $request->phone ?? null;
         $contact->subject = $request->subject;
         $contact->message = $fullMessage;
+        $contact->status = 'pending';
+        $contact->user_id = $userId;
         $contact->save();
 
         return back()->with('success', __('Thank you for your message. We will get back to you soon!'));

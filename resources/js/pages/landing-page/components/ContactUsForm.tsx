@@ -4,28 +4,36 @@ import { useTranslation } from 'react-i18next';
 import { MapPin, Phone, Mail, Clock, ShieldCheck, Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from '@/components/custom-toast';
 
+interface LawyerItem {
+  id: number;
+  name: string;
+  email?: string;
+  avatar?: string;
+  type?: string;
+}
+
 interface Props {
   settings?: any;
   brandColor?: string;
+  lawyers?: LawyerItem[];
 }
 
 const practiceAreasList = [
-  '🏡 Đất đai & Bất động sản (Sổ đỏ, tranh chấp đất, chuyển nhượng)',
-  '⚖️ Dân sự & Tranh chấp hợp đồng (Đòi nợ, bồi thường thiệt hại)',
-  '💼 Lao động & Việc làm (Sa thải, HĐLĐ, trợ cấp mất việc)',
-  '🏢 Doanh nghiệp & M&A (Thành lập, đầu tư FDI, quản trị nội bộ)',
-  '💍 Hôn nhân & Gia đình (Ly hôn, phân chia tài sản, quyền nuôi con)',
-  '🔒 Hình sự & Bào chữa tranh tụng (Điều tra, tại ngoại, ra tòa)',
-  '🛡️ Bảo hiểm & Social Security (BHXH bắt buộc, BHYT, thất nghiệp)',
-  '🚗 Giao thông & Tai nạn giao thông',
-  '🏛️ Hành chính & Khiếu nại quyết định hành chính',
-  '💡 Sở hữu trí tuệ & Bản quyền thương hiệu',
-  '📜 Thừa kế & Di chúc (Khai nhận di sản, tranh chấp di chúc)',
-  '💰 Thuế & Tài chính doanh nghiệp',
-  '❓ Lĩnh vực pháp lý khác'
+  'Đất đai & Bất động sản (Sổ đỏ, tranh chấp đất, chuyển nhượng)',
+  'Dân sự & Tranh chấp hợp đồng (Đòi nợ, bồi thường thiệt hại)',
+  'Lao động & Việc làm (Sa thải, HĐLĐ, trợ cấp mất việc)',
+  'Doanh nghiệp & M&A (Thành lập, đầu tư FDI, quản trị nội bộ)',
+  'Hôn nhân & Gia đình (Ly hôn, phân chia tài sản, quyền nuôi con)',
+  'Hình sự & Bào chữa tranh tụng (Điều tra, tại ngoại, ra tòa)',
+  'Bảo hiểm & Social Security (BHXH bắt buộc, BHYT, thất nghiệp)',
+  'Giao thông & Tai nạn giao thông',
+  'Hành chính & Khiếu nại quyết định hành chính',
+  'Sở hữu trí tuệ & Bản quyền thương hiệu',
+  'Thừa kế & Di chúc (Khai nhận di sản, tranh chấp di chúc)',
+  'Thuế & Tài chính doanh nghiệp'
 ];
 
-export default function ContactUsForm({ settings, brandColor = '#3b82f6' }: Props) {
+export default function ContactUsForm({ settings, brandColor = '#3b82f6', lawyers = [] }: Props) {
   const { t } = useTranslation();
   const pageProps = usePage().props as any;
   const flash = pageProps?.flash || {};
@@ -36,6 +44,8 @@ export default function ContactUsForm({ settings, brandColor = '#3b82f6' }: Prop
     phone: '',
     email: '',
     practice_area: practiceAreasList[0],
+    user_id: '',
+    preferred_lawyer: '',
     subject: '',
     message: '',
   });
@@ -68,43 +78,46 @@ export default function ContactUsForm({ settings, brandColor = '#3b82f6' }: Prop
       <div className="max-w-7xl mx-auto space-y-10">
         
         {/* Header Title Section */}
-        <div className="text-center max-w-3xl mx-auto space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-sm">
-            <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span>{t('Tư Vấn Pháp Lý Trực Tuyến & Bảo Mật 100%')}</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-            {t('Gửi Câu Hỏi & Yêu Cầu Tư Vấn Pháp Lý')}
+        <div className="text-center space-y-3 max-w-3xl mx-auto">
+          <span className="text-xs font-extrabold uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/70 px-3.5 py-1.5 rounded-full border border-blue-200/80 dark:border-blue-900 shadow-xs">
+            {t('Hỗ Trợ Pháp Lý 24/7')}
+          </span>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight">
+            {t('Liên Hệ & Đặt Câu Hỏi Cho Luật Sư')}
           </h1>
-          <p className="text-base text-gray-600 dark:text-gray-300 leading-relaxed">
-            {t('Đội ngũ Luật sư cấp cao sẽ nghiên cứu hồ sơ và phản hồi trực tiếp qua Điện thoại/Email trong vòng 2 giờ làm việc.')}
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed">
+            {t('Đội ngũ Luật sư chuyên gia giàu kinh nghiệm sẵn sàng lắng nghe, bảo mật tuyệt đối và tư vấn giải pháp pháp lý toàn diện, tối ưu nhất cho bạn.')}
           </p>
         </div>
 
-        {/* Main Content: 2 Column Layout */}
+        {/* Main Grid: Form Left (7 Cols) & Info Cards Right (5 Cols) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* Left Column: The Contact Form (7 Cols) */}
-          <div className="lg:col-span-7 bg-white dark:bg-gray-900 rounded-2xl p-6 sm:p-8 shadow-xl border border-gray-100 dark:border-gray-800 relative">
-            
+          {/* Left Column: Interactive Contact Form (7 Cols) */}
+          <div className="lg:col-span-7 bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-100 dark:border-gray-800 space-y-6">
+            <div className="border-b border-gray-100 dark:border-gray-800 pb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Send className="w-5 h-5 text-blue-600" />
+                <span>{t('Gửi Yêu Cầu Tư Vấn')}</span>
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {t('Vui lòng điền đầy đủ các thông tin bên dưới để Luật sư tiếp nhận và nghiên cứu hồ sơ nhanh chóng.')}
+              </p>
+            </div>
+
             {submittedSuccess && (
-              <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/50 dark:border-emerald-800 flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <div className="bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 p-4 rounded-2xl flex items-start gap-3 text-emerald-800 dark:text-emerald-200 text-sm">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-bold text-emerald-800 dark:text-emerald-200">
-                    {t('Gửi câu hỏi tư vấn thành công!')}
-                  </p>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
-                    {t('Chúng tôi đã ghi nhận thông tin vụ việc và sẽ phản hồi cho bạn trong thời gian sớm nhất.')}
-                  </p>
+                  <p className="font-bold">{t('Gửi yêu cầu thành công!')}</p>
+                  <p className="text-xs mt-0.5">{t('Luật sư của chúng tôi đã nhận được câu hỏi và sẽ liên hệ phản hồi cho bạn trong thời gian sớm nhất.')}</p>
                 </div>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               {/* Row 1: Name & Phone */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
                     {t('Họ và tên')} <span className="text-red-500">*</span>
@@ -114,7 +127,7 @@ export default function ContactUsForm({ settings, brandColor = '#3b82f6' }: Prop
                     required
                     value={data.name}
                     onChange={(e) => setData('name', e.target.value)}
-                    placeholder={t('Nhập họ và tên đầy đủ của bạn')}
+                    placeholder={t('Nguyễn Văn A')}
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm"
                   />
                   {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
@@ -129,7 +142,7 @@ export default function ContactUsForm({ settings, brandColor = '#3b82f6' }: Prop
                     required
                     value={data.phone}
                     onChange={(e) => setData('phone', e.target.value)}
-                    placeholder={t('Ví dụ: 0912 345 678')}
+                    placeholder={t('0912 345 678')}
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm"
                   />
                   {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
@@ -137,10 +150,10 @@ export default function ContactUsForm({ settings, brandColor = '#3b82f6' }: Prop
               </div>
 
               {/* Row 2: Email & Address */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
-                    {t('Gmail / Email')} <span className="text-red-500">*</span>
+                    {t('Email')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
@@ -152,7 +165,6 @@ export default function ContactUsForm({ settings, brandColor = '#3b82f6' }: Prop
                   />
                   {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
                     {t('Địa chỉ liên hệ')}
@@ -167,22 +179,60 @@ export default function ContactUsForm({ settings, brandColor = '#3b82f6' }: Prop
                 </div>
               </div>
 
-              {/* Row 3: Practice Area Select */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
-                  {t('Lĩnh vực quan tâm / Cần tư vấn')} <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={data.practice_area}
-                  onChange={(e) => setData('practice_area', e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm cursor-pointer"
-                >
-                  {practiceAreasList.map((area, idx) => (
-                    <option key={idx} value={area}>
-                      {t(area)}
-                    </option>
-                  ))}
-                </select>
+              {/* Row 3: Practice Area & Preferred Lawyer */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
+                    {t('Lĩnh vực quan tâm / Cần tư vấn')} <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={data.practice_area}
+                    onChange={(e) => setData('practice_area', e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm cursor-pointer"
+                  >
+                    {practiceAreasList.map((area, idx) => (
+                      <option key={idx} value={area}>
+                        {t(area)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
+                    {t('Luật sư muốn tư vấn')} <span className="text-xs font-normal text-gray-400 normal-case">({t('Không bắt buộc')})</span>
+                  </label>
+                  {lawyers && lawyers.length > 0 ? (
+                    <select
+                      value={data.user_id}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        const found = lawyers.find(l => String(l.id) === String(selectedId));
+                        setData((prev: any) => ({
+                          ...prev,
+                          user_id: selectedId,
+                          preferred_lawyer: found ? found.name : ''
+                        }));
+                      }}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm cursor-pointer"
+                    >
+                      <option value="">-- {t('Hệ thống tự động phân công Luật sư')} --</option>
+                      {lawyers.map((lawyer) => (
+                        <option key={lawyer.id} value={lawyer.id}>
+                          {lawyer.name} {lawyer.email ? `(${lawyer.email})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={data.preferred_lawyer}
+                      onChange={(e) => setData('preferred_lawyer', e.target.value)}
+                      placeholder={t('Nhập tên Luật sư mong muốn (nếu có)')}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm"
+                    />
+                  )}
+                </div>
               </div>
 
               {/* Row 4: Question Subject */}
