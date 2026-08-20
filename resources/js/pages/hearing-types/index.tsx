@@ -276,7 +276,7 @@ export default function HearingTypes() {
                         { name: 'description', label: t('Description'), type: 'textarea', placeholder: 'eg. Initial hearing to determine case direction' },
                         { name: 'duration_estimate', label: t('Duration Estimate (minutes)'), type: 'number', placeholder: 'eg. 60' },
                         { name: 'notes', label: t('Notes'), type: 'textarea', placeholder: 'eg. Requires court reporter' },
-                        { name: 'status', label: t('Status'), type: 'select', options: [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }], defaultValue: 'active' }
+                        { name: 'status', label: t('Status'), type: 'select', options: [{ value: 'active', label: t('Active') }, { value: 'inactive', label: t('Inactive') }], defaultValue: 'active' }
                     ],
                     modalSize: 'xl'
                 }}

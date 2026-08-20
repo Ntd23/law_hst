@@ -3,7 +3,7 @@ import { Head, usePage } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
-import TopLawyersSection from './components/TopLawyersSection';
+import CompaniesDirectory from './components/CompaniesDirectory';
 import PracticeAreasSection from './components/PracticeAreasSection';
 import FeaturesSection from './components/FeaturesSection';
 import ScreenshotsSection from './components/ScreenshotsSection';
@@ -20,7 +20,6 @@ import LegalNewsSection from './components/LegalNewsSection';
 import Footer from './components/Footer';
 import { useBrand } from '@/contexts/BrandContext';
 import { THEME_COLORS } from '@/hooks/use-appearance';
-import { log } from 'node:console';
 import { getImagePath } from '@/utils/helpers';
 
 interface Plan {
@@ -93,6 +92,8 @@ interface PageProps {
     plans: Plan[];
     testimonials: Testimonial[];
     faqs: Faq[];
+    articles?: any[];
+    companies?: any[];
     customPages: CustomPage[];
     settings: LandingSettings;
     flash?: {
@@ -103,7 +104,7 @@ interface PageProps {
 
 export default function LandingPage() {
     const { t } = useTranslation();
-    const { plans, testimonials, faqs, customPages = [], settings, flash } = usePage<PageProps>().props;
+    const { plans, testimonials, faqs, articles = [], companies = [], customPages = [], settings, flash } = usePage<PageProps>().props;
 
     // Get brand colors - prioritize config_sections theme over brand context
     const { themeColor, customColor } = useBrand();
@@ -264,25 +265,27 @@ export default function LandingPage() {
 
     // Get section order or use default
     const rawSectionOrder = settings.config_sections?.section_order || [
-        'header', 'hero', 'top_lawyers', 'features', 'screenshots', 'why_choose_us', 'templates', 'about',
+        'header', 'hero', 'companies', 'features', 'screenshots', 'why_choose_us', 'templates', 'about',
         'team', 'testimonials', 'plans', 'faq', 'newsletter', 'contact', 'footer'
     ];
 
-    const removedSections = ['newsletter', 'faq', 'plans', 'testimonials', 'why_choose_us', 'screenshots', 'features', 'team', 'about'];
+    const removedSections = ['top_lawyers', 'newsletter', 'faq', 'plans', 'testimonials', 'why_choose_us', 'screenshots', 'features', 'team', 'about'];
 
-    // Ensure top_lawyers, practice_areas, and legal_news are included and unwanted sections are filtered out
+    // Ensure companies, practice_areas, and legal_news are included and unwanted sections are filtered out
     const sectionOrder = (() => {
-        let order = rawSectionOrder.filter(key => !removedSections.includes(key));
+        let order = rawSectionOrder
+            .map(k => (k === 'top_lawyers' ? 'companies' : k))
+            .filter(key => !removedSections.includes(key));
 
-        if (!order.includes('top_lawyers')) {
+        if (!order.includes('companies')) {
             const heroIdx = order.indexOf('hero');
-            if (heroIdx !== -1) order.splice(heroIdx + 1, 0, 'top_lawyers');
-            else order.splice(1, 0, 'top_lawyers');
+            if (heroIdx !== -1) order.splice(heroIdx + 1, 0, 'companies');
+            else order.splice(1, 0, 'companies');
         }
 
         if (!order.includes('practice_areas')) {
-            const lawyersIdx = order.indexOf('top_lawyers');
-            if (lawyersIdx !== -1) order.splice(lawyersIdx + 1, 0, 'practice_areas');
+            const compIdx = order.indexOf('companies');
+            if (compIdx !== -1) order.splice(compIdx + 1, 0, 'practice_areas');
             else order.splice(2, 0, 'practice_areas');
         }
 
@@ -313,8 +316,11 @@ export default function LandingPage() {
                 globalSettings={globalSettings}
             />
         ),
+        companies: () => (
+            <CompaniesDirectory companies={companies} brandColor={primaryColor} isSection={true} />
+        ),
         top_lawyers: () => (
-            <TopLawyersSection brandColor={primaryColor} />
+            <CompaniesDirectory companies={companies} brandColor={primaryColor} isSection={true} />
         ),
         practice_areas: () => (
             <PracticeAreasSection brandColor={primaryColor} />
@@ -395,7 +401,7 @@ export default function LandingPage() {
             />
         ),
         legal_news: () => (
-            <LegalNewsSection brandColor={primaryColor} />
+            <LegalNewsSection brandColor={primaryColor} articles={articles} />
         ),
         contact: () => isSectionVisible('contact') && (
             <ContactSection

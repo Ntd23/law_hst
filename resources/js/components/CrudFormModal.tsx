@@ -17,7 +17,6 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@inertiajs/react';
 import DependentDropdown from './DependentDropdown';
-import { log } from 'node:console';
 
 interface CrudFormModalProps {
     isOpen: boolean;
@@ -575,33 +574,57 @@ export function CrudFormModal({ isOpen, onClose, onSubmit, formConfig, initialDa
             case 'select':
                 const options = field.relation ? relationOptions[field.name] || [] : field.options || [];
 
-                const currentValue = String(formData[field.name] || '');
-                const selectedOption = field.relation
-                    ? options.find((opt: any) => String(opt[field.relation!.valueField]) === currentValue)
-                    : options.find((opt) => String(opt.value) === currentValue);
+                const rawVal = formData[field.name];
+                const currentValue = (rawVal !== undefined && rawVal !== null && String(rawVal) !== '' && String(rawVal) !== '_empty_')
+                    ? String(rawVal)
+                    : '_empty_';
 
-                const displayText = selectedOption ? (field.relation ? selectedOption[field.relation!.labelField] : selectedOption.label) : '';
+                const selectedOption = field.relation
+                    ? options.find((opt: any) => {
+                        const v = String(opt[field.relation!.valueField] ?? '');
+                        return v === currentValue || (currentValue === '_empty_' && (v === '' || v === '_empty_'));
+                    })
+                    : options.find((opt) => {
+                        const v = String(opt.value ?? '');
+                        return v === currentValue || (currentValue === '_empty_' && (v === '' || v === '_empty_'));
+                    });
+
+                const rawDisplayText = selectedOption ? (field.relation ? selectedOption[field.relation!.labelField] : selectedOption.label) : '';
+                const displayText = rawDisplayText ? (t(rawDisplayText) || rawDisplayText) : '';
+                const defaultPlaceholder = field.placeholder || `${t('Select')} ${field.label}`;
 
                 return (
                     <>
-                        <Select value={currentValue} onValueChange={(value) => handleChange(field.name, value)} disabled={mode === 'view' || field.disabled}>
+                        <Select
+                            value={currentValue}
+                            onValueChange={(value) => handleChange(field.name, value === '_empty_' ? '' : value)}
+                            disabled={mode === 'view' || field.disabled}
+                        >
                             <SelectTrigger className={errors[field.name] ? 'border-red-500' : ''}>
-                                <SelectValue placeholder={field.placeholder || `Select ${field.label}`}>
-                                    {displayText || field.placeholder || `Select ${field.label}`}
+                                <SelectValue placeholder={defaultPlaceholder}>
+                                    {displayText || defaultPlaceholder}
                                 </SelectValue>
                             </SelectTrigger>
                             <SelectContent className="z-[60000]" searchable={field.searchable}>
                                 {field.relation
-                                    ? options.map((option: any) => (
-                                        <SelectItem key={option[field.relation!.valueField]} value={String(option[field.relation!.valueField])}>
-                                            {option[field.relation!.labelField]}
-                                        </SelectItem>
-                                    ))
-                                    : options.map((option) => (
-                                        <SelectItem key={option.value} value={String(option.value)}>
-                                            {option.label}
-                                        </SelectItem>
-                                    ))}
+                                    ? options.map((option: any) => {
+                                        const rawOptionVal = String(option[field.relation!.valueField] ?? '');
+                                        const safeOptionVal = rawOptionVal === '' ? '_empty_' : rawOptionVal;
+                                        return (
+                                            <SelectItem key={safeOptionVal} value={safeOptionVal}>
+                                                {t(option[field.relation!.labelField]) || option[field.relation!.labelField]}
+                                            </SelectItem>
+                                        );
+                                    })
+                                    : options.map((option) => {
+                                        const rawOptionVal = String(option.value ?? '');
+                                        const safeOptionVal = rawOptionVal === '' ? '_empty_' : rawOptionVal;
+                                        return (
+                                            <SelectItem key={safeOptionVal} value={safeOptionVal}>
+                                                {t(option.label) || option.label}
+                                            </SelectItem>
+                                        );
+                                    })}
                             </SelectContent>
                         </Select>
                         {options.length === 0 && mode !== 'view' && field.emptyNote && (

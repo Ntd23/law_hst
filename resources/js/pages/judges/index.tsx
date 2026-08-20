@@ -308,7 +308,7 @@ export default function Judges() {
             { name: 'phone', label: t('Phone'), type: 'text', required: true, placeholder: 'eg. +1 212 000 0000' },
             { name: 'contact_info', label: t('Contact Information'), type: 'textarea', placeholder: 'eg. Chambers on 3rd floor, Room 301' },
             { name: 'notes', label: t('Notes'), type: 'textarea', placeholder: 'eg. Prefers written motions submitted 5 days in advance' },
-            { name: 'status', label: t('Status'), type: 'select', options: [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }], defaultValue: 'active' }
+            { name: 'status', label: t('Status'), type: 'select', options: [{ value: 'active', label: t('Active') }, { value: 'inactive', label: t('Inactive') }], defaultValue: 'active' }
           ],
           modalSize: 'xl'
         }}

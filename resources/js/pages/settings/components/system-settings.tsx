@@ -22,7 +22,7 @@ interface SystemSettingsProps {
 }
 
 export default function SystemSettings({ settings = {}, timezones = {}, dateFormats = {}, timeFormats = {} }: SystemSettingsProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { pageProps, auth } = usePage().props as any;
     const isCompanyUser = auth?.roles?.includes('company');
     const [isLoading, setIsLoading] = useState(false);
@@ -139,6 +139,11 @@ export default function SystemSettings({ settings = {}, timezones = {}, dateForm
                 setIsLoading(false);
                 const successMessage = page.props.flash?.success;
                 const errorMessage = page.props.flash?.error;
+
+                if (cleanSettings.defaultLanguage) {
+                    i18n.changeLanguage(cleanSettings.defaultLanguage);
+                    localStorage.setItem('i18nextLng', cleanSettings.defaultLanguage);
+                }
 
                 if (successMessage) {
                     toast.success(successMessage);

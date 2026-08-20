@@ -44,6 +44,7 @@ export function AppSidebar() {
     const getSuperAdminNavItems = (): NavItem[] => [
         { title: t('Dashboard'), href: route('dashboard'), icon: LayoutGrid, group: t("Overview") },
         { title: t('Companies'), href: route('companies.index'), icon: Briefcase, group: t("Management") },
+        { title: t('Quản lý bài viết'), href: route('legal-research.knowledge.index'), icon: BookOpen, group: t("Management") },
         { title: t('Media Library'), href: route('media-library'), icon: Image, group: t("Management") },
         {
             title: t('Plans'), icon: CreditCard, group: t("Management"),

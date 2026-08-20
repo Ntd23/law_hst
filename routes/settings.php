@@ -39,9 +39,12 @@ Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
     Route::post('/payment-settings', [PaymentSettingController::class, 'store'])->name('payment.settings');
 
     // Profile settings page with profile and password sections
-    Route::get('profile', function () {
+    Route::get('ho-so-ca-nhan', function () {
         return Inertia::render('settings/profile-settings');
     })->name('profile');
+    Route::get('profile', function () {
+        return redirect()->route('profile');
+    });
 
     // Routes for form submissions
     Route::patch('profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -50,9 +53,12 @@ Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
     Route::put('profile/password', [PasswordController::class, 'update'])->name('password.update');
 
     // Email settings page
-    Route::get('settings/email', function () {
+    Route::get('cai-dat/email', function () {
         return Inertia::render('settings/components/email-settings');
     })->name('settings.email');
+    Route::get('settings/email', function () {
+        return redirect()->route('settings.email');
+    });
 
     // Email settings routes
     Route::get('settings/email/get', [EmailSettingController::class, 'getEmailSettings'])->name('settings.email.get');
@@ -60,7 +66,10 @@ Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
     Route::post('settings/email/test', [EmailSettingController::class, 'sendTestEmail'])->name('settings.email.test');
 
     // General settings page with system and company settings
-    Route::get('settings', [SettingsController::class, 'index'])->name('settings');
+    Route::get('cai-dat', [SettingsController::class, 'index'])->name('settings');
+    Route::get('settings', function () {
+        return redirect()->route('settings');
+    });
     Route::get('api/settings', [SettingsController::class, 'getSettings'])->name('settings.api');
     Route::post('settings/layout-direction', [SettingsController::class, 'updateLayoutDirection'])->name('settings.layout-direction.update');
 
@@ -112,8 +121,11 @@ Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
     Route::post('settings/slack/test', [SystemSettingsController::class, 'testSlackWebhook'])->name('settings.slack.test');
 
     // Notification Template routes
-    Route::get('notification-templates', [NotificationTemplateController::class, 'index'])->name('notification-templates.index');
-    Route::get('notification-templates/{notificationTemplate}', [NotificationTemplateController::class, 'show'])->name('notification-templates.show');
-    Route::match(['POST', 'PUT'], 'notification-templates/{notificationTemplate}/settings', [NotificationTemplateController::class, 'updateSettings'])->name('notification-templates.update-settings');
-    Route::match(['POST', 'PUT'], 'notification-templates/{notificationTemplate}/content', [NotificationTemplateController::class, 'updateContent'])->name('notification-templates.update-content');
+    Route::get('mau-thong-bao', [NotificationTemplateController::class, 'index'])->name('notification-templates.index');
+    Route::get('notification-templates', function () {
+        return redirect()->route('notification-templates.index');
+    });
+    Route::get('mau-thong-bao/{notificationTemplate}', [NotificationTemplateController::class, 'show'])->name('notification-templates.show');
+    Route::match(['POST', 'PUT'], 'mau-thong-bao/{notificationTemplate}/settings', [NotificationTemplateController::class, 'updateSettings'])->name('notification-templates.update-settings');
+    Route::match(['POST', 'PUT'], 'mau-thong-bao/{notificationTemplate}/content', [NotificationTemplateController::class, 'updateContent'])->name('notification-templates.update-content');
 });

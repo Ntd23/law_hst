@@ -100,7 +100,7 @@ const getInitialLanguage = () => {
     }
 
     // In demo mode, don't use server locale or localStorage
-    return 'en';
+    return 'vi';
   }
 
   // Non-demo mode: try server locale first
@@ -121,7 +121,7 @@ const getInitialLanguage = () => {
   }
 
   // Default fallback
-  return 'en';
+  return 'vi';
 };
 
 // Initialize i18n

@@ -1060,6 +1060,7 @@ export default function LandingPageSettings() {
                         <option value="left">{t('Left Side')}</option>
                         <option value="center">{t('Center')}</option>
                         <option value="background">{t('Background')}</option>
+                        <option value="fullscreen">{t('Full Screen')}</option>
                       </select>
                     </div>
                   </div>

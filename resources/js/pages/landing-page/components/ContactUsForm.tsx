@@ -12,10 +12,18 @@ interface LawyerItem {
   type?: string;
 }
 
+interface CompanyItem {
+  id: number;
+  name: string;
+  email?: string;
+  address?: string;
+}
+
 interface Props {
   settings?: any;
   brandColor?: string;
   lawyers?: LawyerItem[];
+  companies?: CompanyItem[];
 }
 
 const practiceAreasList = [
@@ -33,7 +41,7 @@ const practiceAreasList = [
   'Thuế & Tài chính doanh nghiệp'
 ];
 
-export default function ContactUsForm({ settings, brandColor = '#3b82f6', lawyers = [] }: Props) {
+export default function ContactUsForm({ settings, brandColor = '#3b82f6', lawyers = [], companies = [] }: Props) {
   const { t } = useTranslation();
   const pageProps = usePage().props as any;
   const flash = pageProps?.flash || {};
@@ -200,9 +208,30 @@ export default function ContactUsForm({ settings, brandColor = '#3b82f6', lawyer
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
-                    {t('Luật sư muốn tư vấn')} <span className="text-xs font-normal text-gray-400 normal-case">({t('Không bắt buộc')})</span>
+                    {t('Công ty muốn tư vấn')} <span className="text-xs font-normal text-gray-400 normal-case">({t('Không bắt buộc')})</span>
                   </label>
-                  {lawyers && lawyers.length > 0 ? (
+                  {companies && companies.length > 0 ? (
+                    <select
+                      value={data.user_id}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        const found = companies.find(c => String(c.id) === String(selectedId));
+                        setData((prev: any) => ({
+                          ...prev,
+                          user_id: selectedId,
+                          preferred_lawyer: found ? found.name : ''
+                        }));
+                      }}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm cursor-pointer"
+                    >
+                      <option value="">-- {t('Hệ thống tự động phân công Công ty')} --</option>
+                      {companies.map((company) => (
+                        <option key={company.id} value={company.id}>
+                          {company.name} {company.email ? `(${company.email})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  ) : lawyers && lawyers.length > 0 ? (
                     <select
                       value={data.user_id}
                       onChange={(e) => {
@@ -216,7 +245,7 @@ export default function ContactUsForm({ settings, brandColor = '#3b82f6', lawyer
                       }}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm cursor-pointer"
                     >
-                      <option value="">-- {t('Hệ thống tự động phân công Luật sư')} --</option>
+                      <option value="">-- {t('Hệ thống tự động phân công Công ty')} --</option>
                       {lawyers.map((lawyer) => (
                         <option key={lawyer.id} value={lawyer.id}>
                           {lawyer.name} {lawyer.email ? `(${lawyer.email})` : ''}
@@ -228,7 +257,7 @@ export default function ContactUsForm({ settings, brandColor = '#3b82f6', lawyer
                       type="text"
                       value={data.preferred_lawyer}
                       onChange={(e) => setData('preferred_lawyer', e.target.value)}
-                      placeholder={t('Nhập tên Luật sư mong muốn (nếu có)')}
+                      placeholder={t('Nhập tên Công ty luật mong muốn (nếu có)')}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm"
                     />
                   )}

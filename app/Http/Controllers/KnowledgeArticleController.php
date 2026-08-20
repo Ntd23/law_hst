@@ -12,24 +12,32 @@ class KnowledgeArticleController extends Controller
 {
     public function index(Request $request)
     {
-        if (!Auth::user()->can('manage-knowledge-articles')) {
+        if (!Auth::user()->can('manage-knowledge-articles') && Auth::user()->type !== 'superadmin') {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
-        $query = KnowledgeArticle::with(['category.practiceArea', 'creator'])->where(function ($q) {
-            if (Auth::user()->can('manage-any-knowledge-articles')) {
-                $q->whereIn('created_by', getCompanyAndUsersId());
-            } elseif (Auth::user()->can('manage-own-knowledge-articles')) {
-                $q->where('created_by', Auth::id());
-            } else {
-                $q->whereRaw('1 = 0');
-            }
-        });
+
+        $isSuperAdmin = Auth::user()->type === 'superadmin';
+
+        $query = KnowledgeArticle::with(['category.practiceArea', 'creator']);
+
+        if (!$isSuperAdmin) {
+            $query->where(function ($q) {
+                if (Auth::user()->can('manage-any-knowledge-articles')) {
+                    $q->whereIn('created_by', getCompanyAndUsersId());
+                } elseif (Auth::user()->can('manage-own-knowledge-articles')) {
+                    $q->where('created_by', Auth::id());
+                } else {
+                    $q->whereRaw('1 = 0');
+                }
+            });
+        }
 
         $stats = (clone $query)
             ->select('status')
             ->selectRaw('COUNT(*) as count')
             ->groupBy('status')
-            ->pluck('count', 'status');
+            ->pluck('count', 'status')
+            ->toArray();
 
         $stats['total'] = (clone $query)->count();
 
@@ -52,9 +60,7 @@ class KnowledgeArticleController extends Controller
         }
 
         $sortDirection = $request->input('sort_direction', 'desc');
-
         $sortDirection = in_array($sortDirection, ['asc', 'desc']) ? $sortDirection : 'desc';
-
         $query->orderBy('created_at', $sortDirection);
 
         $perPage = $request->input('per_page', 9);
@@ -62,18 +68,20 @@ class KnowledgeArticleController extends Controller
             $perPage = 9;
         }
 
-
         $articles = $query->paginate($perPage)->withQueryString();
 
-        $categoryQuery = ResearchCategory::with('practiceArea')->where(function ($q) {
-            if (Auth::user()->can('manage-any-research-categories')) {
-                $q->whereIn('created_by', getCompanyAndUsersId());
-            } elseif (Auth::user()->can('manage-own-research-categories')) {
-                $q->where('created_by', Auth::id());
-            } else {
-                $q->whereRaw('1 = 0');
-            }
-        });
+        $categoryQuery = ResearchCategory::with('practiceArea');
+        if (!$isSuperAdmin) {
+            $categoryQuery->where(function ($q) {
+                if (Auth::user()->can('manage-any-research-categories')) {
+                    $q->whereIn('created_by', getCompanyAndUsersId());
+                } elseif (Auth::user()->can('manage-own-research-categories')) {
+                    $q->where('created_by', Auth::id());
+                } else {
+                    $q->whereRaw('1 = 0');
+                }
+            });
+        }
         $allCategories = (clone $categoryQuery)->get(['id', 'name', 'practice_area_id']);
         $categories = (clone $categoryQuery)->active()->get(['id', 'name', 'practice_area_id']);
 
@@ -88,21 +96,26 @@ class KnowledgeArticleController extends Controller
 
     public function store(Request $request)
     {
-        if (!Auth::user()->can('create-knowledge-articles')) {
+        if (!Auth::user()->can('create-knowledge-articles') && Auth::user()->type !== 'superadmin') {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
+
+        $isSuperAdmin = Auth::user()->type === 'superadmin';
+
         $validated = $request->validate([
             'title' => [
                 'required',
                 'string',
                 'max:255',
-                function ($attribute, $value, $fail) {
-                    $exists = KnowledgeArticle::whereRaw('LOWER(title) = ?', [strtolower($value)])
-                        ->whereIn('created_by', getCompanyAndUsersId())
-                        ->exists();
-
-                    if ($exists) {
-                        $fail('A knowledge article with this title already exists.');
+                function ($attribute, $value, $fail) use ($isSuperAdmin) {
+                    $query = KnowledgeArticle::whereRaw('LOWER(title) = ?', [strtolower($value)]);
+                    if (!$isSuperAdmin) {
+                        $query->whereIn('created_by', getCompanyAndUsersId());
+                    } else {
+                        $query->where('created_by', Auth::id());
+                    }
+                    if ($query->exists()) {
+                        $fail(__('A knowledge article with this title already exists.'));
                     }
                 }
             ],
@@ -113,12 +126,14 @@ class KnowledgeArticleController extends Controller
             'status' => 'nullable|in:draft,published,archived',
         ]);
 
-        if ($validated['category_id']) {
-            $category = ResearchCategory::active()->where('id', $validated['category_id'])
-                ->whereIn('created_by', getCompanyAndUsersId())
-                ->first();
+        if (!empty($validated['category_id'])) {
+            $catQuery = ResearchCategory::active()->where('id', $validated['category_id']);
+            if (!$isSuperAdmin) {
+                $catQuery->whereIn('created_by', getCompanyAndUsersId());
+            }
+            $category = $catQuery->first();
             if (!$category) {
-                return redirect()->back()->with('error', 'Invalid category selection.');
+                return redirect()->back()->with('error', __('Invalid category selection.'));
             }
         }
 
@@ -128,16 +143,20 @@ class KnowledgeArticleController extends Controller
 
         KnowledgeArticle::create($validated);
 
-        return redirect()->back()->with('success', 'Knowledge article created successfully.');
+        return redirect()->back()->with('success', __('Knowledge article created successfully.'));
     }
 
     public function update(Request $request, $articleId)
     {
-        if (!Auth::user()->can('edit-knowledge-articles')) {
+        if (!Auth::user()->can('edit-knowledge-articles') && Auth::user()->type !== 'superadmin') {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
-        $article = KnowledgeArticle::where('id', $articleId)
-            ->where(function ($q) {
+
+        $isSuperAdmin = Auth::user()->type === 'superadmin';
+
+        $articleQuery = KnowledgeArticle::where('id', $articleId);
+        if (!$isSuperAdmin) {
+            $articleQuery->where(function ($q) {
                 if (Auth::user()->can('manage-any-knowledge-articles')) {
                     $q->whereIn('created_by', getCompanyAndUsersId());
                 } elseif (Auth::user()->can('manage-own-knowledge-articles')) {
@@ -145,10 +164,12 @@ class KnowledgeArticleController extends Controller
                 } else {
                     $q->whereRaw('1 = 0');
                 }
-            })->first();
+            });
+        }
+        $article = $articleQuery->first();
 
         if (!$article) {
-            return redirect()->back()->with('error', 'Knowledge article not found.');
+            return redirect()->back()->with('error', __('Knowledge article not found.'));
         }
 
         $validated = $request->validate([
@@ -160,37 +181,41 @@ class KnowledgeArticleController extends Controller
             'status' => 'nullable|in:draft,published,archived',
         ]);
 
-        if ($validated['category_id']) {
-            $category = ResearchCategory::active()->where('id', $validated['category_id'])
-                ->whereIn('created_by', getCompanyAndUsersId())
-                ->first();
+        if (!empty($validated['category_id'])) {
+            $catQuery = ResearchCategory::active()->where('id', $validated['category_id']);
+            if (!$isSuperAdmin) {
+                $catQuery->whereIn('created_by', getCompanyAndUsersId());
+            }
+            $category = $catQuery->first();
             if (!$category) {
-                return redirect()->back()->with('error', 'Invalid category selection.');
+                return redirect()->back()->with('error', __('Invalid category selection.'));
             }
         }
 
-        // Check if knowledge article with same title already exists for this company (excluding current)
-        $exists = KnowledgeArticle::where('title', $validated['title'])
-            ->whereIn('created_by', getCompanyAndUsersId())
-            ->where('id', '!=', $articleId)
-            ->exists();
-
-        if ($exists) {
-            return redirect()->back()->with('error', 'Knowledge article already exists.');
+        $existsQuery = KnowledgeArticle::where('title', $validated['title'])->where('id', '!=', $articleId);
+        if (!$isSuperAdmin) {
+            $existsQuery->whereIn('created_by', getCompanyAndUsersId());
+        }
+        if ($existsQuery->exists()) {
+            return redirect()->back()->with('error', __('Knowledge article already exists.'));
         }
 
         $article->update($validated);
 
-        return redirect()->back()->with('success', 'Knowledge article updated successfully.');
+        return redirect()->back()->with('success', __('Knowledge article updated successfully.'));
     }
 
     public function destroy($articleId)
     {
-        if (!Auth::user()->can('delete-knowledge-articles')) {
+        if (!Auth::user()->can('delete-knowledge-articles') && Auth::user()->type !== 'superadmin') {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
-        $article = KnowledgeArticle::where('id', $articleId)
-            ->where(function ($q) {
+
+        $isSuperAdmin = Auth::user()->type === 'superadmin';
+
+        $articleQuery = KnowledgeArticle::where('id', $articleId);
+        if (!$isSuperAdmin) {
+            $articleQuery->where(function ($q) {
                 if (Auth::user()->can('manage-any-knowledge-articles')) {
                     $q->whereIn('created_by', getCompanyAndUsersId());
                 } elseif (Auth::user()->can('manage-own-knowledge-articles')) {
@@ -198,21 +223,30 @@ class KnowledgeArticleController extends Controller
                 } else {
                     $q->whereRaw('1 = 0');
                 }
-            })->first();
+            });
+        }
+        $article = $articleQuery->first();
 
         if (!$article) {
-            return redirect()->back()->with('error', 'Knowledge article not found.');
+            return redirect()->back()->with('error', __('Knowledge article not found.'));
         }
 
         $article->delete();
 
-        return redirect()->back()->with('success', 'Knowledge article deleted successfully.');
+        return redirect()->back()->with('success', __('Knowledge article deleted successfully.'));
     }
 
     public function publish($articleId)
     {
-        $article = KnowledgeArticle::where('id', $articleId)
-            ->where(function ($q) {
+        if (!Auth::user()->can('publish-knowledge-articles') && Auth::user()->type !== 'superadmin') {
+            return redirect()->back()->with('error', __('Permission Denied.'));
+        }
+
+        $isSuperAdmin = Auth::user()->type === 'superadmin';
+
+        $articleQuery = KnowledgeArticle::where('id', $articleId);
+        if (!$isSuperAdmin) {
+            $articleQuery->where(function ($q) {
                 if (Auth::user()->can('manage-any-knowledge-articles')) {
                     $q->whereIn('created_by', getCompanyAndUsersId());
                 } elseif (Auth::user()->can('manage-own-knowledge-articles')) {
@@ -220,15 +254,17 @@ class KnowledgeArticleController extends Controller
                 } else {
                     $q->whereRaw('1 = 0');
                 }
-            })->first();
+            });
+        }
+        $article = $articleQuery->first();
 
         if (!$article) {
-            return redirect()->back()->with('error', 'Knowledge article not found.');
+            return redirect()->back()->with('error', __('Knowledge article not found.'));
         }
 
         $article->status = $article->status === 'published' ? 'draft' : 'published';
         $article->save();
 
-        return redirect()->back()->with('success', 'Knowledge article status updated successfully.');
+        return redirect()->back()->with('success', __('Knowledge article status updated successfully.'));
     }
 }

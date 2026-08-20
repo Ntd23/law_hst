@@ -81,10 +81,105 @@ class LandingPageController extends Controller
                 ];
             });
 
+        $articles = \App\Models\KnowledgeArticle::with(['category', 'creator'])
+            ->where('status', 'published')
+            ->where('is_public', true)
+            ->latest()
+            ->get()
+            ->unique('title')
+            ->values()
+            ->map(function ($article) {
+                $categoryName = $article->category?->name ?: 'Pháp luật Doanh nghiệp';
+                $tags = is_array($article->tags) ? $article->tags : (json_decode($article->tags, true) ?: []);
+                $paragraphs = array_values(array_filter(explode("\n", strip_tags($article->content))));
+                $authorName = $article->creator?->name ?: 'Luật sư Chuyên gia';
+                $authorRole = $article->creator?->type === 'superadmin' ? 'Hội đồng Cố vấn Pháp lý' : 'Luật sư Thành viên';
+                $authorAvatar = $article->creator?->avatar ?: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=200';
+
+                $images = [
+                    'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800',
+                    'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800',
+                    'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=800',
+                    'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
+                    'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&q=80&w=800',
+                    'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&q=80&w=800',
+                ];
+                $img = $images[($article->id - 1) % count($images)];
+
+                return [
+                    'id' => $article->id,
+                    'title' => $article->title,
+                    'category' => $categoryName,
+                    'category_id' => $article->category_id,
+                    'date' => $article->created_at ? $article->created_at->format('d/m/Y') : date('d/m/Y'),
+                    'readTime' => '5 phút đọc',
+                    'author' => [
+                        'name' => $authorName,
+                        'role' => $authorRole,
+                        'avatar' => $authorAvatar,
+                    ],
+                    'image' => $img,
+                    'summary' => \Illuminate\Support\Str::limit(strip_tags($article->content), 180),
+                    'content' => $paragraphs,
+                    'tags' => $tags,
+                ];
+            });
+
+        $companies = \App\Models\User::where('type', 'company')
+            ->where(function($q) {
+                $q->whereNull('status')->orWhere('status', 1)->orWhere('status', 'active');
+            })
+            ->with(['plan'])
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(function ($company) {
+                $profile = \App\Models\CompanyProfile::where('created_by', $company->id)->first();
+                $companyLawyers = \App\Models\User::where('created_by', $company->id)
+                    ->where(function($q) {
+                        $q->where('type', '!=', 'client')->orWhereNull('type');
+                    })
+                    ->select('id', 'name', 'email', 'avatar')
+                    ->get();
+                    
+                $userIds = $companyLawyers->pluck('id')->toArray();
+                $allIds = array_merge([$company->id], $userIds);
+                
+                $casesCount = \App\Models\CaseModel::whereIn('created_by', $allIds)->count();
+                $clientsCount = \App\Models\Client::whereIn('created_by', $allIds)->count();
+
+                return [
+                    'id' => $company->id,
+                    'name' => $profile?->name ?: $company->name,
+                    'email' => $profile?->email ?: $company->email,
+                    'phone' => $profile?->phone ?: ($company->phone ?: null),
+                    'address' => $profile?->address ?: null,
+                    'website' => $profile?->website ?: null,
+                    'logo' => $profile?->logo ?: $company->avatar,
+                    'advocate_name' => $profile?->advocate_name ?: $company->name,
+                    'specialization' => $profile?->specialization ?: null,
+                    'years_of_experience' => $profile?->years_of_experience ?? null,
+                    'success_rate' => $profile?->success_rate ?? null,
+                    'consultation_fees' => $profile?->consultation_fees ?? null,
+                    'languages_spoken' => $profile?->languages_spoken ?: null,
+                    'office_hours' => $profile?->office_hours ?: null,
+                    'registration_number' => $profile?->registration_number ?: null,
+                    'bar_registration_number' => $profile?->bar_registration_number ?: null,
+                    'business_type' => $profile?->business_type ?: null,
+                    'plan_name' => $company->plan?->name ?? null,
+                    'cases_count' => $casesCount,
+                    'clients_count' => $clientsCount,
+                    'lawyers_count' => count($companyLawyers),
+                    'lawyers' => $companyLawyers,
+                    'created_at' => $company->created_at?->format('d/m/Y') ?? '',
+                ];
+            });
+
         return Inertia::render('landing-page/index', [
             'plans' => $plans,
             'testimonials' => [],
             'faqs' => $faqs,
+            'articles' => $articles,
+            'companies' => $companies,
             'customPages' => LandingPageCustomPage::active()->ordered()->get() ?? [],
             'settings' => $landingSettings,
             'sectionData' => [

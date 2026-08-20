@@ -21,9 +21,10 @@ interface Article {
 
 interface LegalNewsSectionProps {
     brandColor?: string;
+    articles?: Article[];
 }
 
-export default function LegalNewsSection({ brandColor = '#3b82f6' }: LegalNewsSectionProps) {
+export default function LegalNewsSection({ brandColor = '#3b82f6', articles: propArticles }: LegalNewsSectionProps) {
     const { t } = useTranslation();
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [activeArticle, setActiveArticle] = useState<Article | null>(null);
@@ -47,111 +48,20 @@ export default function LegalNewsSection({ brandColor = '#3b82f6' }: LegalNewsSe
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    const articles: Article[] = propArticles || [];
+
+    if (articles.length === 0) {
+        return null;
+    }
+
+    // Build dynamic categories list from articles
+    const uniqueCategories = Array.from(new Set(articles.map(a => a.category))).filter(Boolean);
     const categories = [
         { key: 'all', label: t('All News') },
-        { key: 'corporate', label: t('Corporate Law') },
-        { key: 'real_estate', label: t('Real Estate') },
-        { key: 'litigation', label: t('Litigation & Defense') },
-        { key: 'tax_finance', label: t('Tax & Finance') },
-    ];
-
-    const articles: Article[] = [
-        {
-            id: 1,
-            title: t('Highlights of the Land Law 2024: Essential Impacts on Enterprises & Investors'),
-            category: 'real_estate',
-            date: '15/08/2026',
-            readTime: t('6 min read'),
-            author: {
-                name: 'Luật sư Nguyễn Văn Toàn',
-                role: t('Senior Partner'),
-                avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=200'
-            },
-            image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800',
-            summary: t('An in-depth guide to key modifications in Land Law 2024 including land valuation frameworks, lease terms, and project investment procedures.'),
-            content: [
-                t('The newly enacted Land Law 2024 introduces landmark reformations affecting corporate land allocation, lease payment structures, and project clearance procedures.'),
-                t('One of the most noteworthy amendments is the removal of the government land price frame, transitioning to annual market-aligned land price lists.'),
-                t('Investors and corporate landowners must proactively audit existing land use right certificates (LURC) and align project timelines with the updated regulations.')
-            ],
-            tags: [t('Land Law'), t('Real Estate'), t('Investment')]
-        },
-        {
-            id: 2,
-            title: t('M&A Legal Due Diligence: 5 Critical Risks Every Foreign Investor Must Mitigate'),
-            category: 'corporate',
-            date: '12/08/2026',
-            readTime: t('5 min read'),
-            author: {
-                name: 'Luật sư Nguyễn Cao Trí',
-                role: t('M&A Specialist'),
-                avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200'
-            },
-            image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=600',
-            summary: t('Legal risk assessment in cross-border mergers and acquisitions, focusing on tax liabilities, labor compliance, and IP ownership.'),
-            content: [
-                t('Navigating M&A transactions in Vietnam demands meticulous legal due diligence to uncover hidden financial liabilities and regulatory non-compliance.'),
-                t('Key audit domains include employment contracts, tax arrears, environmental permits, and clear intellectual property title transfer.')
-            ],
-            tags: [t('Corporate Law'), t('M&A'), t('Cross-border')]
-        },
-        {
-            id: 3,
-            title: t('Defending White-Collar & Economic Offenses: Tactical Legal Guidance'),
-            category: 'litigation',
-            date: '09/08/2026',
-            readTime: t('7 min read'),
-            author: {
-                name: 'Luật sư Nguyễn Hồng Lĩnh',
-                role: t('Litigation Head'),
-                avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200'
-            },
-            image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=600',
-            summary: t('Key procedural rights, investigation protocols, and defense strategies in high-profile corporate criminal proceedings.'),
-            content: [
-                t('Corporate criminal defense requires immediate intervention during the preliminary investigation phase to safeguard constitutional rights.'),
-                t('Defense counsel plays a critical role in preserving documentation, verifying accounting evidence, and mitigating personal asset freeze risk.')
-            ],
-            tags: [t('Criminal Defense'), t('Corporate Risk'), t('Litigation')]
-        },
-        {
-            id: 4,
-            title: t('New Tax Compliance Regulations for E-Commerce & Tech Companies'),
-            category: 'tax_finance',
-            date: '05/08/2026',
-            readTime: t('4 min read'),
-            author: {
-                name: 'Luật sư Trần Thị Mai Hương',
-                role: t('Tax & Financial Advisor'),
-                avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200'
-            },
-            image: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=600',
-            summary: t('Comprehensive analysis of digital tax withholding obligations, transfer pricing rules, and cross-border SaaS tax filings.'),
-            content: [
-                t('Tax authorities are tightening oversight on e-commerce platforms and digital service providers operating in Southeast Asia.'),
-                t('Businesses must review their tax declarations, transfer pricing documentation, and foreign contractor tax (FCT) compliance.')
-            ],
-            tags: [t('Tax Law'), t('E-Commerce'), t('Fintech')]
-        },
-        {
-            id: 5,
-            title: t('Navigating Labor Disputes & Termination Protocols Under Revised Labor Code'),
-            category: 'corporate',
-            date: '01/08/2026',
-            readTime: t('5 min read'),
-            author: {
-                name: 'Luật sư Nguyễn Văn Toàn',
-                role: t('Senior Partner'),
-                avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=200'
-            },
-            image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&q=80&w=600',
-            summary: t('Essential guidance on employee termination, severance payments, and resolving collective labor disputes peacefully.'),
-            content: [
-                t('Employer compliance with statutory termination grounds and notice periods is mandatory to prevent unlawful dismissal claims.'),
-                t('Proper documentation of performance metrics and disciplinary proceedings safeguards corporate reputation.')
-            ],
-            tags: [t('Labor Law'), t('Employment'), t('Compliance')]
-        }
+        ...uniqueCategories.map(cat => ({
+            key: cat,
+            label: t(cat),
+        }))
     ];
 
     const filteredArticles = selectedCategory === 'all' 
@@ -270,7 +180,7 @@ export default function LegalNewsSection({ brandColor = '#3b82f6' }: LegalNewsSe
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                         />
                                         <div className="absolute top-3 left-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md text-primary text-[11px] font-semibold px-2.5 py-1 rounded-md shadow-sm border border-white/20">
-                                            {categories.find(c => c.key === article.category)?.label}
+                                            {categories.find(c => c.key === article.category)?.label || article.category}
                                         </div>
                                     </div>
 
@@ -303,7 +213,7 @@ export default function LegalNewsSection({ brandColor = '#3b82f6' }: LegalNewsSe
                                             className="w-7 h-7 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700"
                                         />
                                         <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[120px]">
-                                            {t(article.author.name)}
+                                            {article.author.name}
                                         </span>
                                     </div>
                                     <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary group-hover:translate-x-1 transition-transform">
@@ -337,10 +247,16 @@ export default function LegalNewsSection({ brandColor = '#3b82f6' }: LegalNewsSe
 
             {/* Article Reading Modal */}
             {activeArticle && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-fade-in">
-                    <div className="relative w-full max-w-3xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col border border-gray-200 dark:border-gray-800">
-                        {/* Modal Header */}
-                        <div className="relative aspect-[21/9] overflow-hidden">
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+                    onClick={() => setActiveArticle(null)}
+                >
+                    <div 
+                        className="bg-white dark:bg-gray-900 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col animate-in zoom-in-95 duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Modal Header / Banner */}
+                        <div className="relative aspect-[21/9] w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
                             <img 
                                 src={activeArticle.image} 
                                 alt={activeArticle.title} 
@@ -355,7 +271,7 @@ export default function LegalNewsSection({ brandColor = '#3b82f6' }: LegalNewsSe
                             </button>
                             <div className="absolute bottom-4 left-6 right-6">
                                 <span className="inline-block px-2.5 py-1 rounded bg-primary text-white text-xs font-bold uppercase tracking-wider mb-2">
-                                    {categories.find(c => c.key === activeArticle.category)?.label}
+                                    {categories.find(c => c.key === activeArticle.category)?.label || activeArticle.category}
                                 </span>
                                 <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight">
                                     {activeArticle.title}
@@ -369,11 +285,11 @@ export default function LegalNewsSection({ brandColor = '#3b82f6' }: LegalNewsSe
                                 <div className="flex items-center gap-3">
                                     <img 
                                         src={activeArticle.author.avatar} 
-                                        alt={activeArticle.author.name}
+                                        alt={activeArticle.author.name} 
                                         className="w-10 h-10 rounded-full object-cover ring-2 ring-primary/20"
                                     />
                                     <div>
-                                        <p className="font-semibold text-gray-900 dark:text-white">{t(activeArticle.author.name)}</p>
+                                        <p className="font-semibold text-gray-900 dark:text-white">{activeArticle.author.name}</p>
                                         <p className="text-xs text-gray-500">{activeArticle.author.role}</p>
                                     </div>
                                 </div>
@@ -396,9 +312,13 @@ export default function LegalNewsSection({ brandColor = '#3b82f6' }: LegalNewsSe
 
                             {/* Paragraphs */}
                             <div className="space-y-4 text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
-                                {activeArticle.content.map((paragraph, idx) => (
-                                    <p key={idx}>{paragraph}</p>
-                                ))}
+                                {Array.isArray(activeArticle.content) ? (
+                                    activeArticle.content.map((paragraph, idx) => (
+                                        <p key={idx}>{paragraph}</p>
+                                    ))
+                                ) : (
+                                    <div className="whitespace-pre-line">{activeArticle.content}</div>
+                                )}
                             </div>
 
                             {/* Tags */}

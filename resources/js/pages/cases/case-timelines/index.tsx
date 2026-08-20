@@ -426,8 +426,8 @@ export default function CaseTimelines() {
               label: t('Status'),
               type: 'select',
               options: [
-                { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' }
+                { value: 'active', label: t('Active') },
+                { value: 'inactive', label: t('Inactive') }
               ],
               defaultValue: 'active'
             }

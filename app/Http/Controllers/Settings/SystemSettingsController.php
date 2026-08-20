@@ -45,6 +45,18 @@ class SystemSettingsController extends Controller
                 updateSetting($key, $value);
             }
 
+            if (auth()->check()) {
+                $user = auth()->user();
+                $user->lang = $validated['defaultLanguage'];
+                $user->save();
+
+                // If RTL language, update layout direction
+                $rtlLanguages = ['ar', 'he'];
+                $isRtl = in_array($validated['defaultLanguage'], $rtlLanguages);
+                $layoutDirection = $isRtl ? 'right' : 'left';
+                updateSetting('layoutDirection', $layoutDirection);
+            }
+
             if(auth()?->user()?->type == 'superadmin'){
                 \Cache::forget('admin_settings');
             }
@@ -110,50 +122,48 @@ class SystemSettingsController extends Controller
 
             $imageKeys = ['logoDark', 'logoLight', 'logoFooter', 'favicon', 'bannerImage'];
 
-            $userId = auth()->id();
-            $superAdmin = User::where('type', 'superadmin')->first();
+            $user = auth()->user();
+            $userId = $user->id;
+            $isSuperAdmin = ($user->type === 'superadmin');
 
             foreach ($validated['settings'] as $key => $value) {
                 if (in_array($key, $imageKeys)) {
                     $value = convertToRelativePath($value);
                 }
                 updateSetting($key, $value, $userId);
-
-                // Also sync to superadmin so public landing page sees the updated brand
-                if ($superAdmin && $userId != $superAdmin->id) {
-                    updateSetting($key, $value, $superAdmin->id);
-                }
             }
 
-            // Sync theme logos and brand title to LandingPageSetting
-            try {
-                $landingSettings = \App\Models\LandingPageSetting::first();
-                if ($landingSettings) {
-                    $configSections = $landingSettings->config_sections ?? [];
-                    if (!isset($configSections['theme'])) {
-                        $configSections['theme'] = [];
+            // ONLY Superadmin can update the landing page (trang chủ) theme & logo settings
+            if ($isSuperAdmin) {
+                try {
+                    $landingSettings = \App\Models\LandingPageSetting::first();
+                    if ($landingSettings) {
+                        $configSections = $landingSettings->config_sections ?? [];
+                        if (!isset($configSections['theme'])) {
+                            $configSections['theme'] = [];
+                        }
+                        if (isset($validated['settings']['logoDark'])) {
+                            $configSections['theme']['logo_dark'] = convertToRelativePath($validated['settings']['logoDark']);
+                        }
+                        if (isset($validated['settings']['logoLight'])) {
+                            $configSections['theme']['logo_light'] = convertToRelativePath($validated['settings']['logoLight']);
+                        }
+                        if (isset($validated['settings']['favicon'])) {
+                            $configSections['theme']['favicon'] = convertToRelativePath($validated['settings']['favicon']);
+                        }
+                        if (isset($validated['settings']['titleText']) && !empty($validated['settings']['titleText'])) {
+                            $landingSettings->company_name = $validated['settings']['titleText'];
+                        }
+                        $landingSettings->config_sections = $configSections;
+                        $landingSettings->save();
                     }
-                    if (isset($validated['settings']['logoDark'])) {
-                        $configSections['theme']['logo_dark'] = convertToRelativePath($validated['settings']['logoDark']);
-                    }
-                    if (isset($validated['settings']['logoLight'])) {
-                        $configSections['theme']['logo_light'] = convertToRelativePath($validated['settings']['logoLight']);
-                    }
-                    if (isset($validated['settings']['favicon'])) {
-                        $configSections['theme']['favicon'] = convertToRelativePath($validated['settings']['favicon']);
-                    }
-                    if (isset($validated['settings']['titleText']) && !empty($validated['settings']['titleText'])) {
-                        $landingSettings->company_name = $validated['settings']['titleText'];
-                    }
-                    $landingSettings->config_sections = $configSections;
-                    $landingSettings->save();
+                } catch (\Exception $e) {
+                    // Ignore sync error if table/fields differ
                 }
-            } catch (\Exception $e) {
-                // Ignore sync error if table/fields differ
-            }
 
-            \Cache::forget('admin_settings');
-            \Cache::forget('landing_settings');
+                \Cache::forget('admin_settings');
+                \Cache::forget('landing_settings');
+            }
 
             return redirect()->back()->with('success', __('Brand settings updated successfully.'));
         } catch (\Exception $e) {

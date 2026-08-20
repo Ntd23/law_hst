@@ -36,10 +36,24 @@ export const formatCurrency = (amount: string | number, useSuperAdminSettings = 
     return amount;
 };
 
-export const formatStatusText = (status: string) =>
-  status
+import i18n from 'i18next';
+
+export const formatStatusText = (status: string) => {
+  if (!status || typeof status !== 'string') return status || '';
+  const formatted = status
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  if (i18n && i18n.isInitialized) {
+    if (i18n.exists(formatted)) {
+      return i18n.t(formatted);
+    }
+    if (i18n.exists(status)) {
+      return i18n.t(status);
+    }
+  }
+  return formatted;
+};
 
 // Get full image path helper - consistent with reference project
 export const getImagePath = (path: string): string => {

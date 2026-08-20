@@ -200,7 +200,43 @@ Route::get('newsletter/unsubscribe/{email}', [\App\Http\Controllers\NewsletterCo
 // Cookie consent routes
 Route::post('/cookie-consent/store', [\App\Http\Controllers\CookieConsentController::class, 'store'])->name('cookie.consent.store');
 
-Route::get('/page/{slug}', [CustomPageController::class, 'show'])->name('custom-page.show');
+Route::get('/cong-ty/{id}', [CustomPageController::class, 'showCompanyDetail'])->name('company.detail');
+Route::get('/company/{id}', function ($id) {
+    return redirect()->route('company.detail', $id);
+});
+
+// Friendly Vietnamese URL shortcuts
+Route::get('/luat-su-tu-van', function () {
+    return redirect()->route('custom-page.show', 'luat-su-tu-van');
+})->name('vi.luat-su-tu-van');
+
+Route::get('/gioi-thieu-ve-cong-ty', function () {
+    return redirect()->route('custom-page.show', 'gioi-thieu-ve-cong-ty');
+})->name('vi.gioi-thieu-ve-cong-ty');
+
+Route::get('/gioi-thieu', function () {
+    return redirect()->route('custom-page.show', 'gioi-thieu-ve-cong-ty');
+})->name('vi.gioi-thieu');
+
+Route::get('/lien-he-voi-chung-toi', function () {
+    return redirect()->route('custom-page.show', 'lien-he-voi-chung-toi');
+})->name('vi.lien-he-voi-chung-toi');
+
+Route::get('/lien-he', function () {
+    return redirect()->route('custom-page.show', 'lien-he-voi-chung-toi');
+})->name('vi.lien-he');
+
+Route::get('/cau-hoi-thuong-gap', function () {
+    return redirect()->route('custom-page.show', 'cau-hoi-thuong-gap');
+})->name('vi.cau-hoi-thuong-gap');
+
+Route::get('/chinh-sach-hoan-tien', function () {
+    return redirect()->route('custom-page.show', 'chinh-sach-hoan-tien');
+})->name('vi.chinh-sach-hoan-tien');
+
+Route::get('/bang-dieu-khien', function () {
+    return redirect()->route('dashboard');
+})->name('vi.dashboard');
 
 Route::get('/translations/{locale}', [TranslationController::class, 'getTranslations'])->name('translations');
 Route::get('/refresh-language/{locale}', [TranslationController::class, 'refreshLanguage'])->name('refresh-language');
@@ -294,7 +330,10 @@ Route::get('cashfree-test', function (\Illuminate\Http\Request $request) {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Plans routes - accessible without plan check
-    Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
+    Route::get('goi-dich-vu', [PlanController::class, 'index'])->name('plans.index');
+    Route::get('plans', function () {
+        return redirect()->route('plans.index');
+    });
     Route::post('plans/request', [PlanController::class, 'requestPlan'])->name('plans.request');
     Route::post('plans/trial', [PlanController::class, 'startTrial'])->name('plans.trial');
     Route::post('plans/subscribe', [PlanController::class, 'subscribe'])->name('plans.subscribe');
@@ -387,13 +426,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // All other routes require plan access check
     Route::middleware('plan.access')->group(function () {
-        Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('bang-dieu-khien', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('dashboard', function () {
+            return redirect()->route('dashboard');
+        });
         Route::get('dashboard/redirect', [DashboardController::class, 'redirectToFirstAvailablePage'])->name('dashboard.redirect');
 
         // Analytics routes
-        Route::get('analytics', [\App\Http\Controllers\DashboardAnalyticsController::class, 'index'])->name('analytics.index');
+        Route::get('thong-ke-bao-cao', [\App\Http\Controllers\DashboardAnalyticsController::class, 'index'])->name('analytics.index');
+        Route::get('analytics', function () {
+            return redirect()->route('analytics.index');
+        });
 
-        Route::get('media-library', function () {
+        Route::get('thu-vien-media', function () {
             $storageSettings = \App\Services\StorageConfigService::getStorageConfig();
             $planLimits = null;
             if (auth()->user()->type === 'company') {
@@ -417,6 +462,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'planLimits' => $planLimits
             ]);
         })->middleware('permission:manage-media')->name('media-library');
+
+        Route::get('media-library', function () {
+            return redirect()->route('media-library');
+        });
 
 
 
@@ -443,7 +492,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Roles routes with granular permissions
         Route::middleware('permission:manage-roles')->group(function () {
-            Route::get('roles', [RoleController::class, 'index'])->middleware('permission:manage-roles')->name('roles.index');
+            Route::get('vai-tro-phan-quyen', [RoleController::class, 'index'])->middleware('permission:manage-roles')->name('roles.index');
+            Route::get('roles', function () {
+                return redirect()->route('roles.index');
+            });
             Route::get('roles/create', [RoleController::class, 'create'])->middleware('permission:create-roles')->name('roles.create');
             Route::post('roles', [RoleController::class, 'store'])->middleware('permission:create-roles')->name('roles.store');
             Route::get('roles/{role}', [RoleController::class, 'show'])->middleware('permission:view-roles')->name('roles.show');
@@ -455,7 +507,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Users routes with granular permissions
         Route::middleware('permission:manage-users')->group(function () {
-            Route::get('users', [UserController::class, 'index'])->middleware('permission:manage-users')->name('users.index');
+            Route::get('thanh-vien', [UserController::class, 'index'])->middleware('permission:manage-users')->name('users.index');
+            Route::get('users', function () {
+                return redirect()->route('users.index');
+            });
             Route::get('users/create', [UserController::class, 'create'])->middleware('permission:create-users')->name('users.create');
             Route::post('users', [UserController::class, 'store'])->middleware('permission:create-users')->name('users.store');
             Route::get('users/{user}', [UserController::class, 'show'])->middleware('permission:view-users')->name('users.show');
@@ -484,13 +539,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Client routes
         Route::middleware('permission:manage-clients')->group(function () {
-            Route::get('clients', [\App\Http\Controllers\ClientController::class, 'index'])->name('clients.index');
+            Route::get('khach-hang', [\App\Http\Controllers\ClientController::class, 'index'])->name('clients.index');
+            Route::get('clients', function () {
+                return redirect()->route('clients.index');
+            });
             Route::get('clients/{client}', [\App\Http\Controllers\ClientController::class, 'show'])->middleware('permission:view-clients')->name('clients.show');
             Route::post('clients', [\App\Http\Controllers\ClientController::class, 'store'])->middleware('permission:create-clients')->name('clients.store');
             Route::put('clients/{client}', [\App\Http\Controllers\ClientController::class, 'update'])->middleware('permission:edit-clients')->name('clients.update');
             Route::delete('clients/{client}', [\App\Http\Controllers\ClientController::class, 'destroy'])->middleware('permission:delete-clients')->name('clients.destroy');
             Route::put('clients/{client}/toggle-status', [\App\Http\Controllers\ClientController::class, 'toggleStatus'])->middleware('permission:toggle-status-clients')->name('clients.toggle-status');
             Route::put('clients/{client}/reset-password', [\App\Http\Controllers\ClientController::class, 'resetPassword'])->middleware('permission:reset-client-password')->name('clients.reset-password');
+            Route::post('clients/{client}/assign-lawyer', [\App\Http\Controllers\ClientController::class, 'assignLawyer'])->name('clients.assign-lawyer');
         });
 
 
@@ -523,7 +582,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Company Profile routes
         Route::middleware('permission:manage-company-profiles')->group(function () {
-            Route::get('advocate/company-profiles', [\App\Http\Controllers\CompanyProfileController::class, 'index'])->name('advocate.company-profiles.index');
+            Route::get('ho-so-to-chuc', [\App\Http\Controllers\CompanyProfileController::class, 'index'])->name('advocate.company-profiles.index');
+            Route::get('advocate/ho-so-to-chuc', function () {
+                return redirect()->route('advocate.company-profiles.index');
+            });
+            Route::get('advocate/company-profiles', function () {
+                return redirect()->route('advocate.company-profiles.index');
+            });
             Route::post('advocate/company-profiles', [\App\Http\Controllers\CompanyProfileController::class, 'store'])->middleware('permission:create-company-profiles')->name('advocate.company-profiles.store');
             Route::put('advocate/company-profiles/{profile}', [\App\Http\Controllers\CompanyProfileController::class, 'update'])->middleware('permission:edit-company-profiles')->name('advocate.company-profiles.update');
             Route::delete('advocate/company-profiles/{profile}', [\App\Http\Controllers\CompanyProfileController::class, 'destroy'])->middleware('permission:delete-company-profiles')->name('advocate.company-profiles.destroy');
@@ -582,7 +647,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Document routes
         Route::middleware('permission:manage-documents')->group(function () {
-            Route::get('document-management/documents', [\App\Http\Controllers\DocumentController::class, 'gallery'])->name('document-management.documents.index');
+            Route::get('tai-lieu', [\App\Http\Controllers\DocumentController::class, 'gallery'])->name('document-management.documents.index');
+            Route::get('document-management/tai-lieu', function () {
+                return redirect()->route('document-management.documents.index');
+            });
+            Route::get('document-management/documents', function () {
+                return redirect()->route('document-management.documents.index');
+            });
             Route::get('document-management/documents/{document}', [\App\Http\Controllers\DocumentController::class, 'show'])->middleware('permission:view-documents')->name('document-management.documents.show');
             Route::get('document-management/documents/version/{version}', [\App\Http\Controllers\DocumentController::class, 'version'])->middleware('permission:view-document-versions')->name('document-management.documents.version');
             Route::get('document-management/documents/comments/{document}', [\App\Http\Controllers\DocumentController::class, 'comments'])->middleware('permission:view-document-comments')->name('document-management.documents.comments');
@@ -653,7 +724,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Knowledge Article routes
         Route::middleware('permission:manage-knowledge-articles')->group(function () {
-            Route::get('legal-research/knowledge', [\App\Http\Controllers\KnowledgeArticleController::class, 'index'])->name('legal-research.knowledge.index');
+            Route::get('quan-ly-bai-viet', [\App\Http\Controllers\KnowledgeArticleController::class, 'index'])->name('legal-research.knowledge.index');
+            Route::get('legal-research/quan-ly-bai-viet', function () {
+                return redirect()->route('legal-research.knowledge.index');
+            });
+            Route::get('legal-research/knowledge', function () {
+                return redirect()->route('legal-research.knowledge.index');
+            });
             Route::post('legal-research/knowledge', [\App\Http\Controllers\KnowledgeArticleController::class, 'store'])->middleware('permission:create-knowledge-articles')->name('legal-research.knowledge.store');
             Route::put('legal-research/knowledge/{article}', [\App\Http\Controllers\KnowledgeArticleController::class, 'update'])->middleware('permission:edit-knowledge-articles')->name('legal-research.knowledge.update');
             Route::delete('legal-research/knowledge/{article}', [\App\Http\Controllers\KnowledgeArticleController::class, 'destroy'])->middleware('permission:delete-knowledge-articles')->name('legal-research.knowledge.destroy');
@@ -714,7 +791,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Hearing routes
         Route::middleware('permission:manage-hearings')->group(function () {
-            Route::get('hearings', [\App\Http\Controllers\HearingController::class, 'index'])->name('hearings.index');
+            Route::get('phien-toa', [\App\Http\Controllers\HearingController::class, 'index'])->name('hearings.index');
+            Route::get('hearings', function () {
+                return redirect()->route('hearings.index');
+            });
             Route::post('hearings', [\App\Http\Controllers\HearingController::class, 'store'])->middleware('permission:create-hearings')->name('hearings.store');
             Route::put('hearings/{hearing}', [\App\Http\Controllers\HearingController::class, 'update'])->middleware('permission:edit-hearings')->name('hearings.update');
             Route::delete('hearings/{hearing}', [\App\Http\Controllers\HearingController::class, 'destroy'])->middleware('permission:delete-hearings')->name('hearings.destroy');
@@ -722,7 +802,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
         // Calendar route
-        Route::get('calendar', [\App\Http\Controllers\CalendarController::class, 'index'])->name('calendar.index');
+        Route::get('lich-lam-viec', [\App\Http\Controllers\CalendarController::class, 'index'])->name('calendar.index');
+        Route::get('calendar', function () {
+            return redirect()->route('calendar.index');
+        });
 
         // Google Calendar API routes
         Route::get('api/google-calendar/events', [\App\Http\Controllers\GoogleCalendarController::class, 'getEvents'])->name('google-calendar.events');
@@ -732,7 +815,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Court Management routes
         Route::middleware('permission:manage-courts')->group(function () {
-            Route::get('courts', [\App\Http\Controllers\CourtController::class, 'index'])->name('courts.index');
+            Route::get('toa-an', [\App\Http\Controllers\CourtController::class, 'index'])->name('courts.index');
+            Route::get('courts', function () {
+                return redirect()->route('courts.index');
+            });
             Route::get('courts/{court}', [\App\Http\Controllers\CourtController::class, 'show'])->middleware('permission:view-courts')->name('courts.show');
             Route::post('courts', [\App\Http\Controllers\CourtController::class, 'store'])->middleware('permission:create-courts')->name('courts.store');
             Route::put('courts/{court}', [\App\Http\Controllers\CourtController::class, 'update'])->middleware('permission:edit-courts')->name('courts.update');
@@ -742,7 +828,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Judge Management routes
         Route::middleware('permission:manage-judges')->group(function () {
-            Route::get('judges', [\App\Http\Controllers\JudgeController::class, 'index'])->name('judges.index');
+            Route::get('tham-phan', [\App\Http\Controllers\JudgeController::class, 'index'])->name('judges.index');
+            Route::get('judges', function () {
+                return redirect()->route('judges.index');
+            });
             Route::get('judges/{judge}', [\App\Http\Controllers\JudgeController::class, 'show'])->middleware('permission:view-judges')->name('judges.show');
             Route::post('judges', [\App\Http\Controllers\JudgeController::class, 'store'])->middleware('permission:create-judges')->name('judges.store');
             Route::put('judges/{judge}', [\App\Http\Controllers\JudgeController::class, 'update'])->middleware('permission:edit-judges')->name('judges.update');
@@ -769,7 +858,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Case Management routes
         Route::middleware('permission:manage-cases')->group(function () {
-            Route::get('cases', [\App\Http\Controllers\CaseController::class, 'index'])->name('cases.index');
+            Route::get('vu-viec', [\App\Http\Controllers\CaseController::class, 'index'])->name('cases.index');
+            Route::get('cases', function () {
+                return redirect()->route('cases.index');
+            });
             Route::get('cases/{case}', [\App\Http\Controllers\CaseController::class, 'show'])->middleware('permission:view-cases')->name('cases.show');
             Route::post('cases', [\App\Http\Controllers\CaseController::class, 'store'])->middleware('permission:create-cases')->name('cases.store');
             Route::put('cases/{case}', [\App\Http\Controllers\CaseController::class, 'update'])->middleware('permission:edit-cases')->name('cases.update');
@@ -825,19 +917,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Plan Orders routes
         Route::middleware('permission:manage-plan-orders')->group(function () {
-            Route::get('plan-orders', [PlanOrderController::class, 'index'])->middleware('permission:manage-plan-orders')->name('plan-orders.index');
+            Route::get('don-hang-goi-dich-vu', [PlanOrderController::class, 'index'])->middleware('permission:manage-plan-orders')->name('plan-orders.index');
+            Route::get('plan-orders', function () {
+                return redirect()->route('plan-orders.index');
+            });
             Route::post('plan-orders/{planOrder}/approve', [PlanOrderController::class, 'approve'])->middleware('permission:approve-plan-orders')->name('plan-orders.approve');
             Route::post('plan-orders/{planOrder}/reject', [PlanOrderController::class, 'reject'])->middleware('permission:reject-plan-orders')->name('plan-orders.reject');
         });
 
         // Plan Requests routes (placeholder)
-        Route::get('plan-requests', function () {
+        Route::get('yeu-cau-goi-dich-vu', function () {
             return Inertia::render('plans/plan-requests');
         })->name('plan-requests.index');
+        Route::get('plan-requests', function () {
+            return redirect()->route('plan-requests.index');
+        });
 
         // Companies routes
         Route::middleware('permission:manage-companies')->group(function () {
-            Route::get('companies', [CompanyController::class, 'index'])->middleware('permission:manage-companies')->name('companies.index');
+            Route::get('cong-ty-thanh-vien', [CompanyController::class, 'index'])->middleware('permission:manage-companies')->name('companies.index');
+            Route::get('companies', function () {
+                return redirect()->route('companies.index');
+            });
             Route::post('companies', [CompanyController::class, 'store'])->middleware('permission:create-companies')->name('companies.store');
             Route::put('companies/{company}', [CompanyController::class, 'update'])->middleware('permission:edit-companies')->name('companies.update');
             Route::delete('companies/{company}', [CompanyController::class, 'destroy'])->middleware('permission:delete-companies')->name('companies.destroy');
@@ -850,7 +951,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Coupons routes
         Route::middleware('permission:manage-coupons')->group(function () {
-            Route::get('coupons', [CouponController::class, 'index'])->middleware('permission:manage-coupons')->name('coupons.index');
+            Route::get('ma-giam-gia', [CouponController::class, 'index'])->middleware('permission:manage-coupons')->name('coupons.index');
+            Route::get('coupons', function () {
+                return redirect()->route('coupons.index');
+            });
             Route::get('coupons/{coupon}', [CouponController::class, 'show'])->middleware('permission:view-coupons')->name('coupons.show');
             Route::post('coupons', [CouponController::class, 'store'])->middleware('permission:create-coupons')->name('coupons.store');
             Route::put('coupons/{coupon}', [CouponController::class, 'update'])->middleware('permission:edit-coupons')->name('coupons.update');
@@ -860,7 +964,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Plan Requests routes
         Route::middleware('permission:manage-plan-requests')->group(function () {
-            Route::get('plan-requests', [PlanRequestController::class, 'index'])->middleware('permission:manage-plan-requests')->name('plan-requests.index');
+            Route::get('plan-requests/all', [PlanRequestController::class, 'index'])->middleware('permission:manage-plan-requests')->name('plan-requests.all');
             Route::post('plan-requests/{planRequest}/approve', [PlanRequestController::class, 'approve'])->middleware('permission:approve-plan-requests')->name('plan-requests.approve');
             Route::post('plan-requests/{planRequest}/reject', [PlanRequestController::class, 'reject'])->middleware('permission:reject-plan-requests')->name('plan-requests.reject');
         });
@@ -872,7 +976,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Referral routes
         Route::middleware('permission:manage-referral')->group(function () {
-            Route::get('referral', [ReferralController::class, 'index'])->middleware('permission:manage-referral')->name('referral.index');
+            Route::get('chuong-trinh-gioi-thieu', [ReferralController::class, 'index'])->middleware('permission:manage-referral')->name('referral.index');
+            Route::get('referral', function () {
+                return redirect()->route('referral.index');
+            });
             Route::get('referral/referred-users', [ReferralController::class, 'getReferredUsers'])->middleware('permission:manage-users-referral')->name('referral.referred-users');
             Route::post('referral/settings', [ReferralController::class, 'updateSettings'])->middleware('permission:manage-setting-referral')->name('referral.settings.update');
             Route::post('referral/payout-request', [ReferralController::class, 'createPayoutRequest'])->middleware('permission:manage-payout-referral')->name('referral.payout-request.create');
@@ -882,7 +989,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Contact Us routes
         Route::middleware('permission:manage-contact-us')->group(function () {
-            Route::get('contact-us', [\App\Http\Controllers\ContactUsController::class, 'index'])->name('contact-us.index');
+            Route::get('hop-thu-lien-he', [\App\Http\Controllers\ContactUsController::class, 'index'])->name('contact-us.index');
+            Route::get('contact-us', function () {
+                return redirect()->route('contact-us.index');
+            });
             Route::get('contact-us/{contact}', [\App\Http\Controllers\ContactUsController::class, 'show'])->name('contact-us.show');
             Route::put('contact-us/{contact}/status', [\App\Http\Controllers\ContactUsController::class, 'updateStatus'])->name('contact-us.update-status');
             Route::delete('contact-us/{contact}', [\App\Http\Controllers\ContactUsController::class, 'destroy'])->name('contact-us.destroy');
@@ -890,7 +1000,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Newsletter routes
         Route::middleware('permission:manage-contact-us')->group(function () {
-            Route::get('newsletter', [\App\Http\Controllers\NewsletterController::class, 'index'])->name('newsletter.index');
+            Route::get('quan-ly-ban-tin', [\App\Http\Controllers\NewsletterController::class, 'index'])->name('newsletter.index');
+            Route::get('newsletter', function () {
+                return redirect()->route('newsletter.index');
+            });
             Route::post('newsletter/send', [\App\Http\Controllers\NewsletterController::class, 'send'])->name('newsletter.send');
             Route::delete('newsletter/{subscription}', [\App\Http\Controllers\NewsletterController::class, 'destroy'])->name('newsletter.destroy');
         });
@@ -899,7 +1012,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Currencies routes
         Route::middleware('permission:manage-currencies')->group(function () {
-            Route::get('currencies', [CurrencyController::class, 'index'])->middleware('permission:manage-currencies')->name('currencies.index');
+            Route::get('tien-te', [CurrencyController::class, 'index'])->middleware('permission:manage-currencies')->name('currencies.index');
+            Route::get('currencies', function () {
+                return redirect()->route('currencies.index');
+            });
             Route::post('currencies', [CurrencyController::class, 'store'])->middleware('permission:create-currencies')->name('currencies.store');
             Route::put('currencies/{currency}', [CurrencyController::class, 'update'])->middleware('permission:edit-currencies')->name('currencies.update');
             Route::delete('currencies/{currency}', [CurrencyController::class, 'destroy'])->middleware('permission:delete-currencies')->name('currencies.destroy');
@@ -1011,7 +1127,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Time Entry routes
         Route::middleware('permission:manage-time-entries')->group(function () {
             Route::get('api/time-entries/case-users/{case}', [\App\Http\Controllers\TimeEntryController::class, 'getCaseUsers'])->name('api.time-entries.case-users');
-            Route::get('billing/time-entries', [\App\Http\Controllers\TimeEntryController::class, 'weeklyView'])->name('billing.time-entries.index');
+            Route::get('cham-cong', [\App\Http\Controllers\TimeEntryController::class, 'weeklyView'])->name('billing.time-entries.index');
+            Route::get('billing/cham-cong', function () {
+                return redirect()->route('billing.time-entries.index');
+            });
+            Route::get('billing/time-entries', function () {
+                return redirect()->route('billing.time-entries.index');
+            });
             Route::post('billing/time-entries', [\App\Http\Controllers\TimeEntryController::class, 'store'])->middleware('permission:create-time-entries')->name('billing.time-entries.store');
             Route::put('billing/time-entries/{timeEntry}', [\App\Http\Controllers\TimeEntryController::class, 'update'])->middleware('permission:edit-time-entries')->name('billing.time-entries.update');
             Route::delete('billing/time-entries/{timeEntry}', [\App\Http\Controllers\TimeEntryController::class, 'destroy'])->middleware('permission:delete-time-entries')->name('billing.time-entries.destroy');
@@ -1049,7 +1171,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Expense routes
         Route::middleware('permission:manage-expenses')->group(function () {
-            Route::get('billing/expenses', [\App\Http\Controllers\ExpenseController::class, 'index'])->name('billing.expenses.index');
+            Route::get('chi-phi', [\App\Http\Controllers\ExpenseController::class, 'index'])->name('billing.expenses.index');
+            Route::get('billing/chi-phi', function () {
+                return redirect()->route('billing.expenses.index');
+            });
+            Route::get('billing/expenses', function () {
+                return redirect()->route('billing.expenses.index');
+            });
             Route::post('billing/expenses', [\App\Http\Controllers\ExpenseController::class, 'store'])->middleware('permission:create-expenses')->name('billing.expenses.store');
             Route::put('billing/expenses/{expense}', [\App\Http\Controllers\ExpenseController::class, 'update'])->middleware('permission:edit-expenses')->name('billing.expenses.update');
             Route::delete('billing/expenses/{expense}', [\App\Http\Controllers\ExpenseController::class, 'destroy'])->middleware('permission:delete-expenses')->name('billing.expenses.destroy');
@@ -1068,7 +1196,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Invoice routes
         Route::middleware('permission:manage-invoices')->group(function () {
-            Route::get('billing/invoices', [\App\Http\Controllers\InvoiceController::class, 'index'])->name('billing.invoices.index');
+            Route::get('hoa-don', [\App\Http\Controllers\InvoiceController::class, 'index'])->name('billing.invoices.index');
+            Route::get('billing/hoa-don', function () {
+                return redirect()->route('billing.invoices.index');
+            });
+            Route::get('billing/invoices', function () {
+                return redirect()->route('billing.invoices.index');
+            });
             Route::get('billing/invoices/create', [\App\Http\Controllers\InvoiceController::class, 'create'])->middleware('permission:create-invoices')->name('billing.invoices.create');
             Route::get('billing/invoices/{invoice}', [\App\Http\Controllers\InvoiceController::class, 'show'])->middleware('permission:view-invoices')->name('billing.invoices.show');
             Route::get('billing/invoices/{invoice}/edit', [\App\Http\Controllers\InvoiceController::class, 'edit'])->middleware('permission:edit-invoices')->name('billing.invoices.edit');
@@ -1085,7 +1219,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware('permission:manage-payments')->group(function () {
             Route::post('billing/payments/{payment}/approve', [\App\Http\Controllers\PaymentController::class, 'approvePayment'])->name('billing.payments.approve');
             Route::post('billing/payments/{payment}/reject', [\App\Http\Controllers\PaymentController::class, 'rejectPayment'])->name('billing.payments.reject');
-            Route::get('billing/payments', [\App\Http\Controllers\PaymentController::class, 'index'])->name('billing.payments.index');
+            Route::get('thanh-toan', [\App\Http\Controllers\PaymentController::class, 'index'])->name('billing.payments.index');
+            Route::get('billing/thanh-toan', function () {
+                return redirect()->route('billing.payments.index');
+            });
+            Route::get('billing/payments', function () {
+                return redirect()->route('billing.payments.index');
+            });
             Route::post('billing/payments', [\App\Http\Controllers\PaymentController::class, 'store'])->middleware('permission:create-payments')->name('billing.payments.store');
             Route::put('billing/payments/{payment}', [\App\Http\Controllers\PaymentController::class, 'update'])->middleware('permission:edit-payments')->name('billing.payments.update');
             Route::delete('billing/payments/{payment}', [\App\Http\Controllers\PaymentController::class, 'destroy'])->middleware('permission:delete-payments')->name('billing.payments.destroy');
@@ -1093,7 +1233,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Task Management routes
         Route::middleware('permission:manage-tasks')->group(function () {
-            Route::get('tasks', [\App\Http\Controllers\TaskController::class, 'index'])->name('tasks.index');
+            Route::get('cong-viec', [\App\Http\Controllers\TaskController::class, 'index'])->name('tasks.index');
+            Route::get('tasks', function () {
+                return redirect()->route('tasks.index');
+            });
             Route::get('tasks/{task}', [\App\Http\Controllers\TaskController::class, 'show'])->middleware('permission:view-tasks')->name('tasks.show');
             Route::post('tasks', [\App\Http\Controllers\TaskController::class, 'store'])->middleware('permission:create-tasks')->name('tasks.store');
             Route::put('tasks/{task}', [\App\Http\Controllers\TaskController::class, 'update'])->middleware('permission:edit-tasks')->name('tasks.update');
@@ -1150,7 +1293,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::prefix('communication')->name('communication.')->group(function () {
             // Messages
             Route::middleware('permission:manage-messages')->group(function () {
-                Route::get('/messages', [\App\Http\Controllers\MessageController::class, 'index'])->name('messages.index');
+                Route::get('/tin-nhan', [\App\Http\Controllers\MessageController::class, 'index'])->name('messages.index');
+                Route::get('/messages', function () {
+                    return redirect()->route('communication.messages.index');
+                });
                 Route::post('/messages/{conversation}/mark-read', [\App\Http\Controllers\MessageController::class, 'markRead'])->name('messages.markRead');
                 Route::get('/messages/start/{user}', [\App\Http\Controllers\MessageController::class, 'startConversation'])->name('messages.start');
                 Route::get('/messages/{conversation}', [\App\Http\Controllers\MessageController::class, 'show'])->middleware('permission:view-messages')->name('messages.show');
@@ -1176,15 +1322,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Landing Page content management (Super Admin only)
         Route::middleware('App\Http\Middleware\SuperAdminMiddleware')->group(function () {
             // Email Templates
-            Route::get('email-templates', [\App\Http\Controllers\EmailTemplateController::class, 'index'])->name('email-templates.index');
-            Route::get('email-templates/{emailTemplate}', [\App\Http\Controllers\EmailTemplateController::class, 'show'])->name('email-templates.show');
-            Route::put('email-templates/{emailTemplate}/settings', [\App\Http\Controllers\EmailTemplateController::class, 'updateSettings'])->name('email-templates.update-settings');
-            Route::put('email-templates/{emailTemplate}/content', [\App\Http\Controllers\EmailTemplateController::class, 'updateContent'])->name('email-templates.update-content');
+            Route::get('mau-email', [\App\Http\Controllers\EmailTemplateController::class, 'index'])->name('email-templates.index');
+            Route::get('email-templates', function () {
+                return redirect()->route('email-templates.index');
+            });
+            Route::get('mau-email/{emailTemplate}', [\App\Http\Controllers\EmailTemplateController::class, 'show'])->name('email-templates.show');
+            Route::put('mau-email/{emailTemplate}/settings', [\App\Http\Controllers\EmailTemplateController::class, 'updateSettings'])->name('email-templates.update-settings');
+            Route::put('mau-email/{emailTemplate}/content', [\App\Http\Controllers\EmailTemplateController::class, 'updateContent'])->name('email-templates.update-content');
 
-            Route::get('landing-page', [LandingPageController::class, 'settings'])->name('landing-page');
+            Route::get('cai-dat-trang-chu', [LandingPageController::class, 'settings'])->name('landing-page');
+            Route::get('landing-page', function () {
+                return redirect()->route('landing-page');
+            });
             Route::post('landing-page/settings', [LandingPageController::class, 'updateSettings'])->name('landing-page.settings.update');
 
-            Route::resource('custom-pages', CustomPageController::class)->names('landing-page.custom-pages');
+            Route::resource('quan-ly-trang', CustomPageController::class)->names('landing-page.custom-pages');
+            Route::get('custom-pages', function () {
+                return redirect()->route('landing-page.custom-pages.index');
+            });
 
             // Cookie consent download (Super Admin only)
             Route::get('/cookie-consent/download', [\App\Http\Controllers\CookieConsentController::class, 'download'])->name('cookie.consent.download');

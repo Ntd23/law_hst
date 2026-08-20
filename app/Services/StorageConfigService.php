@@ -21,9 +21,13 @@ class StorageConfigService
         }
 
         $cacheKey = 'active_storage_config_' . $userId;
-        $config = Cache::remember($cacheKey, 300, function() use ($userId) {
-            return self::loadStorageConfigFromDB($userId);
-        });
+        try {
+            $config = Cache::remember($cacheKey, 300, function() use ($userId) {
+                return self::loadStorageConfigFromDB($userId);
+            });
+        } catch (\Throwable $e) {
+            $config = self::loadStorageConfigFromDB($userId);
+        }
 
         return $config['disk'] ?? 'public';
     }
@@ -62,9 +66,13 @@ class StorageConfigService
     public static function getStorageConfig(): array
     {
         $cacheKey = 'global_storage_config';
-        return Cache::remember($cacheKey, 300, function() {
+        try {
+            return Cache::remember($cacheKey, 300, function() {
+                return self::loadStorageConfigFromDB();
+            });
+        } catch (\Throwable $e) {
             return self::loadStorageConfigFromDB();
-        });
+        }
     }
 
     /**

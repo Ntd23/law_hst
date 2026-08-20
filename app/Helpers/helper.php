@@ -1390,15 +1390,24 @@ if (! function_exists('getAdminAllSetting')) {
     function getAdminAllSetting()
     {
         // Laravel cache
-        return Cache::rememberForever('admin_settings', function () {
+        try {
+            return Cache::rememberForever('admin_settings', function () {
+                $superAdmin = User::where('type', 'superadmin')->first();
+                $settings = [];
+                if ($superAdmin) {
+                    $settings = Setting::where('user_id', $superAdmin->id)->pluck('value', 'key')->toArray();
+                }
+
+                return $settings;
+            });
+        } catch (\Throwable $e) {
             $superAdmin = User::where('type', 'superadmin')->first();
             $settings = [];
             if ($superAdmin) {
                 $settings = Setting::where('user_id', $superAdmin->id)->pluck('value', 'key')->toArray();
             }
-
             return $settings;
-        });
+        }
     }
 }
 // File Upload Function
@@ -2661,18 +2670,21 @@ if (! function_exists('getCompanyProfile')) {
 
 if (! function_exists('convertToRelativePath')) {
     /**
-     * Get company profile for the current user's company
+     * Convert absolute URL or storage path to relative path
      *
-     * @return \App\Models\CompanyProfile|null
+     * @param string|null $url
+     * @return string|null
      */
-    function convertToRelativePath(string $url): string
+    function convertToRelativePath(?string $url): ?string
     {
         if (!$url) return $url;
 
         // If it's a comma-separated list of URLs
         if (str_contains($url, ',')) {
             $parts = explode(',', $url);
-            $relativeParts = array_map('convertToRelativePath', array_map('trim', $parts));
+            $relativeParts = array_map(function($part) {
+                return convertToRelativePath(trim($part));
+            }, $parts);
             return implode(',', array_filter($relativeParts));
         }
 

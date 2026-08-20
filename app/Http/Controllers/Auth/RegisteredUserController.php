@@ -76,7 +76,7 @@ class RegisteredUserController extends Controller
         ]);
 
         $superAdminSettings = settings();
-        $userLang = isset($superAdminSettings['defaultLanguage']) ? $superAdminSettings['defaultLanguage'] : 'en';
+        $userLang = isset($superAdminSettings['defaultLanguage']) ? $superAdminSettings['defaultLanguage'] : 'vi';
 
         $userData = [
             'name' => $request->name,
