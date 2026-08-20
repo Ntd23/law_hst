@@ -216,7 +216,7 @@ export default function Hearings() {
         };
         return (
           <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${statusColors[value as keyof typeof statusColors] || 'bg-gray-50 text-gray-700 ring-gray-600/20'}`}>
-            {capitalize(value)}
+            {t(value) || t(capitalize(value)) || capitalize(value)}
           </span>
         );
       }

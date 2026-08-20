@@ -323,7 +323,7 @@ export default function Courts() {
                         { name: 'filing_requirements', label: t('Filing Requirements'), type: 'textarea', placeholder: 'eg. All documents must be filed in triplicate' },
                         { name: 'local_rules', label: t('Local Rules'), type: 'textarea', placeholder: 'eg. No electronic devices in courtroom' },
                         { name: 'notes', label: t('Notes'), type: 'textarea', placeholder: 'eg. Parking available on 2nd floor' },
-                        { name: 'status', label: t('Status'), type: 'select', options: [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }], defaultValue: 'active' }
+                        { name: 'status', label: t('Status'), type: 'select', options: [{ value: 'active', label: t('Active') }, { value: 'inactive', label: t('Inactive') }], defaultValue: 'active' }
                     ],
                     modalSize: 'xl',
                 }}

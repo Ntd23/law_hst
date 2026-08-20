@@ -104,11 +104,19 @@ class ClientController extends Controller
             'can_create' => $currentClients < $companyUser?->plan?->max_clients
         ];
 
+        $companyLawyers = User::where('created_by', $companyUser?->id ?? $authUser->id)
+            ->where(function ($q) {
+                $q->where('type', '!=', 'client')->orWhereNull('type');
+            })
+            ->select('id', 'name', 'email', 'avatar')
+            ->get();
+
         return Inertia::render('clients/index', [
             'clients' => $clients,
             'clientTypes' => $clientTypes,
             'allClientTypes' => $allClientTypes,
             'planLimits' => $planLimits,
+            'companyLawyers' => $companyLawyers,
             'filters' => $request->only(['search', 'client_type_id', 'status', 'sort_field', 'sort_direction', 'per_page', 'page']),
         ]);
     }
@@ -195,6 +203,49 @@ class ClientController extends Controller
             // Create client with user_id
             $validated['user_id'] = $user->id;
             $client = Client::create($validated);
+
+            // Handle assignment if assigned_lawyer_id provided
+            if ($request->filled('assigned_lawyer_id') && $request->input('assigned_lawyer_id') !== '_empty_') {
+                $assignedLawyerId = $request->input('assigned_lawyer_id');
+                $companyId = getCompanyId(Auth::id());
+                $lawyer = User::where('id', $assignedLawyerId)
+                    ->where(function ($q) use ($companyId) {
+                        $q->where('created_by', $companyId)->orWhere('id', $companyId);
+                    })
+                    ->where(function ($q) {
+                        $q->where('type', '!=', 'client')->orWhereNull('type');
+                    })
+                    ->first();
+
+                if ($lawyer) {
+                    $caseType = \App\Models\CaseType::whereIn('created_by', getCompanyAndUsersId())->first() ?? \App\Models\CaseType::first();
+                    $caseStatus = \App\Models\CaseStatus::whereIn('created_by', getCompanyAndUsersId())->first() ?? \App\Models\CaseStatus::first();
+
+                    $case = \App\Models\CaseModel::create([
+                        'title' => __('Vụ việc tư vấn cho :name', ['name' => $client->name]),
+                        'client_id' => $client->id,
+                        'case_type_id' => $caseType?->id ?? 1,
+                        'case_status_id' => $caseStatus?->id ?? 1,
+                        'priority' => 'medium',
+                        'filing_date' => now()->toDateString(),
+                        'status' => 'active',
+                        'created_by' => Auth::id(),
+                        'description' => __('Phân công luật sư phụ trách cho thân chủ'),
+                    ]);
+
+                    \App\Models\CaseTeamMember::updateOrCreate(
+                        [
+                            'case_id' => $case->id,
+                            'user_id' => $assignedLawyerId,
+                        ],
+                        [
+                            'assigned_date' => now()->toDateString(),
+                            'status' => 'active',
+                            'created_by' => Auth::id(),
+                        ]
+                    );
+                }
+            }
         } catch (\Exception $e) {
             return redirect()->back()->withInput()->with('error', 'Failed to create client: ' . $e->getMessage());
         }
@@ -292,6 +343,54 @@ class ClientController extends Controller
                     'email' => $validated['email'] ?? $client->user->email,
                     'status' => $validated['status'] ?? $client->user->status,
                 ]);
+            }
+
+            // Handle assignment if assigned_lawyer_id provided
+            if ($request->has('assigned_lawyer_id')) {
+                $assignedLawyerId = $request->input('assigned_lawyer_id');
+                if (!empty($assignedLawyerId) && $assignedLawyerId !== '_empty_') {
+                    $companyId = getCompanyId(Auth::id());
+                    $lawyer = User::where('id', $assignedLawyerId)
+                        ->where(function ($q) use ($companyId) {
+                            $q->where('created_by', $companyId)->orWhere('id', $companyId);
+                        })
+                        ->where(function ($q) {
+                            $q->where('type', '!=', 'client')->orWhereNull('type');
+                        })
+                        ->first();
+
+                    if ($lawyer) {
+                        $case = $client->cases()->where('status', 'active')->first();
+                        if (!$case) {
+                            $caseType = \App\Models\CaseType::whereIn('created_by', getCompanyAndUsersId())->first() ?? \App\Models\CaseType::first();
+                            $caseStatus = \App\Models\CaseStatus::whereIn('created_by', getCompanyAndUsersId())->first() ?? \App\Models\CaseStatus::first();
+
+                            $case = \App\Models\CaseModel::create([
+                                'title' => __('Vụ việc tư vấn cho :name', ['name' => $client->name]),
+                                'client_id' => $client->id,
+                                'case_type_id' => $caseType?->id ?? 1,
+                                'case_status_id' => $caseStatus?->id ?? 1,
+                                'priority' => 'medium',
+                                'filing_date' => now()->toDateString(),
+                                'status' => 'active',
+                                'created_by' => Auth::id(),
+                                'description' => __('Phân công luật sư phụ trách cho thân chủ'),
+                            ]);
+                        }
+
+                        \App\Models\CaseTeamMember::updateOrCreate(
+                            [
+                                'case_id' => $case->id,
+                                'user_id' => $assignedLawyerId,
+                            ],
+                            [
+                                'assigned_date' => now()->toDateString(),
+                                'status' => 'active',
+                                'created_by' => Auth::id(),
+                            ]
+                        );
+                    }
+                }
             }
 
             return redirect()->back()->with('success', 'Client updated successfully');
@@ -460,5 +559,70 @@ class ClientController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage() ?: 'Failed to reset client password');
         }
+    }
+
+    public function assignLawyer(Request $request, $id)
+    {
+        $authUser = Auth::user();
+        if (!$authUser->hasRole('company') && !$authUser->hasRole('superadmin')) {
+            return redirect()->back()->with('error', __('Permission Denied. Only company can assign lawyers.'));
+        }
+
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'case_title' => 'nullable|string|max:255',
+            'role' => 'nullable|string|max:100',
+            'notes' => 'nullable|string',
+        ]);
+
+        $client = Client::where('id', $id)
+            ->whereIn('created_by', getCompanyAndUsersId())
+            ->firstOrFail();
+
+        $companyId = getCompanyId($authUser->id);
+        $lawyer = User::where('id', $validated['user_id'])
+            ->where('created_by', $companyId)
+            ->where(function ($q) {
+                $q->where('type', '!=', 'client')->orWhereNull('type');
+            })
+            ->first();
+
+        if (!$lawyer && $validated['user_id'] != $authUser->id) {
+            return redirect()->back()->with('error', __('Luật sư được chọn không thuộc công ty của bạn.'));
+        }
+
+        // Check if client has active cases
+        $case = $client->cases()->where('status', 'active')->first();
+        if (!$case) {
+            $caseType = \App\Models\CaseType::whereIn('created_by', getCompanyAndUsersId())->first() ?? \App\Models\CaseType::first();
+            $caseStatus = \App\Models\CaseStatus::whereIn('created_by', getCompanyAndUsersId())->first() ?? \App\Models\CaseStatus::first();
+
+            $case = \App\Models\CaseModel::create([
+                'title' => $validated['case_title'] ?: __('Vụ việc tư vấn cho :name', ['name' => $client->name]),
+                'client_id' => $client->id,
+                'case_type_id' => $caseType?->id ?? 1,
+                'case_status_id' => $caseStatus?->id ?? 1,
+                'priority' => 'medium',
+                'filing_date' => now()->toDateString(),
+                'status' => 'active',
+                'created_by' => $authUser->id,
+                'description' => $validated['notes'] ?: __('Phân công luật sư phụ trách cho thân chủ'),
+            ]);
+        }
+
+        // Add lawyer to case team members
+        \App\Models\CaseTeamMember::updateOrCreate(
+            [
+                'case_id' => $case->id,
+                'user_id' => $validated['user_id'],
+            ],
+            [
+                'assigned_date' => now()->toDateString(),
+                'status' => 'active',
+                'created_by' => $authUser->id,
+            ]
+        );
+
+        return redirect()->back()->with('success', __('Phân công luật sư phụ trách cho thân chủ thành công.'));
     }
 }

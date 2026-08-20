@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ConsultingLawyersDirectory from './components/ConsultingLawyersDirectory';
+import CompaniesDirectory from './components/CompaniesDirectory';
 import ContactUsForm from './components/ContactUsForm';
 import AboutCompanyView from './components/AboutCompanyView';
 import { useFavicon } from '@/hooks/use-favicon';
@@ -36,6 +37,8 @@ interface PageProps {
   page: CustomPage;
   customPages: CustomPageData[];
   lawyers?: LawyerItem[];
+  companies?: any[];
+  articles?: any[];
   settings: {
     company_name: string;
     contact_email?: string;
@@ -53,7 +56,7 @@ interface PageProps {
 
 export default function CustomPage() {
   const pageProps = usePage<PageProps>();
-  const { page, customPages = [], settings, lawyers = [] } = pageProps.props;
+  const { page, customPages = [], settings, lawyers = [], companies = [], articles = [] } = pageProps.props;
   const globalSettings = (pageProps.props as any).globalSettings;
 
   // RTL Support for custom pages
@@ -214,12 +217,14 @@ React.useEffect(() => {
           brandColor={primaryColor}
         />
 
-        <main className="pt-16">
-          {page.slug === 'terms-of-service' || page.title.toLowerCase().includes('giới thiệu về công ty') || page.title.toLowerCase().includes('giới thiệu công ty') ? (
-            <AboutCompanyView brandColor={primaryColor} pageContent={page.content} />
-          ) : page.slug === 'contact-us' || page.slug.includes('contact') || page.title.toLowerCase().includes('liên hệ') ? (
-            <ContactUsForm settings={settings} brandColor={primaryColor} lawyers={lawyers} />
-          ) : page.slug === 'about-us' || page.slug === 'luat-su-tu-van' || page.title.toLowerCase().includes('luật sư') ? (
+        <main>
+          {page.slug === 'luat-su-tu-van' || page.slug === 'about-us' || page.slug === 'danh-ba-hang-luat' || page.slug.includes('company') || page.slug.includes('cong-ty') || page.title.toLowerCase().includes('tổ chức hành nghề') ? (
+            <CompaniesDirectory companies={companies} brandColor={primaryColor} />
+          ) : page.slug === 'gioi-thieu-ve-cong-ty' || page.slug === 'gioi-thieu' || page.slug === 'terms-of-service' || page.title.toLowerCase().includes('giới thiệu') ? (
+            <AboutCompanyView brandColor={primaryColor} pageContent={page.content} articles={articles} />
+          ) : page.slug === 'lien-he-voi-chung-toi' || page.slug === 'lien-he' || page.slug === 'contact-us' || page.slug.includes('contact') || page.title.toLowerCase().includes('liên hệ') ? (
+            <ContactUsForm settings={settings} brandColor={primaryColor} lawyers={lawyers} companies={companies} />
+          ) : page.slug === 'danh-sach-luat-su' || page.slug === 'luat-su' || page.slug.includes('lawyer') ? (
             <ConsultingLawyersDirectory brandColor={primaryColor} />
           ) : (
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

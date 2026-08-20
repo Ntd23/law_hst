@@ -99,8 +99,12 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
     ? getImagePath(bannerImages[activeSlide % bannerImages.length])
     : (getImagePath(sectionData?.image) || defaultImage);
 
-  // Apply sectionData settings
-  const isFullLayout = bannerLayout === 'full';
+  // Apply sectionData settings & image position
+  const imagePosition = sectionData.image_position || (sectionData.layout === 'image-left' ? 'left' : (sectionData.layout === 'full-width' ? 'fullscreen' : (sectionData.layout === 'centered' ? 'center' : (bannerLayout || 'right'))));
+  const isFullLayout = imagePosition === 'fullscreen' || imagePosition === 'full' || imagePosition === 'background' || bannerLayout === 'full' || sectionData.layout === 'full-width';
+  const isSplitLeft = imagePosition === 'left' || (!isFullLayout && (sectionData.layout === 'image-left' || bannerLayout === 'split-left'));
+  const isCenter = imagePosition === 'center' || (!isFullLayout && sectionData.layout === 'centered');
+
   const backgroundColor = sectionData.background_color || (isDark ? '#111827' : '#f9fafb');
   const textColor = isFullLayout ? '#ffffff' : (sectionData.text_color || (isDark ? '#ffffff' : '#111827'));
   const subtitleColor = isFullLayout ? '#e5e7eb' : (sectionData.text_color || (isDark ? '#d1d5db' : '#4b5563'));
@@ -109,7 +113,7 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
   // Reusable text content block
   const textContent = (
     <div className={`space-y-6 sm:space-y-8 ${
-      isFullLayout ? 'text-center max-w-4xl mx-auto' : 'text-center lg:text-left'
+      (isFullLayout || isCenter) ? 'text-center max-w-4xl mx-auto' : 'text-center lg:text-left'
     }`}>
       {sectionData.announcement_text && (
         <div
@@ -138,7 +142,7 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
         {displaySubtitle}
       </p>
       <div className={`flex flex-col sm:flex-row gap-3 sm:gap-4 ${
-        isFullLayout ? 'justify-center' : 'justify-center lg:justify-start'
+        (isFullLayout || isCenter) ? 'justify-center' : 'justify-center lg:justify-start'
       }`}>
         <a
           href={displayBtnLink}
@@ -170,7 +174,7 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
 
       {sectionData.stats && sectionData.stats.length > 0 && (
         <div className={`grid grid-cols-3 gap-4 sm:gap-6 lg:gap-8 pt-8 sm:pt-12 ${
-          isFullLayout ? 'max-w-lg mx-auto' : ''
+          (isFullLayout || isCenter) ? 'max-w-lg mx-auto' : ''
         }`}>
           {sectionData.stats.map((stat, index) => (
             <div key={index} className="text-center">
@@ -223,9 +227,9 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
     </div>
   );
 
-  // Render layout based on bannerLayout selection
+  // Render layout based on imagePosition / layout selection
   const renderLayoutContent = () => {
-    if (bannerLayout === 'full') {
+    if (isFullLayout) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[70vh] py-16">
           {textContent}
@@ -233,7 +237,18 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
       );
     }
 
-    if (bannerLayout === 'split-left') {
+    if (isCenter) {
+      return (
+        <div className="flex flex-col items-center justify-center space-y-12 max-w-5xl mx-auto">
+          {textContent}
+          <div className="w-full max-w-3xl">
+            {imageContent}
+          </div>
+        </div>
+      );
+    }
+
+    if (isSplitLeft) {
       return (
         <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
           {imageContent}
@@ -242,7 +257,7 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
       );
     }
 
-    // Default: 'split-right'
+    // Default: 'split-right' / 'right'
     return (
       <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
         {textContent}
@@ -257,7 +272,7 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
       className="pt-16 flex items-center relative overflow-hidden transition-all duration-700"
       style={{
         minHeight,
-        ...(bannerLayout === 'full' && currentHeroImage ? {
+        ...(isFullLayout && currentHeroImage ? {
           backgroundImage: `url(${currentHeroImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
@@ -268,7 +283,7 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
       }}
     >
       {/* Full screen dark overlay gradient */}
-      {bannerLayout === 'full' && (
+      {isFullLayout && (
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/65 to-black/40 z-0 transition-opacity duration-700" />
       )}
 
@@ -277,7 +292,7 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
       </div>
 
       {/* Slide indicator dots for Full Screen background layout */}
-      {bannerLayout === 'full' && bannerImages.length >= 2 && (
+      {isFullLayout && bannerImages.length >= 2 && (
         <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-2.5 z-20">
           {bannerImages.map((_, idx) => (
             <button

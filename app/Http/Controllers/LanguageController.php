@@ -17,7 +17,7 @@ class LanguageController extends Controller
         if (File::exists($langListPath)) {
             $languages = json_decode(File::get($langListPath), true);
         }
-        $defaultLang = 'en';
+        $defaultLang = 'vi';
         $selectedLang = $defaultLang;
         if ($lang && collect($languages)->pluck('code')->contains($lang)) {
             $selectedLang = $lang;

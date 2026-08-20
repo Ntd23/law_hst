@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { PageTemplate } from '@/components/page-template';
 import { usePage, router } from '@inertiajs/react';
-import { Plus } from 'lucide-react';
-import { hasPermission } from '@/utils/authorization';
+import { Plus, UserPlus } from 'lucide-react';
+import { hasPermission, hasRole } from '@/utils/authorization';
 import { CrudTable } from '@/components/CrudTable';
 import { CrudFormModal } from '@/components/CrudFormModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -19,8 +19,10 @@ import { useInitials } from '@/hooks/use-initials';
 
 export default function Clients() {
   const { t } = useTranslation();
-  const { auth, clients, clientTypes, allClientTypes, planLimits, filters: pageFilters = {} } = usePage().props as any;
+  const { auth, clients, clientTypes, allClientTypes, planLimits, companyLawyers = [], filters: pageFilters = {} } = usePage().props as any;
   const permissions = auth?.permissions || [];
+  const userRoles = auth?.roles || [];
+  const isCompany = userRoles.includes('company') || hasRole('company', userRoles) || hasRole('superadmin', userRoles) || (auth?.user?.type === 'company');
 
   // State
   const [searchTerm, setSearchTerm] = useState(pageFilters.search || '');
@@ -71,20 +73,36 @@ export default function Clients() {
   };
 
   const handleAction = (action: string, item: any) => {
-    setCurrentItem(item);
-
     switch (action) {
-      case 'edit':
+      case 'edit': {
+        let currentAssignedLawyerId = '';
+        if (item.cases && item.cases.length > 0) {
+          for (const c of item.cases) {
+            const members = c.team_members || c.teamMembers || [];
+            if (members.length > 0 && members[0].user) {
+              currentAssignedLawyerId = String(members[0].user.id);
+              break;
+            }
+          }
+        }
+        setCurrentItem({
+          ...item,
+          assigned_lawyer_id: currentAssignedLawyerId || '',
+        });
         setFormMode('edit');
         setIsFormModalOpen(true);
         break;
+      }
       case 'delete':
+        setCurrentItem(item);
         setIsDeleteModalOpen(true);
         break;
       case 'toggle-status':
+        setCurrentItem(item);
         handleToggleStatus(item);
         break;
       case 'reset-password':
+        setCurrentItem(item);
         if (item.email) {
           setIsResetPasswordModalOpen(true);
         } else {
@@ -95,7 +113,11 @@ export default function Clients() {
   };
 
   const handleAddNew = () => {
-    setCurrentItem(null);
+    setCurrentItem({
+      assigned_lawyer_id: '',
+      tax_rate: 0,
+      status: 'active',
+    });
     setFormMode('create');
     setIsFormModalOpen(true);
   };
@@ -577,13 +599,28 @@ export default function Clients() {
             { name: 'tax_rate', label: t('Tax Rate (%)'), type: 'number', step: '0.01', min: '0', max: '100', defaultValue: 0, required: true, placeholder: 'eg. 10' },
             { name: 'date_of_birth', label: t('Date of Birth'), type: 'date' },
             { name: 'address', label: t('Address'), type: 'textarea', placeholder: 'eg. 123 Main St, New York, NY 10001' },
+            ...(isCompany && companyLawyers && companyLawyers.length > 0 ? [
+              {
+                name: 'assigned_lawyer_id',
+                label: t('Phân công luật sư phụ trách'),
+                type: 'select' as const,
+                options: [
+                  { value: '_empty_', label: t('-- Chưa phân công / Chọn luật sư --') },
+                  ...companyLawyers.map((l: any) => ({
+                    value: String(l.id),
+                    label: `${l.name} (${l.email})`
+                  }))
+                ],
+                defaultValue: '_empty_'
+              }
+            ] : []),
             {
               name: 'status',
               label: t('Status'),
               type: 'select',
               options: [
-                { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' }
+                { value: 'active', label: t('Active') },
+                { value: 'inactive', label: t('Inactive') }
               ],
               defaultValue: 'active'
             }

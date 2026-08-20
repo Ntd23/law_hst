@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { getBrandSettings, type BrandSettings } from '@/pages/settings/components/brand-settings';
 import { getImagePath } from '@/utils/helpers';
 import { setCookie, getCookie, isDemoMode } from '@/utils/cookies';
+import { router } from '@inertiajs/react';
 
 interface BrandContextType extends BrandSettings {
   updateBrandSettings: (settings: Partial<BrandSettings>) => void;
@@ -10,6 +11,17 @@ interface BrandContextType extends BrandSettings {
 const BrandContext = createContext<BrandContextType | undefined>(undefined);
 
 export function BrandProvider({ children, globalSettings, user }: { children: ReactNode; globalSettings?: any; user?: any }) {
+  const [currentPath, setCurrentPath] = useState(() => (typeof window !== 'undefined' ? window.location.pathname : '/'));
+
+  useEffect(() => {
+    const unregister = router.on('navigate', () => {
+      setCurrentPath(window.location.pathname);
+    });
+    return () => {
+      unregister();
+    };
+  }, []);
+
   // Determine which settings to use based on user role and route
   const getEffectiveSettings = () => {
     const isDemo = globalSettings?.is_demo || false;
@@ -19,22 +31,43 @@ export function BrandProvider({ children, globalSettings, user }: { children: Re
       return null; // This will force getBrandSettings to use cookies
     }
 
-    const isPublicRoute = window.location.pathname.includes('/public/') ||
-      window.location.pathname === '/' ||
-      window.location.pathname.startsWith('/page/') ||
-      window.location.pathname.includes('/auth/');
+    const path = typeof window !== 'undefined' ? window.location.pathname : currentPath;
+    const isPublicRoute =
+      path.includes('/public/') ||
+      path === '/' ||
+      path.startsWith('/page/') ||
+      path.startsWith('/trang/') ||
+      path.startsWith('/company/') ||
+      path.startsWith('/cong-ty/') ||
+      path.startsWith('/plans') ||
+      path.startsWith('/goi-dich-vu') ||
+      path.startsWith('/contact') ||
+      path.startsWith('/lien-he') ||
+      path.startsWith('/gioi-thieu') ||
+      path.startsWith('/luat-su-tu-van') ||
+      path.includes('/auth/') ||
+      path === '/login' ||
+      path === '/dang-nhap' ||
+      path === '/register' ||
+      path === '/dang-ky' ||
+      path === '/forgot-password' ||
+      path === '/quen-mat-khau' ||
+      path === '/reset-password';
 
-    // For public routes (landing page, auth pages, custom pages), always use superadmin / global settings
+    // For public routes (landing page, auth pages, custom pages), ALWAYS use superadmin brand settings
     if (isPublicRoute) {
-      return globalSettings;
+      return globalSettings?.superAdminBrand && Object.keys(globalSettings.superAdminBrand).length > 0
+        ? globalSettings.superAdminBrand
+        : globalSettings;
     }
 
-    // For authenticated routes, use user's own settings if company role
+    // For authenticated dashboard routes:
+    // If company role or company staff, use their own company settings
     if (user?.role === 'company' && user?.globalSettings) {
       return user.globalSettings;
     }
 
-    // Default to global settings (superadmin)
+    // Default to current user's settings (in globalSettings)
     return globalSettings;
   };
 
@@ -113,7 +146,7 @@ export function BrandProvider({ children, globalSettings, user }: { children: Re
       logoFooter: getImagePath(updatedSettings.logoFooter || '/storage/media/1/logo-van-phong-luat.png'),
       favicon: getImagePath(updatedSettings.favicon || '/storage/media/logos/favicon.png')
     });
-  }, [globalSettings, user]);
+  }, [globalSettings, user, currentPath]);
 
 
 

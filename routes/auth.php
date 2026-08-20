@@ -14,20 +14,30 @@ Route::middleware(['guest', 'landing.enabled'])->group(function () {
     Route::middleware('registration.enabled')->group(function () {
         Route::get('register', [RegisteredUserController::class, 'create'])
             ->name('register');
+        Route::get('dang-ky', [RegisteredUserController::class, 'create'])
+            ->name('vi.register');
 
         Route::post('register', [RegisteredUserController::class, 'store']);
+        Route::post('dang-ky', [RegisteredUserController::class, 'store']);
     });
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
+    Route::get('dang-nhap', [AuthenticatedSessionController::class, 'create'])
+        ->name('vi.login');
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
+    Route::post('dang-nhap', [AuthenticatedSessionController::class, 'store']);
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
+    Route::get('quen-mat-khau', [PasswordResetLinkController::class, 'create'])
+        ->name('vi.password.request');
 
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
         ->name('password.email');
+    Route::post('quen-mat-khau', [PasswordResetLinkController::class, 'store'])
+        ->name('vi.password.email');
 
     Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
         ->name('password.reset');

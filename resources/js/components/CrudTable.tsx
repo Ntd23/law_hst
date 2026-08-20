@@ -202,7 +202,7 @@ export function CrudTable({
         // Handle different column types
         switch (col.type) {
             case 'badge':
-                return <Badge className={cn('capitalize', statusColors[value])}>{value}</Badge>;
+                return <Badge className={cn('capitalize', statusColors[value])}>{t(value) || (typeof value === 'string' ? t(capitalize(value)) : value)}</Badge>;
 
             case 'image':
                 if (!value) {

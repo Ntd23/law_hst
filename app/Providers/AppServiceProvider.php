@@ -39,5 +39,10 @@ class AppServiceProvider extends ServiceProvider
         } catch (\Exception $e) {
             // Silently fail during migrations or when database is not ready
         }
+
+        // Implicitly grant 'superadmin' role all permissions
+        \Illuminate\Support\Facades\Gate::before(function ($user, $ability) {
+            return ($user->type === 'superadmin' || $user->hasRole('superadmin')) ? true : null;
+        });
     }
 }

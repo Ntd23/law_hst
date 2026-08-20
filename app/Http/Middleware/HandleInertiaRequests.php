@@ -178,12 +178,40 @@ class HandleInertiaRequests extends Middleware
                 $superAdminRegistrationEnabled = false;
             }
 
+            // Get superadmin brand settings for public / landing pages
+            $superAdminBrand = [];
+            try {
+                $superAdmin = User::where('type', 'superadmin')->first();
+                if ($superAdmin) {
+                    $superAdminBrand = Setting::where('user_id', $superAdmin->id)
+                        ->whereIn('key', [
+                            'logoDark',
+                            'logoLight',
+                            'logoFooter',
+                            'favicon',
+                            'logoSize',
+                            'titleText',
+                            'footerText',
+                            'themeColor',
+                            'customColor',
+                            'enableHeaderLogo',
+                            'enableFooterLogo',
+                            'enableAdminLogo',
+                        ])
+                        ->pluck('value', 'key')
+                        ->toArray();
+                }
+            } catch (\Exception $e) {
+                $superAdminBrand = [];
+            }
+
             // Merge currency settings with other settings
-           $globalSettings = array_merge(
-    $settings instanceof \Illuminate\Support\Collection ? $settings->toArray() : $settings,
-    $currencySettings instanceof \Illuminate\Support\Collection ? $currencySettings->toArray() : $currencySettings,
-    $superAdminCurrencySettings instanceof \Illuminate\Support\Collection ? $superAdminCurrencySettings->toArray() : $superAdminCurrencySettings
-);
+            $globalSettings = array_merge(
+                $settings instanceof \Illuminate\Support\Collection ? $settings->toArray() : $settings,
+                $currencySettings instanceof \Illuminate\Support\Collection ? $currencySettings->toArray() : $currencySettings,
+                $superAdminCurrencySettings instanceof \Illuminate\Support\Collection ? $superAdminCurrencySettings->toArray() : $superAdminCurrencySettings
+            );
+            $globalSettings['superAdminBrand'] = $superAdminBrand;
             $globalSettings['base_url'] = config('app.url');
             $globalSettings['image_url'] = getImageUrlPrefix();
             $globalSettings['is_demo'] = config('app.is_demo', false);
@@ -240,8 +268,8 @@ class HandleInertiaRequests extends Middleware
                 'permissions' => fn() => $request->user()?->getAllPermissions()->pluck('name'),
             ],
             'userLanguage' => config('app.is_demo')
-                ? $request->cookie('app_language', $request->user()?->lang ?? $globalSettings['defaultLanguage'] ?? 'en')
-                : ($request->user()?->lang ?? $globalSettings['defaultLanguage'] ?? 'en'),
+                ? $request->cookie('app_language', $request->user()?->lang ?? $globalSettings['defaultLanguage'] ?? 'vi')
+                : ($request->user()?->lang ?? $globalSettings['defaultLanguage'] ?? 'vi'),
             'isImpersonating' => session('impersonated_by') ? true : false,
             'ziggy' => fn(): array => [
                 ...(new Ziggy)->toArray(),
