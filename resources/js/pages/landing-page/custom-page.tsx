@@ -218,12 +218,12 @@ React.useEffect(() => {
         />
 
         <main>
-          {page.slug === 'luat-su-tu-van' || page.slug === 'about-us' || page.slug === 'danh-ba-hang-luat' || page.slug.includes('company') || page.slug.includes('cong-ty') || page.title.toLowerCase().includes('tổ chức hành nghề') ? (
-            <CompaniesDirectory companies={companies} brandColor={primaryColor} />
-          ) : page.slug === 'gioi-thieu-ve-cong-ty' || page.slug === 'gioi-thieu' || page.slug === 'terms-of-service' || page.title.toLowerCase().includes('giới thiệu') ? (
+          {page.slug === 'gioi-thieu-ve-cong-ty' || page.slug === 'gioi-thieu' || page.slug === 'about-us' || page.slug === 'terms-of-service' || page.title.toLowerCase().includes('giới thiệu') ? (
             <AboutCompanyView brandColor={primaryColor} pageContent={page.content} articles={articles} />
           ) : page.slug === 'lien-he-voi-chung-toi' || page.slug === 'lien-he' || page.slug === 'contact-us' || page.slug.includes('contact') || page.title.toLowerCase().includes('liên hệ') ? (
             <ContactUsForm settings={settings} brandColor={primaryColor} lawyers={lawyers} companies={companies} />
+          ) : page.slug === 'luat-su-tu-van' || page.slug === 'danh-ba-hang-luat' || page.slug === 'cong-ty' || page.title.toLowerCase().includes('tổ chức hành nghề') || page.title.toLowerCase().includes('luật sư tư vấn') ? (
+            <CompaniesDirectory companies={companies} brandColor={primaryColor} />
           ) : page.slug === 'danh-sach-luat-su' || page.slug === 'luat-su' || page.slug.includes('lawyer') ? (
             <ConsultingLawyersDirectory brandColor={primaryColor} />
           ) : (

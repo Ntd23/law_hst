@@ -200,6 +200,9 @@ Route::get('newsletter/unsubscribe/{email}', [\App\Http\Controllers\NewsletterCo
 // Cookie consent routes
 Route::post('/cookie-consent/store', [\App\Http\Controllers\CookieConsentController::class, 'store'])->name('cookie.consent.store');
 
+// Public Custom Page & Company Detail routes
+Route::get('/page/{slug}', [CustomPageController::class, 'show'])->name('custom-page.show');
+Route::get('/trang/{slug}', [CustomPageController::class, 'show']);
 Route::get('/cong-ty/{id}', [CustomPageController::class, 'showCompanyDetail'])->name('company.detail');
 Route::get('/company/{id}', function ($id) {
     return redirect()->route('company.detail', $id);
