@@ -1382,12 +1382,12 @@ if (! function_exists('defaultSettings')) {
 
             // Currency Settings
             'decimalFormat' => '2',
-            'defaultCurrency' => 'USD',
+            'defaultCurrency' => 'VND',
             'decimalSeparator' => '.',
             'thousandsSeparator' => ',',
             'floatNumber' => true,
-            'currencySymbolSpace' => false,
-            'currencySymbolPosition' => 'before',
+            'currencySymbolSpace' => true,
+            'currencySymbolPosition' => 'after',
 
             // Slack Settings
             'slack_enabled' => false,

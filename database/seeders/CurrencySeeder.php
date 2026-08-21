@@ -15,7 +15,7 @@ class CurrencySeeder extends Seeder
     public function run(): void
     {
         $currencies = [
-            ['name' => 'US Dollar', 'code' => 'USD', 'symbol' => '$', 'description' => 'United States Dollar', 'is_default' => true],
+            ['name' => 'US Dollar', 'code' => 'USD', 'symbol' => '$', 'description' => 'United States Dollar', 'is_default' => false],
             ['name' => 'Euro', 'code' => 'EUR', 'symbol' => '€', 'description' => 'Euro', 'is_default' => false],
             ['name' => 'British Pound', 'code' => 'GBP', 'symbol' => '£', 'description' => 'British Pound Sterling', 'is_default' => false],
             ['name' => 'Japanese Yen', 'code' => 'JPY', 'symbol' => '¥', 'description' => 'Japanese Yen', 'is_default' => false],
@@ -47,7 +47,7 @@ class CurrencySeeder extends Seeder
             ['name' => 'Malaysian Ringgit', 'code' => 'MYR', 'symbol' => 'RM', 'description' => 'Malaysian Ringgit', 'is_default' => false],
             ['name' => 'Indonesian Rupiah', 'code' => 'IDR', 'symbol' => 'Rp', 'description' => 'Indonesian Rupiah', 'is_default' => false],
             ['name' => 'Philippine Peso', 'code' => 'PHP', 'symbol' => '₱', 'description' => 'Philippine Peso', 'is_default' => false],
-            ['name' => 'Vietnamese Dong', 'code' => 'VND', 'symbol' => '₫', 'description' => 'Vietnamese Dong', 'is_default' => false],
+            ['name' => 'Việt Nam Đồng', 'code' => 'VND', 'symbol' => 'VNĐ', 'description' => 'Vietnamese Dong', 'is_default' => true],
             ['name' => 'Argentine Peso', 'code' => 'ARS', 'symbol' => '$', 'description' => 'Argentine Peso', 'is_default' => false],
             ['name' => 'Chilean Peso', 'code' => 'CLP', 'symbol' => '$', 'description' => 'Chilean Peso', 'is_default' => false],
             ['name' => 'Colombian Peso', 'code' => 'COP', 'symbol' => '$', 'description' => 'Colombian Peso', 'is_default' => false],
