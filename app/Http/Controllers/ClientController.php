@@ -9,6 +9,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class ClientController extends Controller
@@ -181,7 +182,10 @@ class ClientController extends Controller
 
         try {
             // Create user account first
-            $password = !empty($validated['password']) ? $validated['password'] : 'password';
+            // A client created without a supplied password must never receive a
+            // predictable credential. They can use the normal password-reset
+            // flow to set their first password.
+            $password = !empty($validated['password']) ? $validated['password'] : Str::random(40);
 
             $user = User::create([
                 'name' => $validated['name'],

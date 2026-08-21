@@ -330,8 +330,8 @@ class User extends BaseAuthenticatable implements MustVerifyEmail
             // Set language for new users based on company owner
             $authUser = auth()->user();
             $companySettings = settings();
-            $userLang = isset($companySettings['defaultLanguage']) ? $companySettings['defaultLanguage'] : ($authUser?->lang ?? 'en');
-            $user->lang = $userLang ?? 'en';
+            $userLang = isset($companySettings['defaultLanguage']) ? $companySettings['defaultLanguage'] : ($authUser?->lang ?? 'vi');
+            $user->lang = $userLang ?? 'vi';
 
             // Set layout direction based on language
             $rtlLanguages = ['ar', 'he'];

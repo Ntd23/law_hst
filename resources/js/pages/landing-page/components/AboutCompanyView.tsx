@@ -140,19 +140,19 @@ export default function AboutCompanyView({ brandColor = '#3b82f6', pageContent, 
       quote: t('Nền tảng giúp văn phòng chúng tôi quản lý hơn 200 vụ án cùng lúc mà không xảy ra sai sót hay trễ hạn tòa. Toàn bộ 35 luật sư phối hợp cực kỳ mượt mà.'),
       author: 'LS. Nguyễn Văn Hùng',
       role: t('Luật sư Điều hành - Apex & Partners'),
-      image: 'https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&q=80&w=200'
+      image: '/images/testimonials/vietnamese-managing-lawyer.png'
     },
     {
       quote: t('Tính năng tùy biến thương hiệu riêng và Cổng thân chủ giúp hình ảnh văn phòng trở nên vô cùng chuyên nghiệp. Thân chủ có thể chủ động xem tiến độ vụ án bất cứ lúc nào.'),
       author: 'LS. Trần Thị Mai Anh',
       role: t('Trưởng Văn phòng Luật sư Thăng Long'),
-      image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200'
+      image: '/images/testimonials/vietnamese-managing-lawyer.png'
     },
     {
       quote: t('Hệ thống tính giờ tư vấn và quản lý biểu phí minh bạch giúp doanh thu công ty tăng trưởng 40% trong năm qua. Một giải pháp chuyển đổi số không thể thiếu cho nghề luật.'),
       author: 'LS. Lê Hoàng Nam',
       role: t('Giám đốc Hãng Luật VietTrust'),
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200'
+      image: '/images/testimonials/vietnamese-managing-lawyer.png'
     }
   ];
 

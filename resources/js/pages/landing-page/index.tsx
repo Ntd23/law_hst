@@ -155,7 +155,7 @@ export default function LandingPage() {
     React.useEffect(() => {
         const applyRTLDirection = () => {
             const isDemo = globalSettings?.is_demo || false;
-            const userLanguage = (props as any)?.userLanguage || globalSettings?.defaultLanguage || 'en';
+            const userLanguage = (props as any)?.userLanguage || globalSettings?.defaultLanguage || 'vi';
             const isRTLLanguage = ['ar', 'he', 'fa', 'ur'].includes(userLanguage);
             let dir = 'ltr';
 
@@ -421,8 +421,10 @@ export default function LandingPage() {
     };
 
     const seo = settings.config_sections?.seo;
-    const defaultHomepageTitle = 'Trang chủ - Văn Phòng Luật Sư Advocate & Partners';
-    const pageTitle = t(seo?.meta_title || defaultHomepageTitle);
+    const defaultHomepageTitle = `${t('Trang chủ')} - ${settings.company_name || t('Văn Phòng Luật Sư')}`;
+    const configuredTitle = seo?.meta_title?.trim();
+    const isLegacyEnglishTitle = configuredTitle ? /legal case management|complete law firm solution/i.test(configuredTitle) : false;
+    const pageTitle = configuredTitle && !isLegacyEnglishTitle ? t(configuredTitle) : defaultHomepageTitle;
 
     return (
         <>

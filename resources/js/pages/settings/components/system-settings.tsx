@@ -29,7 +29,7 @@ export default function SystemSettings({ settings = {}, timezones = {}, dateForm
 
     // Default settings
     const defaultSettings = {
-        defaultLanguage: 'en',
+        defaultLanguage: 'vi',
         dateFormat: 'MM/DD/YYYY',
         timeFormat: '12h',
         calendarStartDay: 'sunday',

@@ -26,8 +26,8 @@ class TranslationController extends BaseController
         $path = resource_path("lang/{$locale}.json");
         
         if (!File::exists($path)) {
-            $path = resource_path("lang/en.json");
-            $locale = 'en';
+            $path = resource_path("lang/vi.json");
+            $locale = 'vi';
         }
         
         // Validate the language in demo mode
@@ -43,12 +43,12 @@ class TranslationController extends BaseController
         if (!config('app.is_demo') && !auth()->check() && request()->is('login', 'register', 'password/*', 'email/*')) {
             $superAdmin = User::where('type', 'superadmin')->first();
             if ($superAdmin) {
-                $locale = $superAdmin->lang ?? 'en';
+                $locale = $superAdmin->lang ?? 'vi';
                 $path = resource_path("lang/{$locale}.json");
                 
                 if (!File::exists($path)) {
-                    $path = resource_path("lang/en.json");
-                    $locale = 'en';
+                    $path = resource_path("lang/vi.json");
+                    $locale = 'vi';
                 }
                 
                 $layoutDirection = in_array($locale, ['ar', 'he']) ? 'rtl' : 'ltr';
@@ -69,8 +69,8 @@ class TranslationController extends BaseController
         $path = resource_path("lang/{$locale}.json");
         
         if (!File::exists($path)) {
-            $path = resource_path("lang/en.json");
-            $locale = 'en';
+            $path = resource_path("lang/vi.json");
+            $locale = 'vi';
         }
         
         $direction = in_array($locale, ['ar', 'he']) ? 'right' : 'left';
@@ -108,7 +108,7 @@ class TranslationController extends BaseController
     {
         if (config('app.is_demo') === true) {
             $cookieLang = Cookie::get('app_language');
-            return $cookieLang ?: 'en';
+            return $cookieLang ?: 'vi';
         }
         
         // First check cookie for all users for consistency
@@ -119,15 +119,15 @@ class TranslationController extends BaseController
         
         if (auth()->check()) {
             // For authenticated users, get from user preferences
-            return auth()->user()->lang ?? 'en';
+            return auth()->user()->lang ?? 'vi';
         } else if (request()->is('login', 'register', 'password/*', 'email/*')) {
             // For auth pages, get from superadmin
             $superAdmin = User::where('type', 'superadmin')->first();
-            return $superAdmin->lang ?? 'en';
+            return $superAdmin->lang ?? 'vi';
         }
         
         // Default fallback
-        return 'en';
+        return 'vi';
     }
     
     /**
@@ -138,7 +138,7 @@ class TranslationController extends BaseController
         // Check if language file exists
         $path = resource_path("lang/{$locale}.json");
         if (!File::exists($path)) {
-            return 'en'; // Default to English if language file doesn't exist
+            return 'vi';
         }
         
         // Check if language is enabled in language.json
@@ -148,7 +148,7 @@ class TranslationController extends BaseController
             $languageData = collect($languages)->firstWhere('code', $locale);
             
             if (!$languageData || (isset($languageData['enabled']) && $languageData['enabled'] === false)) {
-                return 'en'; // Default to English if language is disabled
+                return 'vi';
             }
         }
         

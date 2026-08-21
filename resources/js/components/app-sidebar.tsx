@@ -60,6 +60,7 @@ export function AppSidebar() {
         {
             title: t('Landing Page'), icon: Palette, group: t("Management"),
             children: [
+                { title: t('Homepage Appearance'), href: route('landing-page.appearance') },
                 { title: t('Landing Page'), href: route('landing-page') },
                 { title: t('Custom Pages'), href: route('landing-page.custom-pages.index') },
                 { title: t('Contact Inquiries'), href: route('contact-us.index') },
@@ -67,6 +68,7 @@ export function AppSidebar() {
             ],
         },
         { title: t('Email Templates'), href: route('email-templates.index'), icon: Mail, group: t("System Control" )},
+        { title: t('Roles & Permissions'), href: route('roles.index'), icon: UserCheck, group: t("System Control") },
         { title: t('Settings'), href: route('settings'), icon: Settings, group: t("System Control" )},
     ];
 

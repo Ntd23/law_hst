@@ -35,7 +35,10 @@ class TeamMemberCreateListener
                 '{user_name}' => auth()->user()->name ?? 'System Administrator',
                 '{name}' => $teamMember->name ?? 'Team Member',
                 '{email}' => $teamMember->email ?? 'Not provided',
-                '{password}' => $requestData['password'] ?? 'Not provided',
+                // Passwords are not sent through email templates or retained
+                // in listener data. Administrators can direct users to reset
+                // their password through the authenticated reset flow.
+                '{password}' => __('Set by your administrator; use password reset if needed.'),
                 '{role}' => ucfirst($teamMember->type ?? 'team_member'),
                 '{phone_no}' => $teamMember->phone ?? 'Not provided',
                 '{app_name}' => config('app.name', 'Legal Management System'),

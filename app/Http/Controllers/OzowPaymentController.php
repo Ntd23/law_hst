@@ -10,36 +10,9 @@ class OzowPaymentController extends Controller
 {
     public function processPayment(Request $request)
     {
-        $validated = validatePaymentRequest($request, [
-            'transaction_id' => 'required|string',
-            'status' => 'required|string',
+        return back()->withErrors([
+            'error' => __('Ozow payments are awaiting verified confirmation.'),
         ]);
-
-        try {
-            $plan = Plan::findOrFail($validated['plan_id']);
-            $settings = getPaymentGatewaySettings();
-
-            if (!isset($settings['payment_settings']['ozow_site_key'])) {
-                return back()->withErrors(['error' => __('Ozow not configured')]);
-            }
-
-            if ($validated['status'] === 'Complete') {
-                processPaymentSuccess([
-                    'user_id' => auth()->id(),
-                    'plan_id' => $plan->id,
-                    'billing_cycle' => $validated['billing_cycle'],
-                    'payment_method' => 'ozow',
-                    'coupon_code' => $validated['coupon_code'] ?? null,
-                    'payment_id' => $validated['transaction_id'],
-                ]);
-
-                return back()->with('success', __('Payment successful and plan activated'));
-            }
-
-            return back()->withErrors(['error' => __('Payment failed or cancelled')]);
-        } catch (\Exception $e) {
-            return handlePaymentError($e, 'ozow');
-        }
     }
 
     public function createPayment(Request $request)
@@ -128,64 +101,17 @@ class OzowPaymentController extends Controller
 
     public function callback(Request $request)
     {
-        try {
-            $transactionId = $request->input('TransactionReference');
-            $status = $request->input('Status');
+        \Log::warning('Rejected Ozow plan callback because callback signature verification is not implemented.', [
+            'transaction_reference' => $request->input('TransactionReference'),
+        ]);
 
-            if ($transactionId && $status === 'Complete') {
-                $parts = explode('_', $transactionId);
-
-                if (count($parts) >= 3) {
-                    $planId = $parts[1];
-                    $userId = $parts[2];
-
-                    $plan = Plan::find($planId);
-                    $user = User::find($userId);
-
-                    if ($plan && $user) {
-                        processPaymentSuccess([
-                            'user_id' => $user->id,
-                            'plan_id' => $plan->id,
-                            'billing_cycle' => 'monthly',
-                            'payment_method' => 'ozow',
-                            'payment_id' => $transactionId,
-                        ]);
-                    }
-                }
-            }
-
-            return response()->json(['status' => 'success']);
-        } catch (\Exception $e) {
-            return response()->json(['error' => __('Callback processing failed')], 500);
-        }
+        return response()->json(['error' => __('Ozow callback verification is not configured')], 503);
     }
     public function processInvoicePayment(Request $request)
     {
-        $request->validate([
-            'invoice_token' => 'required|string',
-            'amount' => 'required|numeric|min:0',
-            'transaction_id' => 'required|string',
-            'status' => 'required|string',
+        return back()->withErrors([
+            'error' => __('Payment is awaiting verified confirmation.'),
         ]);
-
-        try {
-            $invoice = \App\Models\Invoice::where('payment_token', $request->invoice_token)->firstOrFail();
-
-            if ($request->status === 'Complete') {
-                $invoice->createPaymentRecord($request->amount, 'ozow', $request->transaction_id);
-
-                return redirect()->route('invoice.payment', $invoice->payment_token)
-                    ->with('success', __('Payment successful!'));
-            }
-
-            return back()->withErrors(['error' => __('Payment failed or cancelled')]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return back()->withErrors($e->errors());
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return back()->withErrors(['error' => __('Invoice not found. Please check the link and try again.')]);
-        } catch (\Exception $e) {
-            return back()->withErrors(['error' => __('Payment processing failed. Please try again or contact support.')]);
-        }
     }
 
     public function createInvoicePayment(Request $request)
@@ -304,23 +230,10 @@ class OzowPaymentController extends Controller
 
     public function invoiceCallback(Request $request)
     {
-        try {
-            $transactionId = $request->input('TransactionReference');
-            $status = $request->input('Status');
-            $amount = $request->input('Amount');
-            $invoiceToken = $request->input('invoice_token');
+        \Log::warning('Rejected Ozow invoice callback because callback signature verification is not implemented.', [
+            'transaction_reference' => $request->input('TransactionReference'),
+        ]);
 
-            if ($transactionId && $status === 'Complete' && $invoiceToken) {
-                $invoice = \App\Models\Invoice::where('payment_token', $invoiceToken)->first();
-
-                if ($invoice) {
-                    $invoice->createPaymentRecord($amount, 'ozow', $transactionId);
-                }
-            }
-
-            return response()->json(['status' => 'success']);
-        } catch (\Exception $e) {
-            return response()->json(['error' => __('Callback processing failed')], 500);
-        }
+        return response()->json(['error' => __('Ozow callback verification is not configured')], 503);
     }
 }

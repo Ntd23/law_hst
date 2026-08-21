@@ -11,7 +11,7 @@ export const defaultLandingPageSections = {
       key: 'hero',
       title: 'Complete Legal Case Management Solution',
       subtitle: 'Streamline your law firm operations with comprehensive case, client, and document management.',
-      announcement_text: '⚖️ New: Advanced Court Calendar Integration',
+      announcement_text: '',
       primary_button_text: 'Start Free Trial',
       secondary_button_text: 'Login',
       image: '',
@@ -234,7 +234,7 @@ export const defaultLandingPageSections = {
     favicon: ''
   },
   seo: {
-    meta_title: 'Legal Case Management System - Complete Law Firm Solution',
+    meta_title: 'Trang chủ - Văn Phòng Luật Sư',
     meta_description: 'Comprehensive legal case management software for law firms. Manage cases, clients, documents, billing, and court schedules in one platform.',
     meta_keywords: 'legal case management, law firm software, case management system, legal billing, court calendar, document management'
   },

@@ -4,42 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Plan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MidtransPaymentController extends Controller
 {
     public function processPayment(Request $request)
     {
-        $validated = validatePaymentRequest($request, [
-            'transaction_status' => 'required|string',
-            'order_id' => 'required|string',
+        // Client-provided status is not proof of a successful Midtrans payment.
+        return back()->withErrors([
+            'error' => __('Midtrans payments are awaiting verified confirmation.'),
         ]);
-
-        try {
-            $plan = Plan::findOrFail($validated['plan_id']);
-            $settings = getPaymentGatewaySettings();
-
-            if (!isset($settings['payment_settings']['midtrans_secret_key'])) {
-                return back()->withErrors(['error' => __('Midtrans not configured')]);
-            }
-
-            if (in_array($validated['transaction_status'], ['capture', 'settlement'])) {
-                processPaymentSuccess([
-                    'user_id' => auth()->id(),
-                    'plan_id' => $plan->id,
-                    'billing_cycle' => $validated['billing_cycle'],
-                    'payment_method' => 'midtrans',
-                    'coupon_code' => $validated['coupon_code'] ?? null,
-                    'payment_id' => $validated['order_id'],
-                ]);
-
-                return back()->with('success', __('Payment successful and plan activated'));
-            }
-
-            return back()->withErrors(['error' => __('Payment failed or cancelled')]);
-
-        } catch (\Exception $e) {
-            return handlePaymentError($e, 'midtrans');
-        }
     }
 
     public function createPayment(Request $request)
@@ -106,76 +80,21 @@ class MidtransPaymentController extends Controller
 
     public function success(Request $request)
     {
-        try {
-            $orderId = $request->input('order_id');
-
-            if ($orderId) {
-                $parts = explode('_', $orderId);
-
-                if (count($parts) >= 4) {
-                    $userId = $parts[0];
-                    $planId = $parts[1];
-                    $billingCycle = $parts[2];
-
-                    $plan = Plan::find($planId);
-                    $user = \App\Models\User::find($userId);
-
-                    if ($plan && $user) {
-                        processPaymentSuccess([
-                            'user_id' => $user->id,
-                            'plan_id' => $plan->id,
-                            'billing_cycle' => $billingCycle,
-                            'payment_method' => 'midtrans',
-                            'payment_id' => $orderId,
-                        ]);
-
-                        return redirect()->route('plans.index')->with('success', __('Payment completed successfully!'));
-                    }
-                }
-            }
-
-            return redirect()->route('plans.index')->with('error', __('Payment verification failed'));
-
-        } catch (\Exception $e) {
-            return redirect()->route('plans.index')->with('error', __('Payment processing failed'));
-        }
+        return redirect()->route('plans.index')->with(
+            'info',
+            __('Midtrans payment is being verified. Your plan will not change until confirmation is verified.')
+        );
     }
 
     public function callback(Request $request)
     {
-        try {
-            $orderId = $request->input('order_id');
-            $transactionStatus = $request->input('transaction_status');
+        // A pending order is required before automatic plan activation can be
+        // safely enabled. Do not derive user/plan ownership from a callback.
+        \Log::warning('Rejected Midtrans plan callback without a server-side pending order.', [
+            'order_id' => $request->input('order_id'),
+        ]);
 
-            if ($orderId && in_array($transactionStatus, ['capture', 'settlement'])) {
-                $parts = explode('_', $orderId);
-
-                if (count($parts) >= 4) {
-                    $userId = $parts[0];
-                    $planId = $parts[1];
-                    $billingCycle = $parts[2];
-
-                    $plan = Plan::find($planId);
-                    $user = \App\Models\User::find($userId);
-
-                    if ($plan && $user) {
-                        processPaymentSuccess([
-                            'user_id' => $user->id,
-                            'plan_id' => $plan->id,
-                            'billing_cycle' => $billingCycle,
-                            'payment_method' => 'midtrans',
-                            'payment_id' => $request->input('transaction_id'),
-                        ]);
-
-                    }
-                }
-            }
-
-            return response()->json(['status' => 'success']);
-
-        } catch (\Exception $e) {
-            return response()->json(['error' => __('Callback processing failed')], 500);
-        }
+        return response()->json(['error' => __('Midtrans plan callback verification is not configured')], 503);
     }
 
     private function createSnapToken($paymentData, $settings)
@@ -239,7 +158,7 @@ class MidtransPaymentController extends Controller
             }
 
             $orderId = 'invoice_' . $invoice->id . '_' . time();
-            $amount = intval($request->amount);
+            $amount = intval($invoice->remaining_amount);
 
             $paymentData = [
                 'transaction_details' => [
@@ -277,63 +196,12 @@ class MidtransPaymentController extends Controller
 
     public function invoiceSuccess(Request $request)
     {
-        try {
-            $orderId = $request->input('order_id');
-            $invoiceToken = $request->input('invoice_token');
+        $invoiceToken = (string) $request->input('invoice_token', 'invalid');
 
-            if ($orderId && $invoiceToken) {
-                $invoice = \App\Models\Invoice::where('payment_token', $invoiceToken)->first();
-
-                if ($invoice) {
-                    // Get the actual payment amount from Midtrans API
-                    $amount = $invoice->remaining_amount; // fallback
-                    
-                    try {
-                        $paymentSettings = $invoice->getPaymentSettings('midtrans');
-                        if (!empty($paymentSettings['midtrans_secret_key'])) {
-                            $baseUrl = ($paymentSettings['midtrans_mode'] ?? 'sandbox') === 'live'
-                                ? 'https://api.midtrans.com'
-                                : 'https://api.sandbox.midtrans.com';
-                            
-                            $ch = curl_init();
-                            curl_setopt($ch, CURLOPT_URL, $baseUrl . '/v2/' . $orderId . '/status');
-                            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                                'Authorization: Basic ' . base64_encode($paymentSettings['midtrans_secret_key'] . ':'),
-                                'Accept: application/json'
-                            ]);
-                            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-                            
-                            $response = curl_exec($ch);
-                            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                            curl_close($ch);
-                            
-                            if ($httpCode === 200) {
-                                $result = json_decode($response, true);
-                                if (isset($result['gross_amount'])) {
-                                    $amount = (float)$result['gross_amount'];
-                                }
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        // Use fallback amount if API call fails
-                    }
-
-                    $invoice->createPaymentRecord($amount, 'midtrans', $orderId);
-
-                    return redirect()->route('invoice.payment', $invoice->payment_token)
-                        ->with('success', __('Payment successful!'));
-                }
-            }
-
-            return redirect()->back()->withErrors(['error' => __('Payment verification failed')]);
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return redirect()->back()->withErrors(['error' => __('Invoice not found. Please check the link and try again.')]);
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => __('Payment processing failed. Please try again or contact support.')]);
-        }
+        return redirect()->route('invoice.payment', $invoiceToken)->with(
+            'info',
+            __('Payment is being processed. The invoice will update after verified confirmation.')
+        );
     }
 
     public function invoiceCallback(Request $request)
@@ -342,25 +210,61 @@ class MidtransPaymentController extends Controller
             $orderId = $request->input('order_id');
             $transactionStatus = $request->input('transaction_status');
 
-            if ($orderId && in_array($transactionStatus, ['capture', 'settlement'])) {
+            if ($orderId && in_array($transactionStatus, ['capture', 'settlement'], true)) {
                 // Extract invoice info from order ID
                 $parts = explode('_', $orderId);
-                if (count($parts) >= 3) {
+                if (count($parts) === 3 && $parts[0] === 'invoice') {
                     $invoiceId = $parts[1];
                     $invoice = \App\Models\Invoice::find($invoiceId);
 
-                    if ($invoice) {
-                        // Get payment amount from the callback request
-                        $amount = $request->input('gross_amount') ? (float)$request->input('gross_amount') : $invoice->remaining_amount;
-                        $invoice->createPaymentRecord($amount, 'midtrans', $request->input('transaction_id') ?? $orderId);
+                    if ($invoice && $this->hasValidInvoiceCallbackSignature($request, $invoice)) {
+                        $amount = (float) $request->input('gross_amount');
+
+                        if ($amount <= 0 || $amount > $invoice->remaining_amount) {
+                            return response()->json(['error' => __('Invalid payment amount')], 422);
+                        }
+
+                        DB::transaction(function () use ($invoice, $amount, $request) {
+                            $lockedInvoice = \App\Models\Invoice::lockForUpdate()->findOrFail($invoice->id);
+
+                            if ($amount > $lockedInvoice->remaining_amount) {
+                                throw new \RuntimeException('Payment amount exceeds the remaining invoice balance.');
+                            }
+
+                            $lockedInvoice->createPaymentRecord(
+                                $amount,
+                                'midtrans',
+                                $request->input('transaction_id') ?: $request->input('order_id')
+                            );
+                        });
+
+                        return response()->json(['status' => 'success']);
                     }
                 }
             }
 
-            return response()->json(['status' => 'success']);
+            return response()->json(['error' => __('Payment verification failed')], 400);
 
         } catch (\Exception $e) {
             return response()->json(['error' => 'Callback processing failed'], 500);
         }
+    }
+
+    private function hasValidInvoiceCallbackSignature(Request $request, \App\Models\Invoice $invoice): bool
+    {
+        $settings = $invoice->getPaymentSettings('midtrans');
+        $serverKey = $settings['midtrans_secret_key'] ?? null;
+        $orderId = (string) $request->input('order_id');
+        $statusCode = (string) $request->input('status_code');
+        $grossAmount = (string) $request->input('gross_amount');
+        $signature = (string) $request->input('signature_key');
+
+        if (!$serverKey || !$orderId || !$statusCode || !$grossAmount || !$signature || $statusCode !== '200') {
+            return false;
+        }
+
+        $expectedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
+
+        return hash_equals($expectedSignature, $signature);
     }
 }

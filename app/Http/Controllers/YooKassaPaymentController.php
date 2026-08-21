@@ -6,6 +6,7 @@ use App\Models\Plan;
 use App\Models\Invoice;
 use App\Models\Payment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class YooKassaPaymentController extends Controller
 {
@@ -70,112 +71,31 @@ class YooKassaPaymentController extends Controller
 
     public function success(Request $request)
     {
-        try {
-            $planId = $request->input('plan_id');
-            $billingCycle = $request->input('billing_cycle');
-            $couponCode = $request->input('coupon_code');
-            $orderId = $request->input('order_id');
-
-            if ($planId && $orderId) {
-                $plan = Plan::find($planId);
-
-                // Find user by session or create temporary assignment
-                $user = null;
-                if (auth()->check()) {
-                    $user = auth()->user();
-                } else {
-                    // Try to find user from recent plan orders
-                    $recentOrder = \App\Models\PlanOrder::where('payment_id', 'like', '%' . substr($orderId, -8))
-                        ->where('created_at', '>=', now()->subHours(1))
-                        ->first();
-                    if ($recentOrder) {
-                        $user = \App\Models\User::find($recentOrder->user_id);
-                    }
-                }
-
-                if ($plan && $user) {
-                    // Assign plan to user immediately
-                    $user->plan_id = $plan->id;
-                    $user->plan_expire_date = $billingCycle === 'yearly' ? now()->addYear() : now()->addMonth();
-                    $user->save();
-
-                    // Create plan order record
-                    processPaymentSuccess([
-                        'user_id' => $user->id,
-                        'plan_id' => $plan->id,
-                        'billing_cycle' => $billingCycle,
-                        'payment_method' => 'yookassa',
-                        'coupon_code' => $couponCode,
-                        'payment_id' => $orderId,
-                    ]);
-
-                    return redirect()->route('plans.index')->with('success', 'Payment successful and plan activated');
-                }
-            }
-            return redirect()->route('plans.index')->with('error', __('Payment verification failed'));
-        } catch (\Exception $e) {
-            return redirect()->route('plans.index')->with('error', __('Payment processing failed'));
-        }
+        // The provider return URL is not authenticated. The callback is the
+        // only path allowed to settle a verified invoice payment.
+        return redirect()->route('plans.index')->with(
+            'info',
+            __('Your payment is awaiting verified confirmation.'),
+        );
     }
 
     public function callback(Request $request)
     {
-        try {
-            $paymentId = $request->input('object.id');
-            $status = $request->input('object.status');
-            $metadata = $request->input('object.metadata');
+        // Do not bind plan ownership from webhook metadata until a persisted
+        // pending order and provider-side reconciliation are available.
+        Log::warning('Rejected YooKassa plan callback until verified pending orders are implemented.', [
+            'request_id' => $request->header('X-Request-Id'),
+        ]);
 
-            if ($paymentId && $status === 'succeeded' && $metadata) {
-                $planId = $metadata['plan_id'];
-                $userId = $metadata['user_id'];
-
-                $plan = Plan::find($planId);
-                $user = \App\Models\User::find($userId);
-
-                if ($plan && $user) {
-                    // Assign plan to user
-                    $user->plan_id = $plan->id;
-                    $user->plan_expire_date = $metadata['billing_cycle'] === 'yearly' ? now()->addYear() : now()->addMonth();
-                    $user->save();
-
-                    processPaymentSuccess([
-                        'user_id' => $user->id,
-                        'plan_id' => $plan->id,
-                        'billing_cycle' => $metadata['billing_cycle'] ?? 'monthly',
-                        'payment_method' => 'yookassa',
-                        'coupon_code' => $metadata['coupon_code'] ?? null,
-                        'payment_id' => $paymentId,
-                    ]);
-                }
-            }
-            return response()->json(['status' => 'success']);
-        } catch (\Exception $e) {
-            return response()->json(['error' => __('Callback processing failed')], 500);
-        }
+        return response()->json(['error' => __('Verified pending order required')], 503);
     }
     public function processInvoicePayment(Request $request)
     {
-        $request->validate([
-            'invoice_token' => 'required|string',
-            'amount' => 'required|numeric|min:0',
-            'payment_id' => 'required|string',
+        // The browser must not be able to turn an invoice into a paid invoice.
+        // YooKassa's verified callback is the only automatic state-changing path.
+        return back()->withErrors([
+            'error' => __('Payment is awaiting verified confirmation.'),
         ]);
-
-        try {
-            $invoice = \App\Models\Invoice::where('payment_token', $request->invoice_token)->firstOrFail();
-
-            $invoice->createPaymentRecord($request->amount, 'yookassa', $request->payment_id);
-
-            return redirect()->route('invoice.payment', $invoice->payment_token)
-                ->with('success', __('Payment successful'));
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return back()->withErrors($e->errors());
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return back()->withErrors(['error' => __('Invoice not found. Please check the link and try again.')]);
-        } catch (\Exception $e) {
-            return back()->withErrors(['error' => __('Payment processing failed. Please try again or contact support.')]);
-        }
     }
 
     public function createInvoicePayment(Request $request)
@@ -201,7 +121,7 @@ class YooKassaPaymentController extends Controller
 
             $payment = $client->createPayment([
                 'amount' => [
-                    'value' => number_format($request->amount, 2, '.', ''),
+                    'value' => number_format($invoice->remaining_amount, 2, '.', ''),
                     'currency' => 'RUB',
                 ],
                 'confirmation' => [
@@ -214,7 +134,7 @@ class YooKassaPaymentController extends Controller
                     'invoice_id' => $invoice->id,
                     'invoice_token' => $request->invoice_token,
                     'order_id' => $orderId,
-                    'amount' => $request->amount
+                    'amount' => $invoice->remaining_amount
                 ]
             ], uniqid('', true));
 
@@ -237,83 +157,76 @@ class YooKassaPaymentController extends Controller
 
     public function invoiceSuccess(Request $request)
     {
-        try {
-            $orderId = $request->input('order_id');
-            $invoiceToken = $request->input('invoice_token');
-            $isTest = $request->input('test');
+        $invoiceToken = (string) $request->input('invoice_token', 'invalid');
 
-            if ($orderId && $invoiceToken) {
-                $invoice = \App\Models\Invoice::where('payment_token', $invoiceToken)->first();
-
-                if ($invoice) {
-                    // Get payment amount from YooKassa API or use remaining amount as fallback
-                    $paymentAmount = $invoice->remaining_amount;
-                    
-                    // Try to get the actual payment amount from YooKassa API
-                    try {
-                        $paymentSettings = $invoice->getPaymentSettings('yookassa');
-                        if (!empty($paymentSettings['yookassa_shop_id']) && !empty($paymentSettings['yookassa_secret_key'])) {
-                            $client = new \YooKassa\Client();
-                            $client->setAuth((int)$paymentSettings['yookassa_shop_id'], $paymentSettings['yookassa_secret_key']);
-                            
-                            // Find payment by order_id in metadata
-                            $payments = $client->getPayments(['limit' => 100]);
-                            foreach ($payments->getItems() as $payment) {
-                                if (isset($payment->metadata['order_id']) && $payment->metadata['order_id'] === $orderId) {
-                                    $paymentAmount = (float)$payment->amount->value;
-                                    break;
-                                }
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        // Fallback to remaining amount if API call fails
-                    }
-                    
-                    $invoice->createPaymentRecord($paymentAmount, 'yookassa', $orderId);
-                    return redirect()->route('invoice.payment', $invoice->payment_token)
-                        ->with('success', __('Payment successful'));
-                }
-            }
-
-            return redirect()->route('invoice.payment', 'invalid')
-                ->with('error', 'Payment verification failed.');
-
-        } catch (\Exception $e) {
-            return redirect()->route('invoice.payment', 'invalid')
-                ->with('error', 'Payment processing failed.');
-        }
+        return redirect()->route('invoice.payment', $invoiceToken)->with(
+            'info',
+            __('Payment is being processed. The invoice will update after verified confirmation.')
+        );
     }
 
     public function invoiceCallback(Request $request)
     {
         try {
             $paymentId = $request->input('object.id');
-            $status = $request->input('object.status');
-            $metadata = $request->input('object.metadata');
+            $invoiceId = $request->input('object.metadata.invoice_id');
 
-            if ($paymentId && $status === 'succeeded' && $metadata) {
-                $invoiceId = $metadata['invoice_id'];
-                $orderId = $metadata['order_id'];
-
-                $invoice = \App\Models\Invoice::find($invoiceId);
-
-                if ($invoice) {
-                    // Get payment amount from metadata or payment object
-                    $paymentAmount = isset($metadata['amount']) ? (float)$metadata['amount'] : $invoice->remaining_amount;
-                    
-                    // Try to get amount from the payment object in request
-                    if (!isset($metadata['amount']) && $request->has('object.amount.value')) {
-                        $paymentAmount = (float)$request->input('object.amount.value');
-                    }
-                    
-                    $invoice->createPaymentRecord($paymentAmount, 'yookassa', $paymentId);
-                    return response('OK', 200);
-                }
+            if (!$paymentId || !$invoiceId) {
+                return response('Invalid payment callback', 400);
             }
+
+            $invoice = \App\Models\Invoice::find($invoiceId);
+            if (!$invoice) {
+                return response('Invoice not found', 404);
+            }
+
+            $payment = $this->retrieveVerifiedInvoicePayment($paymentId, $invoice);
+            if (!$payment) {
+                return response('Payment verification failed', 400);
+            }
+
+            $metadata = $payment->getMetadata() ?? [];
+            $paymentAmount = (float) $payment->getAmount()->getValue();
+            $currency = $payment->getAmount()->getCurrency();
+
+            if (
+                $payment->getStatus() !== 'succeeded' ||
+                ($metadata['invoice_id'] ?? null) != $invoice->id ||
+                ($metadata['invoice_token'] ?? null) !== $invoice->payment_token ||
+                $currency !== 'RUB' ||
+                $paymentAmount <= 0 ||
+                $paymentAmount > $invoice->remaining_amount
+            ) {
+                return response('Payment verification failed', 400);
+            }
+
+            DB::transaction(function () use ($invoice, $paymentAmount, $paymentId) {
+                $lockedInvoice = \App\Models\Invoice::lockForUpdate()->findOrFail($invoice->id);
+
+                if ($paymentAmount > $lockedInvoice->remaining_amount) {
+                    throw new \RuntimeException('Payment amount exceeds the remaining invoice balance.');
+                }
+
+                $lockedInvoice->createPaymentRecord($paymentAmount, 'yookassa', $paymentId);
+            });
 
             return response('OK', 200);
         } catch (\Exception $e) {
             return response('FAILED', 400);
         }
+    }
+
+    private function retrieveVerifiedInvoicePayment(string $paymentId, Invoice $invoice): mixed
+    {
+        $settings = $invoice->getPaymentSettings('yookassa');
+
+        if (empty($settings['yookassa_shop_id']) || empty($settings['yookassa_secret_key'])) {
+            return null;
+        }
+
+        $client = new \YooKassa\Client();
+        $client->setAuth((int) $settings['yookassa_shop_id'], $settings['yookassa_secret_key']);
+
+        return $client->getPaymentInfo($paymentId);
     }
 }

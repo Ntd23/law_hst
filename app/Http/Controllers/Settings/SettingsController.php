@@ -189,7 +189,7 @@ class SettingsController extends Controller
      */
     public function getSettings()
     {
-        $settings = settings();
+        $settings = publicSettings();
         return response()->json([
             'settings' => $settings
         ]);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@inertiajs/react';
 import {
@@ -13,7 +13,9 @@ import {
   Building2,
   ArrowRight,
   User,
-  Headphones
+  Headphones,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { getImagePath } from '@/utils/helpers';
 
@@ -79,6 +81,14 @@ export default function CompaniesDirectory({
   isSection = false
 }: Props) {
   const { t } = useTranslation();
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  const slide = (direction: 'next' | 'previous') => {
+    sliderRef.current?.scrollBy({
+      left: (direction === 'next' ? 1 : -1) * sliderRef.current.clientWidth,
+      behavior: 'smooth',
+    });
+  };
 
   // Dynamic banner generator based on company data
   const renderCardBanner = (company: CompanyItem) => {
@@ -167,15 +177,29 @@ export default function CompaniesDirectory({
             </h3>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6 xl:gap-7">
+          <div className="relative">
+            {isSection && companies.length > 1 && (
+              <div className="absolute -top-12 right-0 hidden sm:flex gap-2">
+                <button type="button" onClick={() => slide('previous')} aria-label={t('Previous')} className="p-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 shadow-sm">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button type="button" onClick={() => slide('next')} aria-label={t('Next')} className="p-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 shadow-sm">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            <div ref={sliderRef} className={isSection ? 'flex gap-5 lg:gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-3 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden' : 'grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6 xl:gap-7'}>
             {companies.map(company => {
               const successRate = company.success_rate !== null && company.success_rate !== undefined ? company.success_rate : 100;
               const starCount = Math.max(1, Math.min(5, Math.round(successRate / 20)));
+              const specialization = company.specialization ? t(company.specialization) : t('Tư vấn Doanh nghiệp, Đất đai & Tranh tụng');
+              const address = company.address ? t(company.address) : t('Chưa cập nhật');
+              const phone = company.phone ? t(company.phone) : t('Chưa cập nhật');
 
               return (
                 <div
                   key={company.id}
-                  className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/90 dark:border-gray-800 shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between group"
+                  className={`${isSection ? 'w-[86vw] sm:w-[calc(50%-10px)] lg:w-[calc(33.333%-16px)] shrink-0 snap-start' : ''} bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/90 dark:border-gray-800 shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between group`}
                 >
                   {/* Top Banner */}
                   {renderCardBanner(company)}
@@ -201,7 +225,7 @@ export default function CompaniesDirectory({
                       <div className="min-w-0 flex-1">
                         <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium leading-none mb-1">{t('Chuyên môn')}</p>
                         <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">
-                          {company.specialization || t('Tư vấn Doanh nghiệp, Đất đai & Tranh tụng')}
+                          {specialization}
                         </p>
                       </div>
                     </div>
@@ -210,11 +234,11 @@ export default function CompaniesDirectory({
                     <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400 pt-0.5">
                       <div className="flex items-center gap-2.5">
                         <MapPin className="w-4 h-4 text-[#c3935b] shrink-0" />
-                        <span className="truncate">{company.address || t('Chưa cập nhật')}</span>
+                        <span className="truncate">{address}</span>
                       </div>
                       <div className="flex items-center gap-2.5">
                         <Phone className="w-4 h-4 text-[#c3935b] shrink-0" />
-                        <span>{company.phone || t('Chưa cập nhật')}</span>
+                        <span>{phone}</span>
                       </div>
                       <div className="flex items-center gap-2.5">
                         <Mail className="w-4 h-4 text-[#c3935b] shrink-0" />
@@ -285,7 +309,7 @@ export default function CompaniesDirectory({
                       </Link>
 
                       <Link
-                        href={`/page/lien-he-voi-chung-toi`}
+                        href={`/lien-he-voi-chung-toi`}
                         className="py-2.5 px-3 rounded-xl text-xs font-bold text-white shadow-2xs hover:brightness-95 transition-all text-center flex items-center justify-center gap-1 bg-[#c3935b]"
                       >
                         <span>{t('Liên Hệ Ngay')}</span>
@@ -297,6 +321,7 @@ export default function CompaniesDirectory({
                 </div>
               );
             })}
+            </div>
           </div>
         )}
       </section>

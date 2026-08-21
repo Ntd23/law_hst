@@ -158,7 +158,7 @@ class UserController extends BaseController
             'email'      => $request->email,
             'password'   => Hash::make($request->password),
             'created_by' => $created_by,
-            'lang'       => $userLang ?? 'en',
+            'lang'       => $userLang ?? 'vi',
         ]);
 
         if ($user && $request->roles) {
@@ -212,6 +212,7 @@ class UserController extends BaseController
         if (!Auth::user()->can('edit-users')) {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
+        $this->ensureUserAccess($user);
 
         if ($user) {
             $user->name  = $request->name;
@@ -231,6 +232,10 @@ class UserController extends BaseController
                         }
                     })->first();
 
+                if (!$role) {
+                    return redirect()->back()->with('error', __('Invalid role selected.'));
+                }
+
                 $user->roles()->sync([$role->id]);
                 $user->type = $role->name;
             }
@@ -249,6 +254,7 @@ class UserController extends BaseController
         if (!Auth::user()->can('delete-users')) {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
+        $this->ensureUserAccess($user);
 
         if ($user) {
             $user->delete();
@@ -265,6 +271,7 @@ class UserController extends BaseController
         if (!Auth::user()->can('reset-password-users')) {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
+        $this->ensureUserAccess($user);
 
         $request->validate([
             'password' => 'required|min:8|confirmed',
@@ -281,23 +288,31 @@ class UserController extends BaseController
      */
     public function show(User $user)
     {
+        if (!Auth::user()->can('view-users')) {
+            return redirect()->back()->with('error', __('Permission Denied.'));
+        }
+        $this->ensureUserAccess($user);
         // Load user with related data
         $user->load(['roles', 'creator']);
 
         // Get client data if user is a client
         $client = null;
         if ($user->type === 'client') {
-            $client = \App\Models\Client::where('email', $user->email)->first();
+            $client = \App\Models\Client::where('email', $user->email)
+                ->whereIn('created_by', getCompanyAndUsersId())
+                ->first();
         }
 
         // Get cases related to this user
         $cases = collect();
         if ($client) {
             $cases = \App\Models\CaseModel::where('client_id', $client->id)
+                ->whereIn('created_by', getCompanyAndUsersId())
                 ->with(['caseStatus', 'caseType'])
                 ->get();
         } elseif ($user->hasRole('team_member')) {
-            $cases = \App\Models\CaseModel::whereHas('teamMembers', function ($q) use ($user) {
+            $cases = \App\Models\CaseModel::whereIn('created_by', getCompanyAndUsersId())
+                ->whereHas('teamMembers', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })->with(['caseStatus', 'caseType'])->get();
         }
@@ -372,6 +387,7 @@ class UserController extends BaseController
         if (!Auth::user()->can('toggle-status-users')) {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
+        $this->ensureUserAccess($user);
 
         $user->status = $user->status === 'active' ? 'inactive' : 'active';
         $user->save();
@@ -384,13 +400,41 @@ class UserController extends BaseController
      */
     public function destroyLoginHistory(LoginHistory $loginHistory)
     {
-        // if (!Auth::user()->can('delete-users-log-history')) {
-        //     return redirect()->back()->with('error', __('Permission Denied.'));
-        // }
+        if (!Auth::user()->can('delete-users-log-history')) {
+            return redirect()->back()->with('error', __('Permission Denied.'));
+        }
+
+        $historyUser = User::find($loginHistory->user_id);
+        abort_unless($historyUser && $this->userBelongsToCurrentTenant($historyUser), 404);
 
         $loginHistory->delete();
         return redirect()->back()->with('success', __('Login history deleted successfully.'));
     }
 
     // switchBusiness method removed
+
+    private function ensureUserAccess(User $user): void
+    {
+        abort_unless($this->userBelongsToCurrentTenant($user), 404);
+
+        if (
+            Auth::id() !== $user->id
+            && ($user->type === 'superadmin' || $user->hasRole('superadmin') || $user->hasRole('super admin'))
+        ) {
+            abort(403);
+        }
+    }
+
+    private function userBelongsToCurrentTenant(User $user): bool
+    {
+        $actor = Auth::user();
+
+        if ($actor->type === 'superadmin' || $actor->hasRole('superadmin') || $actor->hasRole('super admin')) {
+            return $user->id === $actor->id || $user->created_by === $actor->id;
+        }
+
+        $companyId = getCompanyId($actor->id);
+
+        return $companyId !== null && getCompanyId($user->id) === $companyId;
+    }
 }

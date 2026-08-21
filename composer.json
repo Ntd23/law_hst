@@ -11,8 +11,10 @@
     "require": {
         "php": "^8.2",
         "authorizenet/authorizenet": "^2.0",
+        "aws/aws-sdk-php": "^3.368",
         "cashfree/cashfree-pg-sdk-php": "^5.0",
         "coingate/coingate-php": "^4.1",
+        "ezyang/htmlpurifier": "^4.18",
         "fedapay/fedapay-php": "^0.4.7",
         "google/apiclient": "^2.18",
         "inertiajs/inertia-laravel": "^2.0",
@@ -22,7 +24,6 @@
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.29",
-        "aws/aws-sdk-php": "^3.368",
         "mercadopago/dx-php": "^3.7",
         "mollie/mollie-api-php": "^3.1",
         "openai-php/client": "^0.14.0",

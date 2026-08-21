@@ -18,15 +18,19 @@ class RoleController extends BaseController
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
 
-        $query = Role::with(['permissions', 'creator'])->where(function ($q) {
-            if (Auth::user()->can('manage-any-roles')) {
-                $q->whereIn('created_by', getCompanyAndUsersId());
-            } elseif (Auth::user()->can('manage-own-roles')) {
-                $q->where('created_by', Auth::id());
-            } else {
-                $q->whereRaw('1 = 0');
-            }
-        });
+        $query = Role::with(['permissions', 'creator']);
+
+        if (! $this->canManageAllRoles()) {
+            $query->where(function ($q) {
+                if (Auth::user()->can('manage-any-roles')) {
+                    $q->whereIn('created_by', $this->accessibleRoleOwnerIds());
+                } elseif (Auth::user()->can('manage-own-roles')) {
+                    $q->where('created_by', Auth::id());
+                } else {
+                    $q->whereRaw('1 = 0');
+                }
+            });
+        }
 
         if ($request->filled('search')) {
             $searchTerm = $request->search;
@@ -77,6 +81,7 @@ class RoleController extends BaseController
     public function show(Role $role)
     {
         if (Auth::user()->can('view-roles')) {
+            $this->ensureRoleAccess($role);
             $role->load(['permissions', 'creator']);
             $role->is_editable = !in_array($role->name, isNotEditableRoles());
 
@@ -94,6 +99,7 @@ class RoleController extends BaseController
     public function edit(Role $role)
     {
         if (Auth::user()->can('edit-roles')) {
+            $this->ensureRoleAccess($role);
             $role->load(['permissions', 'creator']);
             $role->is_editable = !in_array($role->name, isNotEditableRoles());
 
@@ -231,7 +237,9 @@ class RoleController extends BaseController
         // Validate permissions against user's allowed modules
         $validatedPermissions = $this->validatePermissions($request->permissions ?? []);
 
-        $checkRoleExist = Role::where('name', Str::slug($request->label))->whereIn('created_by', getCompanyAndUsersId())->exists();
+        $checkRoleExist = Role::where('name', Str::slug($request->label))
+            ->when(! $this->canManageAllRoles(), fn ($query) => $query->whereIn('created_by', $this->accessibleRoleOwnerIds()))
+            ->exists();
         if (! $checkRoleExist) {
             // Use direct model creation to bypass Spatie's duplicate check
             $role = new Role;
@@ -259,6 +267,7 @@ class RoleController extends BaseController
         if (!Auth::user()->can('edit-roles')) {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
+        $this->ensureRoleAccess($role);
         if ($role) {
             // Validate permissions against user's allowed modules
             $validatedPermissions = $this->validatePermissions($request->permissions ?? []);
@@ -268,7 +277,7 @@ class RoleController extends BaseController
             // Check if role name already exists (excluding current role)
             $checkRoleExist = Role::where('name', $newSlug)
                 ->where('id', '!=', $role->id)
-                ->whereIn('created_by', getCompanyAndUsersId())
+                ->when(! $this->canManageAllRoles(), fn ($query) => $query->whereIn('created_by', $this->accessibleRoleOwnerIds()))
                 ->exists();
 
             if ($checkRoleExist) {
@@ -302,6 +311,7 @@ class RoleController extends BaseController
         if (!Auth::user()->can('delete-roles')) {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
+        $this->ensureRoleAccess($role);
         if ($role) {
             if (in_array($role->name, isNotDeletableRoles())) {
                 return redirect()->back()->with('error', __('System roles cannot be deleted!'));
@@ -318,5 +328,25 @@ class RoleController extends BaseController
         }
 
         return redirect()->back()->with('error', __('Unable to delete Role. Please try again!'));
+    }
+
+    /** @return array<int, int> */
+    private function accessibleRoleOwnerIds(): array
+    {
+        $user = Auth::user();
+
+        return getCompanyAndUsersId();
+    }
+
+    private function ensureRoleAccess(Role $role): void
+    {
+        abort_unless($this->canManageAllRoles() || in_array($role->created_by, $this->accessibleRoleOwnerIds(), true), 404);
+    }
+
+    private function canManageAllRoles(): bool
+    {
+        $user = Auth::user();
+
+        return $user->type === 'superadmin' || $user->hasRole('superadmin') || $user->hasRole('super admin');
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Models\Webhook;
+use App\Services\OutboundUrlGuard;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -20,7 +21,13 @@ class WebhookController extends Controller
         $request->validate([
             'module' => 'required|in:New User,New Appointment',
             'method' => 'required|in:GET,POST',
-            'url' => 'required|url',
+            'url' => ['required', 'url', function (string $attribute, mixed $value, \Closure $fail) {
+                try {
+                    app(OutboundUrlGuard::class)->assertAllowed((string) $value);
+                } catch (\InvalidArgumentException $exception) {
+                    $fail($exception->getMessage());
+                }
+            }],
         ]);
 
         $webhook = Webhook::create([
@@ -45,7 +52,13 @@ class WebhookController extends Controller
         $request->validate([
             'module' => 'required|in:New User,New Appointment',
             'method' => 'required|in:GET,POST',
-            'url' => 'required|url',
+            'url' => ['required', 'url', function (string $attribute, mixed $value, \Closure $fail) {
+                try {
+                    app(OutboundUrlGuard::class)->assertAllowed((string) $value);
+                } catch (\InvalidArgumentException $exception) {
+                    $fail($exception->getMessage());
+                }
+            }],
         ]);
 
         $webhook->update([

@@ -128,12 +128,6 @@ class EmailTemplateService
         self::$sentEmails[$emailKey] = true;
 
         try {
-            \Log::info('=== EMAIL TEMPLATE LANGUAGE DEBUG ===', [
-                'template_name' => $templateName,
-                'requested_language' => $language,
-                'to_email' => $toEmail
-            ]);
-
             // Get email template
             $template = EmailTemplate::where('name', $templateName)->first();
 
@@ -145,21 +139,6 @@ class EmailTemplateService
             $templateLang = $template->emailTemplateLangs()
                 ->where('lang', $language)
                 ->first();
-
-            \Log::info('Template language lookup', [
-                'requested_lang' => $language,
-                'found_template' => $templateLang ? true : false,
-                'template_id' => $templateLang?->id ?? null
-            ]);
-
-            // Log template content before replacement
-            \Log::info('Template content before replacement:', [
-                'subject' => $templateLang->subject ?? 'N/A',
-                'content_preview' => $templateLang ? substr($templateLang->content, 0, 200) . '...' : 'N/A'
-            ]);
-
-            \Log::info('Variables for replacement:', $variables);
-
 
             // Fallback to English if language not found
             if (!$templateLang) {
