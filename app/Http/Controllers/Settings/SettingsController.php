@@ -27,7 +27,9 @@ class SettingsController extends Controller
     {
         // Get system settings using helper function
         $systemSettings = settings();
-        $currencies = Currency::all();
+        $currencies = Currency::whereIn('code', ['VND', 'USD'])
+            ->orderByRaw("FIELD(code, 'VND', 'USD')")
+            ->get();
         $paymentSettings = PaymentSetting::getUserSettings(auth()->id());
         $webhooks = Webhook::where('user_id', auth()->id())->get();
         $companySettings = CompanySetting::where('created_by', createdBy())->get();

@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Save, DollarSign, Check, Info } from 'lucide-react';
 import { SettingsSection } from '@/components/settings-section';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -26,17 +26,21 @@ export default function CurrencySettings() {
     const { t } = useTranslation();
     // const { currencies = [], systemSettings = {} } = usePage().props as any;
     const { currencies = [], systemSettings = {}, globalSettings } = usePage().props as any;
+    const availableCurrencies = useMemo(
+        () => (currencies || []).filter((currency: CurrencyProps) => ['VND', 'USD'].includes(currency.code)),
+        [currencies]
+    );
     const [isLoading, setIsLoading] = useState(false);
 
     // Currency Settings form state
     const [currencySettings, setCurrencySettings] = useState({
         decimalFormat: systemSettings.decimalFormat || '2',
-        defaultCurrency: systemSettings.defaultCurrency || 'USD',
+        defaultCurrency: ['VND', 'USD'].includes(systemSettings.defaultCurrency) ? systemSettings.defaultCurrency : 'VND',
         decimalSeparator: systemSettings.decimalSeparator || '.',
         thousandsSeparator: systemSettings.thousandsSeparator || ',',
         floatNumber: systemSettings.floatNumber === '0' ? false : true,
-        currencySymbolSpace: systemSettings.currencySymbolSpace === '1',
-        currencySymbolPosition: systemSettings.currencySymbolPosition || 'before',
+        currencySymbolSpace: systemSettings.currencySymbolSpace === undefined ? true : systemSettings.currencySymbolSpace === '1',
+        currencySymbolPosition: systemSettings.currencySymbolPosition || 'after',
         currencyName: ''
     });
 
@@ -45,8 +49,8 @@ export default function CurrencySettings() {
 
     // Set currency name based on selected currency
     useEffect(() => {
-        if (currencies && currencies.length > 0) {
-            const selectedCurrency = currencies.find((c: CurrencyProps) => c.code === currencySettings.defaultCurrency);
+        if (availableCurrencies && availableCurrencies.length > 0) {
+            const selectedCurrency = availableCurrencies.find((c: CurrencyProps) => c.code === currencySettings.defaultCurrency);
             if (selectedCurrency) {
                 setCurrencySettings(prev => ({
                     ...prev,
@@ -54,7 +58,7 @@ export default function CurrencySettings() {
                 }));
             }
         }
-    }, [currencies, currencySettings.defaultCurrency]);
+    }, [availableCurrencies, currencySettings.defaultCurrency]);
 
     // Handle currency settings form changes
     const handleCurrencySettingsChange = (field: string, value: string | boolean) => {
@@ -66,7 +70,7 @@ export default function CurrencySettings() {
 
     // Handle currency selection change
     const handleCurrencyChange = (value: string) => {
-        const selectedCurrency = currencies.find((c: CurrencyProps) => c.code === value);
+        const selectedCurrency = availableCurrencies.find((c: CurrencyProps) => c.code === value);
 
         setCurrencySettings(prev => ({
             ...prev,
@@ -101,8 +105,8 @@ export default function CurrencySettings() {
             let formattedNumber = parts.join(currencySettings.decimalSeparator);
 
             // Get currency symbol from the currencies array
-            const selectedCurrency = currencies.find((c: CurrencyProps) => c.code === currencySettings.defaultCurrency);
-            const symbol = selectedCurrency?.symbol || '$';
+            const selectedCurrency = availableCurrencies.find((c: CurrencyProps) => c.code === currencySettings.defaultCurrency);
+            const symbol = selectedCurrency?.symbol || 'VNĐ';
 
             // Add currency symbol with proper positioning and spacing
             const space = currencySettings.currencySymbolSpace ? ' ' : '';
@@ -227,8 +231,8 @@ export default function CurrencySettings() {
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <div className="max-h-[300px] overflow-y-auto">
-                                                        {currencies && currencies.length > 0 ? (
-                                                            currencies.map((currency: CurrencyProps) => (
+                                                        {availableCurrencies && availableCurrencies.length > 0 ? (
+                                                            availableCurrencies.map((currency: CurrencyProps) => (
                                                                 <SelectItem key={currency.id} value={currency.code}>
                                                                     <div className="flex items-center">
                                                                         <span className="w-8 text-center">{currency.symbol}</span>
