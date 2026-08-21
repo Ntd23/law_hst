@@ -112,15 +112,17 @@ class CustomPageController extends Controller
     public function show($slug)
     {
         $slugMap = [
-            'about-us' => 'luat-su-tu-van',
-            'terms-of-service' => 'gioi-thieu-ve-cong-ty',
+            'about-us' => 'gioi-thieu-ve-cong-ty',
             'gioi-thieu' => 'gioi-thieu-ve-cong-ty',
+            'terms-of-service' => 'gioi-thieu-ve-cong-ty',
             'contact-us' => 'lien-he-voi-chung-toi',
             'lien-he' => 'lien-he-voi-chung-toi',
             'faq' => 'cau-hoi-thuong-gap',
             'refund-policy' => 'chinh-sach-hoan-tien',
             'privacy-policy' => 'chinh-sach-bao-mat',
             'luat-su' => 'luat-su-tu-van',
+            'lawyers' => 'luat-su-tu-van',
+            'cong-ty' => 'luat-su-tu-van',
         ];
 
         $page = LandingPageCustomPage::where('slug', $slug)->where('is_active', true)->first();
