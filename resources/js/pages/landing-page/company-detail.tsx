@@ -32,6 +32,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import { getImagePath } from '@/utils/helpers';
 import { toast } from '@/components/custom-toast';
+import { translateLegalContent } from './utils/legal-content-translations';
 
 interface Lawyer {
   id: number;
@@ -103,9 +104,10 @@ function CompanyEmblem({ logo, name }: { logo?: string | null; name: string }) {
 }
 
 export default function CompanyDetailPage({ company, articles = [], customPages = [], settings = {} }: CompanyDetailProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const primaryColor = settings?.theme_color || '#c3935b';
   const [activeArticle, setActiveArticle] = useState<any | null>(null);
+  const tl = (value: unknown) => translateLegalContent(value, t, i18n.language);
 
   // Contact form state
   const { data, setData, post, processing, reset, errors } = useForm({
@@ -156,7 +158,7 @@ export default function CompanyDetailPage({ company, articles = [], customPages 
                 {t('Trang chủ')}
               </Link>
               <ChevronRight className="w-3.5 h-3.5" />
-              <Link href="/page/luat-su-tu-van" className="hover:text-amber-600 transition-colors">
+              <Link href={route('vi.cong-ty-tu-van')} className="hover:text-amber-600 transition-colors">
                 {t('Danh bạ hãng luật')}
               </Link>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -166,7 +168,7 @@ export default function CompanyDetailPage({ company, articles = [], customPages 
             </div>
 
             <Link
-              href="/page/luat-su-tu-van"
+              href={route('vi.cong-ty-tu-van')}
               className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-400 hover:text-amber-800 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -435,17 +437,17 @@ export default function CompanyDetailPage({ company, articles = [], customPages 
                         <div className="space-y-3">
                           <div className="flex items-center justify-between text-xs text-gray-400">
                             <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold text-[11px]">
-                              {art.category}
+                              {tl(art.category)}
                             </span>
                             <span>{art.date}</span>
                           </div>
 
                           <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-white group-hover:text-amber-600 transition-colors line-clamp-2 leading-snug">
-                            {art.title}
+                            {tl(art.title)}
                           </h3>
 
                           <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
-                            {art.summary}
+                            {tl(art.summary)}
                           </p>
                         </div>
 
@@ -632,7 +634,7 @@ export default function CompanyDetailPage({ company, articles = [], customPages 
               <div className="relative aspect-[21/9] w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
                 <img
                   src={activeArticle.image}
-                  alt={activeArticle.title}
+                  alt={tl(activeArticle.title)}
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent" />
@@ -644,10 +646,10 @@ export default function CompanyDetailPage({ company, articles = [], customPages 
                 </button>
                 <div className="absolute bottom-4 left-6 right-6">
                   <span className="inline-block px-2.5 py-1 rounded bg-amber-600 text-white text-xs font-bold uppercase tracking-wider mb-2">
-                    {activeArticle.category}
+                    {tl(activeArticle.category)}
                   </span>
                   <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight">
-                    {activeArticle.title}
+                    {tl(activeArticle.title)}
                   </h2>
                 </div>
               </div>
@@ -663,7 +665,7 @@ export default function CompanyDetailPage({ company, articles = [], customPages 
                     />
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-white">{activeArticle.author?.name}</p>
-                      <p className="text-xs text-gray-500">{activeArticle.author?.role}</p>
+                      <p className="text-xs text-gray-500">{tl(activeArticle.author?.role)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
@@ -673,24 +675,24 @@ export default function CompanyDetailPage({ company, articles = [], customPages 
                     </span>
                     <span className="flex items-center gap-1.5">
                       <Clock className="w-4 h-4 text-amber-600" />
-                      {activeArticle.readTime}
+                      {tl(activeArticle.readTime)}
                     </span>
                   </div>
                 </div>
 
                 {/* Summary */}
                 <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40 text-amber-900 dark:text-amber-200 text-sm italic leading-relaxed">
-                  "{activeArticle.summary}"
+                  "{tl(activeArticle.summary)}"
                 </div>
 
                 {/* Content Paragraphs */}
                 <div className="space-y-4 text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
                   {Array.isArray(activeArticle.content) ? (
                     activeArticle.content.map((p: string, idx: number) => (
-                      <p key={idx}>{p}</p>
+                      <p key={idx}>{tl(p)}</p>
                     ))
                   ) : (
-                    <div className="whitespace-pre-line">{activeArticle.content}</div>
+                    <div className="whitespace-pre-line">{tl(activeArticle.content)}</div>
                   )}
                 </div>
 
@@ -700,7 +702,7 @@ export default function CompanyDetailPage({ company, articles = [], customPages 
                     <Tag className="w-4 h-4 text-gray-400" />
                     {activeArticle.tags.map((tag: string, idx: number) => (
                       <span key={idx} className="px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300">
-                        #{tag}
+                        #{tl(tag)}
                       </span>
                     ))}
                   </div>

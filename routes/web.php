@@ -201,7 +201,18 @@ Route::get('newsletter/unsubscribe/{email}', [\App\Http\Controllers\NewsletterCo
 Route::post('/cookie-consent/store', [\App\Http\Controllers\CookieConsentController::class, 'store'])->name('cookie.consent.store');
 
 // Public Custom Page & Company Detail routes
-Route::get('/page/{slug}', [CustomPageController::class, 'show'])->name('custom-page.show');
+Route::get('/page/{slug}', function (string $slug) {
+    $canonicalRoutes = [
+        'luat-su-tu-van' => 'vi.cong-ty-tu-van',
+        'lien-he-voi-chung-toi' => 'vi.lien-he-voi-chung-toi',
+    ];
+
+    if (isset($canonicalRoutes[$slug])) {
+        return redirect()->route($canonicalRoutes[$slug]);
+    }
+
+    return app(CustomPageController::class)->show($slug);
+})->name('custom-page.show');
 Route::get('/trang/{slug}', [CustomPageController::class, 'show']);
 Route::get('/cong-ty/{id}', [CustomPageController::class, 'showCompanyDetail'])->name('company.detail');
 Route::get('/company/{id}', function ($id) {
@@ -209,12 +220,16 @@ Route::get('/company/{id}', function ($id) {
 });
 
 // Friendly Vietnamese URL shortcuts
+Route::get('/cong-ty-tu-van', function () {
+    return app(CustomPageController::class)->show('luat-su-tu-van');
+})->name('vi.cong-ty-tu-van');
+
 Route::get('/luat-su-tu-van', function () {
-    return redirect()->route('custom-page.show', 'luat-su-tu-van');
+    return redirect()->route('vi.cong-ty-tu-van');
 })->name('vi.luat-su-tu-van');
 
 Route::get('/gioi-thieu-ve-cong-ty', function () {
-    return redirect()->route('custom-page.show', 'gioi-thieu-ve-cong-ty');
+    return app(CustomPageController::class)->show('gioi-thieu-ve-cong-ty');
 })->name('vi.gioi-thieu-ve-cong-ty');
 
 Route::get('/gioi-thieu', function () {
@@ -222,7 +237,7 @@ Route::get('/gioi-thieu', function () {
 })->name('vi.gioi-thieu');
 
 Route::get('/lien-he-voi-chung-toi', function () {
-    return redirect()->route('custom-page.show', 'lien-he-voi-chung-toi');
+    return app(CustomPageController::class)->show('lien-he-voi-chung-toi');
 })->name('vi.lien-he-voi-chung-toi');
 
 Route::get('/lien-he', function () {
@@ -499,13 +514,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('roles', function () {
                 return redirect()->route('roles.index');
             });
-            Route::get('roles/create', [RoleController::class, 'create'])->middleware('permission:create-roles')->name('roles.create');
+            Route::get('vai-tro-phan-quyen/tao', [RoleController::class, 'create'])->middleware('permission:create-roles')->name('roles.create');
             Route::post('roles', [RoleController::class, 'store'])->middleware('permission:create-roles')->name('roles.store');
-            Route::get('roles/{role}', [RoleController::class, 'show'])->middleware('permission:view-roles')->name('roles.show');
-            Route::get('roles/{role}/edit', [RoleController::class, 'edit'])->middleware('permission:edit-roles')->name('roles.edit');
+            Route::get('vai-tro-phan-quyen/{role}', [RoleController::class, 'show'])->middleware('permission:view-roles')->name('roles.show');
+            Route::get('vai-tro-phan-quyen/{role}/chinh-sua', [RoleController::class, 'edit'])->middleware('permission:edit-roles')->name('roles.edit');
             Route::put('roles/{role}', [RoleController::class, 'update'])->middleware('permission:edit-roles')->name('roles.update');
             Route::patch('roles/{role}', [RoleController::class, 'update'])->middleware('permission:edit-roles');
             Route::delete('roles/{role}', [RoleController::class, 'destroy'])->middleware('permission:delete-roles')->name('roles.destroy');
+            Route::get('roles/create', fn () => redirect()->route('roles.create'));
+            Route::get('roles/{role}/edit', fn ($role) => redirect()->route('roles.edit', $role));
+            Route::get('roles/{role}', fn ($role) => redirect()->route('roles.show', $role));
         });
 
         // Users routes with granular permissions
@@ -514,26 +532,30 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('users', function () {
                 return redirect()->route('users.index');
             });
-            Route::get('users/create', [UserController::class, 'create'])->middleware('permission:create-users')->name('users.create');
+            Route::get('thanh-vien/tao', [UserController::class, 'create'])->middleware('permission:create-users')->name('users.create');
             Route::post('users', [UserController::class, 'store'])->middleware('permission:create-users')->name('users.store');
-            Route::get('users/{user}', [UserController::class, 'show'])->middleware('permission:view-users')->name('users.show');
-            Route::get('users/{user}/edit', [UserController::class, 'edit'])->middleware('permission:edit-users')->name('users.edit');
+            Route::get('thanh-vien/{user}', [UserController::class, 'show'])->middleware('permission:view-users')->name('users.show');
+            Route::get('thanh-vien/{user}/chinh-sua', [UserController::class, 'edit'])->middleware('permission:edit-users')->name('users.edit');
             Route::put('users/{user}', [UserController::class, 'update'])->middleware('permission:edit-users')->name('users.update');
             Route::patch('users/{user}', [UserController::class, 'update'])->middleware('permission:edit-users');
             Route::delete('users/{user}', [UserController::class, 'destroy'])->middleware('permission:delete-users')->name('users.destroy');
             Route::get('user-logs', [UserController::class, 'loginhistory'])->middleware('permission:view-users-log-history')->name('user-logs.index');
-            Route::delete('user-logs/{loginHistory}', [UserController::class, 'destroyLoginHistory'])->name('user-logs.destroy');
+            Route::delete('user-logs/{loginHistory}', [UserController::class, 'destroyLoginHistory'])->middleware('permission:delete-users-log-history')->name('user-logs.destroy');
 
             // Additional user routes
             Route::put('users/{user}/reset-password', [UserController::class, 'resetPassword'])->middleware('permission:reset-password-users')->name('users.reset-password');
             Route::put('users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->middleware('permission:toggle-status-users')->name('users.toggle-status');
+            Route::get('users/create', fn () => redirect()->route('users.create'));
+            Route::get('users/{user}/edit', fn ($user) => redirect()->route('users.edit', $user));
+            Route::get('users/{user}', fn ($user) => redirect()->route('users.show', $user));
         });
 
 
 
         // Client Type routes
         Route::middleware('permission:manage-client-types')->group(function () {
-            Route::get('client/client-types', [\App\Http\Controllers\ClientTypeController::class, 'index'])->name('clients.client-types.index');
+            Route::get('khach-hang/loai-khach-hang', [\App\Http\Controllers\ClientTypeController::class, 'index'])->name('clients.client-types.index');
+            Route::redirect('client/client-types', 'khach-hang/loai-khach-hang');
             Route::post('client/client-types', [\App\Http\Controllers\ClientTypeController::class, 'store'])->middleware('permission:create-client-types')->name('clients.client-types.store');
             Route::put('client/client-types/{clientType}', [\App\Http\Controllers\ClientTypeController::class, 'update'])->middleware('permission:edit-client-types')->name('clients.client-types.update');
             Route::delete('client/client-types/{clientType}', [\App\Http\Controllers\ClientTypeController::class, 'destroy'])->middleware('permission:delete-client-types')->name('clients.client-types.destroy');
@@ -546,29 +568,32 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('clients', function () {
                 return redirect()->route('clients.index');
             });
-            Route::get('clients/{client}', [\App\Http\Controllers\ClientController::class, 'show'])->middleware('permission:view-clients')->name('clients.show');
+            Route::get('khach-hang/{client}', [\App\Http\Controllers\ClientController::class, 'show'])->middleware('permission:view-clients')->name('clients.show');
             Route::post('clients', [\App\Http\Controllers\ClientController::class, 'store'])->middleware('permission:create-clients')->name('clients.store');
             Route::put('clients/{client}', [\App\Http\Controllers\ClientController::class, 'update'])->middleware('permission:edit-clients')->name('clients.update');
             Route::delete('clients/{client}', [\App\Http\Controllers\ClientController::class, 'destroy'])->middleware('permission:delete-clients')->name('clients.destroy');
             Route::put('clients/{client}/toggle-status', [\App\Http\Controllers\ClientController::class, 'toggleStatus'])->middleware('permission:toggle-status-clients')->name('clients.toggle-status');
             Route::put('clients/{client}/reset-password', [\App\Http\Controllers\ClientController::class, 'resetPassword'])->middleware('permission:reset-client-password')->name('clients.reset-password');
             Route::post('clients/{client}/assign-lawyer', [\App\Http\Controllers\ClientController::class, 'assignLawyer'])->name('clients.assign-lawyer');
+            Route::get('clients/{client}', fn ($client) => redirect()->route('clients.show', $client));
         });
 
 
 
         // Client Document routes
         Route::middleware('permission:manage-client-documents')->group(function () {
-            Route::get('client/documents', [\App\Http\Controllers\ClientDocumentController::class, 'index'])->name('clients.documents.index');
+            Route::get('khach-hang/tai-lieu', [\App\Http\Controllers\ClientDocumentController::class, 'index'])->name('clients.documents.index');
+            Route::redirect('client/documents', 'khach-hang/tai-lieu');
             Route::post('client/documents', [\App\Http\Controllers\ClientDocumentController::class, 'store'])->middleware('permission:create-client-documents')->name('clients.documents.store');
             Route::put('client/documents/{document}', [\App\Http\Controllers\ClientDocumentController::class, 'update'])->middleware('permission:edit-client-documents')->name('clients.documents.update');
             Route::delete('client/documents/{document}', [\App\Http\Controllers\ClientDocumentController::class, 'destroy'])->middleware('permission:delete-client-documents')->name('clients.documents.destroy');
-            Route::get('client/documents/{document}/download', [\App\Http\Controllers\ClientDocumentController::class, 'download'])->middleware('permission:download-client-documents')->name('clients.documents.download');
+            Route::get('khach-hang/tai-lieu/{document}/tai-xuong', [\App\Http\Controllers\ClientDocumentController::class, 'download'])->middleware('permission:download-client-documents')->name('clients.documents.download');
         });
 
         // Client Billing Info routes
         Route::middleware('permission:manage-client-billing')->group(function () {
-            Route::get('client/billing', [\App\Http\Controllers\ClientBillingInfoController::class, 'index'])->name('clients.billing.index');
+            Route::get('khach-hang/thong-tin-thanh-toan', [\App\Http\Controllers\ClientBillingInfoController::class, 'index'])->name('clients.billing.index');
+            Route::redirect('client/billing', 'khach-hang/thong-tin-thanh-toan');
             Route::post('client/billing', [\App\Http\Controllers\ClientBillingInfoController::class, 'store'])->middleware('permission:create-client-billing')->name('clients.billing.store');
             Route::put('client/billing/{billing}', [\App\Http\Controllers\ClientBillingInfoController::class, 'update'])->middleware('permission:edit-client-billing')->name('clients.billing.update');
             Route::delete('client/billing/{billing}', [\App\Http\Controllers\ClientBillingInfoController::class, 'destroy'])->middleware('permission:delete-client-billing')->name('clients.billing.destroy');
@@ -576,7 +601,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Client Billing Currency routes
         Route::middleware('permission:manage-client-billing-currencies')->group(function () {
-            Route::get('client-billing-currencies', [\App\Http\Controllers\ClientBillingCurrencyController::class, 'index'])->name('client-billing-currencies.index');
+            Route::get('tien-te-khach-hang', [\App\Http\Controllers\ClientBillingCurrencyController::class, 'index'])->name('client-billing-currencies.index');
+            Route::redirect('client-billing-currencies', 'tien-te-khach-hang');
             Route::post('client-billing-currencies', [\App\Http\Controllers\ClientBillingCurrencyController::class, 'store'])->middleware('permission:create-client-billing-currencies')->name('client-billing-currencies.store');
             Route::put('client-billing-currencies/{clientBillingCurrency}', [\App\Http\Controllers\ClientBillingCurrencyController::class, 'update'])->middleware('permission:edit-client-billing-currencies')->name('client-billing-currencies.update');
             Route::delete('client-billing-currencies/{clientBillingCurrency}', [\App\Http\Controllers\ClientBillingCurrencyController::class, 'destroy'])->middleware('permission:delete-client-billing-currencies')->name('client-billing-currencies.destroy');
@@ -600,7 +626,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Practice Area routes
         Route::middleware('permission:manage-practice-areas')->group(function () {
-            Route::get('advocate/practice-areas', [\App\Http\Controllers\PracticeAreaController::class, 'index'])->name('advocate.practice-areas.index');
+            Route::get('linh-vuc-hanh-nghe', [\App\Http\Controllers\PracticeAreaController::class, 'index'])->name('advocate.practice-areas.index');
+            Route::redirect('advocate/practice-areas', 'linh-vuc-hanh-nghe');
             Route::post('advocate/practice-areas', [\App\Http\Controllers\PracticeAreaController::class, 'store'])->middleware('permission:create-practice-areas')->name('advocate.practice-areas.store');
             Route::put('advocate/practice-areas/{area}', [\App\Http\Controllers\PracticeAreaController::class, 'update'])->middleware('permission:edit-practice-areas')->name('advocate.practice-areas.update');
             Route::delete('advocate/practice-areas/{area}', [\App\Http\Controllers\PracticeAreaController::class, 'destroy'])->middleware('permission:delete-practice-areas')->name('advocate.practice-areas.destroy');
@@ -641,7 +668,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Document Category routes
         Route::middleware('permission:manage-document-categories')->group(function () {
-            Route::get('document-management/categories', [\App\Http\Controllers\DocumentCategoryController::class, 'index'])->name('document-management.categories.index');
+            Route::get('tai-lieu/danh-muc', [\App\Http\Controllers\DocumentCategoryController::class, 'index'])->name('document-management.categories.index');
+            Route::redirect('document-management/categories', 'tai-lieu/danh-muc');
             Route::post('document-management/categories', [\App\Http\Controllers\DocumentCategoryController::class, 'store'])->middleware('permission:create-document-categories')->name('document-management.categories.store');
             Route::put('document-management/categories/{category}', [\App\Http\Controllers\DocumentCategoryController::class, 'update'])->middleware('permission:edit-document-categories')->name('document-management.categories.update');
             Route::delete('document-management/categories/{category}', [\App\Http\Controllers\DocumentCategoryController::class, 'destroy'])->middleware('permission:delete-document-categories')->name('document-management.categories.destroy');
@@ -657,30 +685,37 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('document-management/documents', function () {
                 return redirect()->route('document-management.documents.index');
             });
-            Route::get('document-management/documents/{document}', [\App\Http\Controllers\DocumentController::class, 'show'])->middleware('permission:view-documents')->name('document-management.documents.show');
-            Route::get('document-management/documents/version/{version}', [\App\Http\Controllers\DocumentController::class, 'version'])->middleware('permission:view-document-versions')->name('document-management.documents.version');
-            Route::get('document-management/documents/comments/{document}', [\App\Http\Controllers\DocumentController::class, 'comments'])->middleware('permission:view-document-comments')->name('document-management.documents.comments');
+            Route::get('tai-lieu/{document}', [\App\Http\Controllers\DocumentController::class, 'show'])->middleware('permission:view-documents')->name('document-management.documents.show');
+            Route::get('tai-lieu/phien-ban/{version}', [\App\Http\Controllers\DocumentController::class, 'version'])->middleware('permission:view-document-versions')->name('document-management.documents.version');
+            Route::get('tai-lieu/{document}/binh-luan', [\App\Http\Controllers\DocumentController::class, 'comments'])->middleware('permission:view-document-comments')->name('document-management.documents.comments');
             Route::post('document-management/documents', [\App\Http\Controllers\DocumentController::class, 'store'])->middleware('permission:create-documents')->name('document-management.documents.store');
             Route::put('document-management/documents/{document}', [\App\Http\Controllers\DocumentController::class, 'update'])->middleware('permission:edit-documents')->name('document-management.documents.update');
             Route::delete('document-management/documents/{document}', [\App\Http\Controllers\DocumentController::class, 'destroy'])->middleware('permission:delete-documents')->name('document-management.documents.destroy');
             Route::put('document-management/documents/{document}/toggle-status', [\App\Http\Controllers\DocumentController::class, 'toggleStatus'])->middleware('permission:toggle-status-documents')->name('document-management.documents.toggle-status');
-            Route::get('document-management/documents/{document}/download', [\App\Http\Controllers\DocumentController::class, 'download'])->middleware('permission:download-documents')->name('document-management.documents.download');
+            Route::get('tai-lieu/{document}/tai-xuong', [\App\Http\Controllers\DocumentController::class, 'download'])->middleware('permission:download-documents')->name('document-management.documents.download');
+            Route::get('document-management/documents/version/{version}', fn ($version) => redirect()->route('document-management.documents.version', $version));
+            Route::get('document-management/documents/comments/{document}', fn ($document) => redirect()->route('document-management.documents.comments', $document));
+            Route::get('document-management/documents/{document}', fn ($document) => redirect()->route('document-management.documents.show', $document));
+            Route::get('document-management/documents/{document}/download', fn ($document) => redirect()->route('document-management.documents.download', $document));
         });
 
 
 
         // Document Version routes
         Route::middleware('permission:manage-document-versions')->group(function () {
-            Route::get('document-management/versions', [\App\Http\Controllers\DocumentVersionController::class, 'index'])->name('document-management.versions.index');
+            Route::get('tai-lieu/phien-ban', [\App\Http\Controllers\DocumentVersionController::class, 'index'])->name('document-management.versions.index');
+            Route::redirect('document-management/versions', 'tai-lieu/phien-ban');
             Route::post('document-management/versions', [\App\Http\Controllers\DocumentVersionController::class, 'store'])->middleware('permission:create-document-versions')->name('document-management.versions.store');
             Route::delete('document-management/versions/{version}', [\App\Http\Controllers\DocumentVersionController::class, 'destroy'])->middleware('permission:delete-document-versions')->name('document-management.versions.destroy');
-            Route::get('document-management/versions/{version}/download', [\App\Http\Controllers\DocumentVersionController::class, 'download'])->middleware('permission:download-document-versions')->name('document-management.versions.download');
+            Route::get('tai-lieu/phien-ban/{version}/tai-xuong', [\App\Http\Controllers\DocumentVersionController::class, 'download'])->middleware('permission:download-document-versions')->name('document-management.versions.download');
+            Route::get('document-management/versions/{version}/download', fn ($version) => redirect()->route('document-management.versions.download', $version));
             Route::put('document-management/versions/{version}/restore', [\App\Http\Controllers\DocumentVersionController::class, 'restore'])->middleware('permission:restore-document-versions')->name('document-management.versions.restore');
         });
 
         // Document Comment routes
         Route::middleware('permission:manage-document-comments')->group(function () {
-            Route::get('document-management/comments', [\App\Http\Controllers\DocumentCommentController::class, 'index'])->name('document-management.comments.index');
+            Route::get('tai-lieu/binh-luan', [\App\Http\Controllers\DocumentCommentController::class, 'index'])->name('document-management.comments.index');
+            Route::redirect('document-management/comments', 'tai-lieu/binh-luan');
             Route::post('document-management/comments', [\App\Http\Controllers\DocumentCommentController::class, 'store'])->middleware('permission:create-document-comments')->name('document-management.comments.store');
             Route::put('document-management/comments/{comment}', [\App\Http\Controllers\DocumentCommentController::class, 'update'])->middleware('permission:edit-document-comments')->name('document-management.comments.update');
             Route::delete('document-management/comments/{comment}', [\App\Http\Controllers\DocumentCommentController::class, 'destroy'])->middleware('permission:delete-document-comments')->name('document-management.comments.destroy');
@@ -689,7 +724,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Document Permission routes
         Route::middleware('permission:manage-document-permissions')->group(function () {
-            Route::get('document-management/permissions', [\App\Http\Controllers\DocumentPermissionController::class, 'index'])->name('document-management.permissions.index');
+            Route::get('tai-lieu/phan-quyen', [\App\Http\Controllers\DocumentPermissionController::class, 'index'])->name('document-management.permissions.index');
+            Route::redirect('document-management/permissions', 'tai-lieu/phan-quyen');
             Route::post('document-management/permissions', [\App\Http\Controllers\DocumentPermissionController::class, 'store'])->middleware('permission:create-document-permissions')->name('document-management.permissions.store');
             Route::put('document-management/permissions/{permission}', [\App\Http\Controllers\DocumentPermissionController::class, 'update'])->middleware('permission:edit-document-permissions')->name('document-management.permissions.update');
             Route::delete('document-management/permissions/{permission}', [\App\Http\Controllers\DocumentPermissionController::class, 'destroy'])->middleware('permission:delete-document-permissions')->name('document-management.permissions.destroy');
@@ -699,17 +735,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Research Project routes
         Route::middleware('permission:manage-research-projects')->group(function () {
-            Route::get('legal-research/projects', [\App\Http\Controllers\ResearchProjectController::class, 'index'])->name('legal-research.projects.index');
-            Route::get('legal-research/projects/{project}', [\App\Http\Controllers\ResearchProjectController::class, 'show'])->middleware('permission:view-research-projects')->name('legal-research.projects.show');
+            Route::get('nghien-cuu-phap-ly/du-an', [\App\Http\Controllers\ResearchProjectController::class, 'index'])->name('legal-research.projects.index');
+            Route::redirect('legal-research/projects', 'nghien-cuu-phap-ly/du-an');
+            Route::get('nghien-cuu-phap-ly/du-an/{project}', [\App\Http\Controllers\ResearchProjectController::class, 'show'])->middleware('permission:view-research-projects')->name('legal-research.projects.show');
             Route::post('legal-research/projects', [\App\Http\Controllers\ResearchProjectController::class, 'store'])->middleware('permission:create-research-projects')->name('legal-research.projects.store');
             Route::put('legal-research/projects/{project}', [\App\Http\Controllers\ResearchProjectController::class, 'update'])->middleware('permission:edit-research-projects')->name('legal-research.projects.update');
             Route::delete('legal-research/projects/{project}', [\App\Http\Controllers\ResearchProjectController::class, 'destroy'])->middleware('permission:delete-research-projects')->name('legal-research.projects.destroy');
             Route::put('legal-research/projects/{project}/toggle-status', [\App\Http\Controllers\ResearchProjectController::class, 'toggleStatus'])->middleware('permission:toggle-status-research-projects')->name('legal-research.projects.toggle-status');
+            Route::get('legal-research/projects/{project}', fn ($project) => redirect()->route('legal-research.projects.show', $project));
         });
 
         // Research Source routes
         Route::middleware('permission:manage-research-sources')->group(function () {
-            Route::get('legal-research/sources', [\App\Http\Controllers\ResearchSourceController::class, 'index'])->name('legal-research.sources.index');
+            Route::get('nghien-cuu-phap-ly/nguon', [\App\Http\Controllers\ResearchSourceController::class, 'index'])->name('legal-research.sources.index');
+            Route::redirect('legal-research/sources', 'nghien-cuu-phap-ly/nguon');
             Route::post('legal-research/sources', [\App\Http\Controllers\ResearchSourceController::class, 'store'])->middleware('permission:create-research-sources')->name('legal-research.sources.store');
             Route::put('legal-research/sources/{source}', [\App\Http\Controllers\ResearchSourceController::class, 'update'])->middleware('permission:edit-research-sources')->name('legal-research.sources.update');
             Route::delete('legal-research/sources/{source}', [\App\Http\Controllers\ResearchSourceController::class, 'destroy'])->middleware('permission:delete-research-sources')->name('legal-research.sources.destroy');
@@ -718,7 +757,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Research Category routes
         Route::middleware('permission:manage-research-categories')->group(function () {
-            Route::get('legal-research/categories', [\App\Http\Controllers\ResearchCategoryController::class, 'index'])->name('legal-research.categories.index');
+            Route::get('nghien-cuu-phap-ly/danh-muc', [\App\Http\Controllers\ResearchCategoryController::class, 'index'])->name('legal-research.categories.index');
+            Route::redirect('legal-research/categories', 'nghien-cuu-phap-ly/danh-muc');
             Route::post('legal-research/categories', [\App\Http\Controllers\ResearchCategoryController::class, 'store'])->middleware('permission:create-research-categories')->name('legal-research.categories.store');
             Route::put('legal-research/categories/{category}', [\App\Http\Controllers\ResearchCategoryController::class, 'update'])->middleware('permission:edit-research-categories')->name('legal-research.categories.update');
             Route::delete('legal-research/categories/{category}', [\App\Http\Controllers\ResearchCategoryController::class, 'destroy'])->middleware('permission:delete-research-categories')->name('legal-research.categories.destroy');
@@ -742,7 +782,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Legal Precedent routes
         Route::middleware('permission:manage-legal-precedents')->group(function () {
-            Route::get('legal-research/precedents', [\App\Http\Controllers\LegalPrecedentController::class, 'index'])->name('legal-research.precedents.index');
+            Route::get('nghien-cuu-phap-ly/tien-le', [\App\Http\Controllers\LegalPrecedentController::class, 'index'])->name('legal-research.precedents.index');
+            Route::redirect('legal-research/precedents', 'nghien-cuu-phap-ly/tien-le');
             Route::post('legal-research/precedents', [\App\Http\Controllers\LegalPrecedentController::class, 'store'])->middleware('permission:create-legal-precedents')->name('legal-research.precedents.store');
             Route::put('legal-research/precedents/{precedent}', [\App\Http\Controllers\LegalPrecedentController::class, 'update'])->middleware('permission:edit-legal-precedents')->name('legal-research.precedents.update');
             Route::delete('legal-research/precedents/{precedent}', [\App\Http\Controllers\LegalPrecedentController::class, 'destroy'])->middleware('permission:delete-legal-precedents')->name('legal-research.precedents.destroy');
@@ -751,7 +792,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Research Note routes
         Route::middleware('permission:manage-research-notes')->group(function () {
-            Route::get('legal-research/notes', [\App\Http\Controllers\ResearchNoteController::class, 'index'])->name('legal-research.notes.index');
+            Route::get('nghien-cuu-phap-ly/ghi-chu', [\App\Http\Controllers\ResearchNoteController::class, 'index'])->name('legal-research.notes.index');
+            Route::redirect('legal-research/notes', 'nghien-cuu-phap-ly/ghi-chu');
             Route::post('legal-research/notes', [\App\Http\Controllers\ResearchNoteController::class, 'store'])->middleware('permission:create-research-notes')->name('legal-research.notes.store');
             Route::put('legal-research/notes/{note}', [\App\Http\Controllers\ResearchNoteController::class, 'update'])->middleware('permission:edit-research-notes')->name('legal-research.notes.update');
             Route::delete('legal-research/notes/{note}', [\App\Http\Controllers\ResearchNoteController::class, 'destroy'])->middleware('permission:delete-research-notes')->name('legal-research.notes.destroy');
@@ -759,7 +801,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Research Citation routes
         Route::middleware('permission:manage-research-citations')->group(function () {
-            Route::get('legal-research/citations', [\App\Http\Controllers\ResearchCitationController::class, 'index'])->name('legal-research.citations.index');
+            Route::get('nghien-cuu-phap-ly/trich-dan', [\App\Http\Controllers\ResearchCitationController::class, 'index'])->name('legal-research.citations.index');
+            Route::redirect('legal-research/citations', 'nghien-cuu-phap-ly/trich-dan');
             Route::post('legal-research/citations', [\App\Http\Controllers\ResearchCitationController::class, 'store'])->middleware('permission:create-research-citations')->name('legal-research.citations.store');
             Route::put('legal-research/citations/{citation}', [\App\Http\Controllers\ResearchCitationController::class, 'update'])->middleware('permission:edit-research-citations')->name('legal-research.citations.update');
             Route::delete('legal-research/citations/{citation}', [\App\Http\Controllers\ResearchCitationController::class, 'destroy'])->middleware('permission:delete-research-citations')->name('legal-research.citations.destroy');
@@ -767,7 +810,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Research Type routes
         Route::middleware('permission:manage-research-types')->group(function () {
-            Route::get('legal-research/research-types', [\App\Http\Controllers\ResearchTypeController::class, 'index'])->name('legal-research.research-types.index');
+            Route::get('nghien-cuu-phap-ly/loai-nghien-cuu', [\App\Http\Controllers\ResearchTypeController::class, 'index'])->name('legal-research.research-types.index');
+            Route::redirect('legal-research/research-types', 'nghien-cuu-phap-ly/loai-nghien-cuu');
             Route::post('legal-research/research-types', [\App\Http\Controllers\ResearchTypeController::class, 'store'])->middleware('permission:create-research-types')->name('legal-research.research-types.store');
             Route::put('legal-research/research-types/{researchType}', [\App\Http\Controllers\ResearchTypeController::class, 'update'])->middleware('permission:edit-research-types')->name('legal-research.research-types.update');
             Route::delete('legal-research/research-types/{researchType}', [\App\Http\Controllers\ResearchTypeController::class, 'destroy'])->middleware('permission:delete-research-types')->name('legal-research.research-types.destroy');
@@ -776,7 +820,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Event Type routes
         Route::middleware('permission:manage-event-types')->group(function () {
-            Route::get('event/event-types', [\App\Http\Controllers\EventTypeController::class, 'index'])->name('advocate.event-types.index');
+            Route::get('loai-su-kien', [\App\Http\Controllers\EventTypeController::class, 'index'])->name('advocate.event-types.index');
+            Route::redirect('event/event-types', 'loai-su-kien');
             Route::post('event/event-types', [\App\Http\Controllers\EventTypeController::class, 'store'])->middleware('permission:create-event-types')->name('advocate.event-types.store');
             Route::put('event/event-types/{eventType}', [\App\Http\Controllers\EventTypeController::class, 'update'])->middleware('permission:edit-event-types')->name('advocate.event-types.update');
             Route::delete('event/event-types/{eventType}', [\App\Http\Controllers\EventTypeController::class, 'destroy'])->middleware('permission:delete-event-types')->name('advocate.event-types.destroy');
@@ -785,7 +830,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Court Type routes
         Route::middleware('permission:manage-court-types')->group(function () {
-            Route::get('court/court-types', [\App\Http\Controllers\CourtTypeController::class, 'index'])->name('advocate.court-types.index');
+            Route::get('toa-an/loai-toa-an', [\App\Http\Controllers\CourtTypeController::class, 'index'])->name('advocate.court-types.index');
+            Route::redirect('court/court-types', 'toa-an/loai-toa-an');
             Route::post('court/court-types', [\App\Http\Controllers\CourtTypeController::class, 'store'])->middleware('permission:create-court-types')->name('advocate.court-types.store');
             Route::put('court/court-types/{courtType}', [\App\Http\Controllers\CourtTypeController::class, 'update'])->middleware('permission:edit-court-types')->name('advocate.court-types.update');
             Route::delete('court/court-types/{courtType}', [\App\Http\Controllers\CourtTypeController::class, 'destroy'])->middleware('permission:delete-court-types')->name('advocate.court-types.destroy');
@@ -822,11 +868,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('courts', function () {
                 return redirect()->route('courts.index');
             });
-            Route::get('courts/{court}', [\App\Http\Controllers\CourtController::class, 'show'])->middleware('permission:view-courts')->name('courts.show');
+            Route::get('toa-an/{court}', [\App\Http\Controllers\CourtController::class, 'show'])->middleware('permission:view-courts')->name('courts.show');
             Route::post('courts', [\App\Http\Controllers\CourtController::class, 'store'])->middleware('permission:create-courts')->name('courts.store');
             Route::put('courts/{court}', [\App\Http\Controllers\CourtController::class, 'update'])->middleware('permission:edit-courts')->name('courts.update');
             Route::delete('courts/{court}', [\App\Http\Controllers\CourtController::class, 'destroy'])->middleware('permission:delete-courts')->name('courts.destroy');
             Route::put('courts/{court}/toggle-status', [\App\Http\Controllers\CourtController::class, 'toggleStatus'])->middleware('permission:toggle-status-courts')->name('courts.toggle-status');
+            Route::get('courts/{court}', fn ($court) => redirect()->route('courts.show', $court));
         });
 
         // Judge Management routes
@@ -835,21 +882,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('judges', function () {
                 return redirect()->route('judges.index');
             });
-            Route::get('judges/{judge}', [\App\Http\Controllers\JudgeController::class, 'show'])->middleware('permission:view-judges')->name('judges.show');
+            Route::get('tham-phan/{judge}', [\App\Http\Controllers\JudgeController::class, 'show'])->middleware('permission:view-judges')->name('judges.show');
             Route::post('judges', [\App\Http\Controllers\JudgeController::class, 'store'])->middleware('permission:create-judges')->name('judges.store');
             Route::put('judges/{judge}', [\App\Http\Controllers\JudgeController::class, 'update'])->middleware('permission:edit-judges')->name('judges.update');
             Route::delete('judges/{judge}', [\App\Http\Controllers\JudgeController::class, 'destroy'])->middleware('permission:delete-judges')->name('judges.destroy');
             Route::put('judges/{judge}/toggle-status', [\App\Http\Controllers\JudgeController::class, 'toggleStatus'])->middleware('permission:toggle-status-judges')->name('judges.toggle-status');
+            Route::get('judges/{judge}', fn ($judge) => redirect()->route('judges.show', $judge));
         });
 
         // Hearing Type Management routes
         Route::middleware('permission:manage-hearing-types')->group(function () {
-            Route::get('hearing-types', [\App\Http\Controllers\HearingTypeController::class, 'index'])->name('hearing-types.index');
-            Route::get('hearing-types/{hearingType}', [\App\Http\Controllers\HearingTypeController::class, 'show'])->middleware('permission:view-hearing-types')->name('hearing-types.show');
+            Route::get('loai-phien-toa', [\App\Http\Controllers\HearingTypeController::class, 'index'])->name('hearing-types.index');
+            Route::redirect('hearing-types', 'loai-phien-toa');
+            Route::get('loai-phien-toa/{hearingType}', [\App\Http\Controllers\HearingTypeController::class, 'show'])->middleware('permission:view-hearing-types')->name('hearing-types.show');
             Route::post('hearing-types', [\App\Http\Controllers\HearingTypeController::class, 'store'])->middleware('permission:create-hearing-types')->name('hearing-types.store');
             Route::put('hearing-types/{hearingType}', [\App\Http\Controllers\HearingTypeController::class, 'update'])->middleware('permission:edit-hearing-types')->name('hearing-types.update');
             Route::delete('hearing-types/{hearingType}', [\App\Http\Controllers\HearingTypeController::class, 'destroy'])->middleware('permission:delete-hearing-types')->name('hearing-types.destroy');
             Route::put('hearing-types/{hearingType}/toggle-status', [\App\Http\Controllers\HearingTypeController::class, 'toggleStatus'])->middleware('permission:toggle-status-hearing-types')->name('hearing-types.toggle-status');
+            Route::get('hearing-types/{hearingType}', fn ($hearingType) => redirect()->route('hearing-types.show', $hearingType));
         });
 
         // Company Settings in Settings page routes
@@ -865,16 +915,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('cases', function () {
                 return redirect()->route('cases.index');
             });
-            Route::get('cases/{case}', [\App\Http\Controllers\CaseController::class, 'show'])->middleware('permission:view-cases')->name('cases.show');
+            Route::get('vu-viec/{case}', [\App\Http\Controllers\CaseController::class, 'show'])->middleware('permission:view-cases')->name('cases.show');
             Route::post('cases', [\App\Http\Controllers\CaseController::class, 'store'])->middleware('permission:create-cases')->name('cases.store');
             Route::put('cases/{case}', [\App\Http\Controllers\CaseController::class, 'update'])->middleware('permission:edit-cases')->name('cases.update');
             Route::delete('cases/{case}', [\App\Http\Controllers\CaseController::class, 'destroy'])->middleware('permission:delete-cases')->name('cases.destroy');
             Route::put('cases/{case}/toggle-status', [\App\Http\Controllers\CaseController::class, 'toggleStatus'])->middleware('permission:toggle-status-cases')->name('cases.toggle-status');
+            Route::get('cases/{case}', fn ($case) => redirect()->route('cases.show', $case));
         });
 
         // Case Types routes
         Route::middleware('permission:manage-case-types')->group(function () {
-            Route::get('case/case-types', [\App\Http\Controllers\CaseTypeController::class, 'index'])->name('cases.case-types.index');
+            Route::get('vu-viec/loai-vu-viec', [\App\Http\Controllers\CaseTypeController::class, 'index'])->name('cases.case-types.index');
+            Route::redirect('case/case-types', 'vu-viec/loai-vu-viec');
             Route::post('case/case-types', [\App\Http\Controllers\CaseTypeController::class, 'store'])->middleware('permission:create-case-types')->name('cases.case-types.store');
             Route::put('case/case-types/{caseType}', [\App\Http\Controllers\CaseTypeController::class, 'update'])->middleware('permission:edit-case-types')->name('cases.case-types.update');
             Route::delete('case/case-types/{caseType}', [\App\Http\Controllers\CaseTypeController::class, 'destroy'])->middleware('permission:delete-case-types')->name('cases.case-types.destroy');
@@ -883,7 +935,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Case Status routes
         Route::middleware('permission:manage-case-statuses')->group(function () {
-            Route::get('case/case-statuses', [\App\Http\Controllers\CaseStatusController::class, 'index'])->name('cases.case-statuses.index');
+            Route::get('vu-viec/trang-thai-vu-viec', [\App\Http\Controllers\CaseStatusController::class, 'index'])->name('cases.case-statuses.index');
+            Route::redirect('case/case-statuses', 'vu-viec/trang-thai-vu-viec');
             Route::post('case/case-statuses', [\App\Http\Controllers\CaseStatusController::class, 'store'])->middleware('permission:create-case-statuses')->name('cases.case-statuses.store');
             Route::put('case/case-statuses/{caseStatus}', [\App\Http\Controllers\CaseStatusController::class, 'update'])->middleware('permission:edit-case-statuses')->name('cases.case-statuses.update');
             Route::delete('case/case-statuses/{caseStatus}', [\App\Http\Controllers\CaseStatusController::class, 'destroy'])->middleware('permission:delete-case-statuses')->name('cases.case-statuses.destroy');
@@ -892,7 +945,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Case Timelines routes
         Route::middleware('permission:manage-case-timelines')->group(function () {
-            Route::get('cases/case-timelines', [\App\Http\Controllers\CaseTimelineController::class, 'index'])->name('cases.case-timelines.index');
+            Route::get('vu-viec/lich-su', [\App\Http\Controllers\CaseTimelineController::class, 'index'])->name('cases.case-timelines.index');
+            Route::redirect('cases/case-timelines', 'vu-viec/lich-su');
             Route::post('cases/case-timelines', [\App\Http\Controllers\CaseTimelineController::class, 'store'])->middleware('permission:create-case-timelines')->name('cases.case-timelines.store');
             Route::put('cases/case-timelines/{timeline}', [\App\Http\Controllers\CaseTimelineController::class, 'update'])->middleware('permission:edit-case-timelines')->name('cases.case-timelines.update');
             Route::delete('cases/case-timelines/{timeline}', [\App\Http\Controllers\CaseTimelineController::class, 'destroy'])->middleware('permission:delete-case-timelines')->name('cases.case-timelines.destroy');
@@ -901,7 +955,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Case Team Members routes
         Route::middleware('permission:manage-case-team-members')->group(function () {
-            Route::get('cases/case-team-members', [\App\Http\Controllers\CaseTeamMemberController::class, 'index'])->name('cases.case-team-members.index');
+            Route::get('vu-viec/thanh-vien-phu-trach', [\App\Http\Controllers\CaseTeamMemberController::class, 'index'])->name('cases.case-team-members.index');
+            Route::redirect('cases/case-team-members', 'vu-viec/thanh-vien-phu-trach');
             Route::post('cases/case-team-members', [\App\Http\Controllers\CaseTeamMemberController::class, 'store'])->middleware('permission:create-case-team-members')->name('cases.case-team-members.store');
             Route::put('cases/case-team-members/{teamMember}', [\App\Http\Controllers\CaseTeamMemberController::class, 'update'])->middleware('permission:edit-case-team-members')->name('cases.case-team-members.update');
             Route::delete('cases/case-team-members/{teamMember}', [\App\Http\Controllers\CaseTeamMemberController::class, 'destroy'])->middleware('permission:delete-case-team-members')->name('cases.case-team-members.destroy');
@@ -910,12 +965,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Plans management routes (admin only)
         Route::middleware('permission:manage-plans')->group(function () {
-            Route::get('plans/create', [PlanController::class, 'create'])->middleware('permission:create-plans')->name('plans.create');
+            Route::get('goi-dich-vu/tao', [PlanController::class, 'create'])->middleware('permission:create-plans')->name('plans.create');
             Route::post('plans', [PlanController::class, 'store'])->middleware('permission:create-plans')->name('plans.store');
-            Route::get('plans/{plan}/edit', [PlanController::class, 'edit'])->middleware('permission:edit-plans')->name('plans.edit');
+            Route::get('goi-dich-vu/{plan}/chinh-sua', [PlanController::class, 'edit'])->middleware('permission:edit-plans')->name('plans.edit');
             Route::put('plans/{plan}', [PlanController::class, 'update'])->middleware('permission:edit-plans')->name('plans.update');
             Route::delete('plans/{plan}', [PlanController::class, 'destroy'])->middleware('permission:delete-plans')->name('plans.destroy');
             Route::post('plans/{plan}/toggle-status', [PlanController::class, 'toggleStatus'])->name('plans.toggle-status');
+            Route::get('plans/create', fn () => redirect()->route('plans.create'));
+            Route::get('plans/{plan}/edit', fn ($plan) => redirect()->route('plans.edit', $plan));
         });
 
         // Plan Orders routes
@@ -947,7 +1004,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('companies/{company}', [CompanyController::class, 'destroy'])->middleware('permission:delete-companies')->name('companies.destroy');
             Route::put('companies/{company}/reset-password', [CompanyController::class, 'resetPassword'])->middleware('permission:reset-password-companies')->name('companies.reset-password');
             Route::put('companies/{company}/toggle-status', [CompanyController::class, 'toggleStatus'])->middleware('permission:toggle-status-companies')->name('companies.toggle-status');
-            Route::get('companies/{company}/plans', [CompanyController::class, 'getPlans'])->middleware('permission:manage-plans-companies')->name('companies.plans');
+            Route::get('cong-ty-thanh-vien/{company}/goi-dich-vu', [CompanyController::class, 'getPlans'])->middleware('permission:manage-plans-companies')->name('companies.plans');
+            Route::get('companies/{company}/plans', fn ($company) => redirect()->route('companies.plans', $company));
             Route::put('companies/{company}/upgrade-plan', [CompanyController::class, 'upgradePlan'])->middleware('permission:upgrade-plan-companies')->name('companies.upgrade-plan');
         });
 
@@ -1029,7 +1087,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Compliance Requirements routes
         Route::middleware('permission:manage-compliance-requirements')->group(function () {
-            Route::get('compliance/requirements', [\App\Http\Controllers\ComplianceRequirementController::class, 'index'])->name('compliance.requirements.index');
+            Route::get('quan-ly-tuan-thu/yeu-cau', [\App\Http\Controllers\ComplianceRequirementController::class, 'index'])->name('compliance.requirements.index');
+            Route::redirect('compliance/requirements', 'quan-ly-tuan-thu/yeu-cau');
             Route::post('compliance/requirements', [\App\Http\Controllers\ComplianceRequirementController::class, 'store'])->middleware('permission:create-compliance-requirements')->name('compliance.requirements.store');
             Route::put('compliance/requirements/{requirement}', [\App\Http\Controllers\ComplianceRequirementController::class, 'update'])->middleware('permission:edit-compliance-requirements')->name('compliance.requirements.update');
             Route::delete('compliance/requirements/{requirement}', [\App\Http\Controllers\ComplianceRequirementController::class, 'destroy'])->middleware('permission:delete-compliance-requirements')->name('compliance.requirements.destroy');
@@ -1038,7 +1097,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Compliance Categories routes
         Route::middleware('permission:manage-compliance-categories')->group(function () {
-            Route::get('compliance/categories', [\App\Http\Controllers\ComplianceCategoryController::class, 'index'])->name('compliance.categories.index');
+            Route::get('quan-ly-tuan-thu/danh-muc', [\App\Http\Controllers\ComplianceCategoryController::class, 'index'])->name('compliance.categories.index');
+            Route::redirect('compliance/categories', 'quan-ly-tuan-thu/danh-muc');
             Route::post('compliance/categories', [\App\Http\Controllers\ComplianceCategoryController::class, 'store'])->middleware('permission:create-compliance-categories')->name('compliance.categories.store');
             Route::put('compliance/categories/{category}', [\App\Http\Controllers\ComplianceCategoryController::class, 'update'])->middleware('permission:edit-compliance-categories')->name('compliance.categories.update');
             Route::delete('compliance/categories/{category}', [\App\Http\Controllers\ComplianceCategoryController::class, 'destroy'])->middleware('permission:delete-compliance-categories')->name('compliance.categories.destroy');
@@ -1047,7 +1107,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Compliance Frequencies routes
         Route::middleware('permission:manage-compliance-frequencies')->group(function () {
-            Route::get('compliance/frequencies', [\App\Http\Controllers\ComplianceFrequencyController::class, 'index'])->name('compliance.frequencies.index');
+            Route::get('quan-ly-tuan-thu/tan-suat', [\App\Http\Controllers\ComplianceFrequencyController::class, 'index'])->name('compliance.frequencies.index');
+            Route::redirect('compliance/frequencies', 'quan-ly-tuan-thu/tan-suat');
             Route::post('compliance/frequencies', [\App\Http\Controllers\ComplianceFrequencyController::class, 'store'])->middleware('permission:create-compliance-frequencies')->name('compliance.frequencies.store');
             Route::put('compliance/frequencies/{frequency}', [\App\Http\Controllers\ComplianceFrequencyController::class, 'update'])->middleware('permission:edit-compliance-frequencies')->name('compliance.frequencies.update');
             Route::delete('compliance/frequencies/{frequency}', [\App\Http\Controllers\ComplianceFrequencyController::class, 'destroy'])->middleware('permission:delete-compliance-frequencies')->name('compliance.frequencies.destroy');
@@ -1056,7 +1117,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Professional Licenses routes
         Route::middleware('permission:manage-professional-licenses')->group(function () {
-            Route::get('compliance/professional-licenses', [\App\Http\Controllers\ProfessionalLicenseController::class, 'index'])->name('compliance.professional-licenses.index');
+            Route::get('quan-ly-tuan-thu/chung-chi-hanh-nghe', [\App\Http\Controllers\ProfessionalLicenseController::class, 'index'])->name('compliance.professional-licenses.index');
+            Route::redirect('compliance/professional-licenses', 'quan-ly-tuan-thu/chung-chi-hanh-nghe');
             Route::post('compliance/professional-licenses', [\App\Http\Controllers\ProfessionalLicenseController::class, 'store'])->middleware('permission:create-professional-licenses')->name('compliance.professional-licenses.store');
             Route::put('compliance/professional-licenses/{license}', [\App\Http\Controllers\ProfessionalLicenseController::class, 'update'])->middleware('permission:edit-professional-licenses')->name('compliance.professional-licenses.update');
             Route::delete('compliance/professional-licenses/{license}', [\App\Http\Controllers\ProfessionalLicenseController::class, 'destroy'])->middleware('permission:delete-professional-licenses')->name('compliance.professional-licenses.destroy');
@@ -1065,7 +1127,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Regulatory Bodies routes
         Route::middleware('permission:manage-regulatory-bodies')->group(function () {
-            Route::get('compliance/regulatory-bodies', [\App\Http\Controllers\RegulatoryBodyController::class, 'index'])->name('compliance.regulatory-bodies.index');
+            Route::get('quan-ly-tuan-thu/co-quan-quan-ly', [\App\Http\Controllers\RegulatoryBodyController::class, 'index'])->name('compliance.regulatory-bodies.index');
+            Route::redirect('compliance/regulatory-bodies', 'quan-ly-tuan-thu/co-quan-quan-ly');
             Route::post('compliance/regulatory-bodies', [\App\Http\Controllers\RegulatoryBodyController::class, 'store'])->middleware('permission:create-regulatory-bodies')->name('compliance.regulatory-bodies.store');
             Route::put('compliance/regulatory-bodies/{body}', [\App\Http\Controllers\RegulatoryBodyController::class, 'update'])->middleware('permission:edit-regulatory-bodies')->name('compliance.regulatory-bodies.update');
             Route::delete('compliance/regulatory-bodies/{body}', [\App\Http\Controllers\RegulatoryBodyController::class, 'destroy'])->middleware('permission:delete-regulatory-bodies')->name('compliance.regulatory-bodies.destroy');
@@ -1074,20 +1137,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // CLE Tracking routes
         Route::middleware('permission:manage-cle-tracking')->group(function () {
-            Route::get('compliance/cle-tracking', [\App\Http\Controllers\CleTrackingController::class, 'index'])->name('compliance.cle-tracking.index');
+            Route::get('quan-ly-tuan-thu/theo-doi-boi-duong', [\App\Http\Controllers\CleTrackingController::class, 'index'])->name('compliance.cle-tracking.index');
+            Route::redirect('compliance/cle-tracking', 'quan-ly-tuan-thu/theo-doi-boi-duong');
             Route::post('compliance/cle-tracking', [\App\Http\Controllers\CleTrackingController::class, 'store'])->middleware('permission:create-cle-tracking')->name('compliance.cle-tracking.store');
             Route::put('compliance/cle-tracking/{cleTracking}', [\App\Http\Controllers\CleTrackingController::class, 'update'])->middleware('permission:edit-cle-tracking')->name('compliance.cle-tracking.update');
             Route::delete('compliance/cle-tracking/{cleTracking}', [\App\Http\Controllers\CleTrackingController::class, 'destroy'])->middleware('permission:delete-cle-tracking')->name('compliance.cle-tracking.destroy');
-            Route::get('compliance/cle-tracking/{cleTracking}/download', [\App\Http\Controllers\CleTrackingController::class, 'download'])->middleware('permission:download-cle-tracking')->name('compliance.cle-tracking.download');
+            Route::get('quan-ly-tuan-thu/theo-doi-boi-duong/{cleTracking}/tai-xuong', [\App\Http\Controllers\CleTrackingController::class, 'download'])->middleware('permission:download-cle-tracking')->name('compliance.cle-tracking.download');
+            Route::get('compliance/cle-tracking/{cleTracking}/download', fn ($cleTracking) => redirect()->route('compliance.cle-tracking.download', $cleTracking));
         });
 
         // Compliance Policies routes
         Route::middleware('permission:manage-compliance-policies')->group(function () {
-            Route::get('compliance/policies', [\App\Http\Controllers\CompliancePolicyController::class, 'index'])->name('compliance.policies.index');
-            Route::get('compliance/policies/create', [\App\Http\Controllers\CompliancePolicyController::class, 'create'])->middleware('permission:create-compliance-policies')->name('compliance.policies.create');
+            Route::get('quan-ly-tuan-thu/chinh-sach', [\App\Http\Controllers\CompliancePolicyController::class, 'index'])->name('compliance.policies.index');
+            Route::get('quan-ly-tuan-thu/chinh-sach/tao', [\App\Http\Controllers\CompliancePolicyController::class, 'create'])->middleware('permission:create-compliance-policies')->name('compliance.policies.create');
             Route::post('compliance/policies', [\App\Http\Controllers\CompliancePolicyController::class, 'store'])->middleware('permission:create-compliance-policies')->name('compliance.policies.store');
-            Route::get('compliance/policies/{policy}', [\App\Http\Controllers\CompliancePolicyController::class, 'show'])->middleware('permission:view-compliance-policies')->name('compliance.policies.show');
-            Route::get('compliance/policies/{policy}/edit', [\App\Http\Controllers\CompliancePolicyController::class, 'edit'])->middleware('permission:edit-compliance-policies')->name('compliance.policies.edit');
+            Route::get('quan-ly-tuan-thu/chinh-sach/{policy}', [\App\Http\Controllers\CompliancePolicyController::class, 'show'])->middleware('permission:view-compliance-policies')->name('compliance.policies.show');
+            Route::get('quan-ly-tuan-thu/chinh-sach/{policy}/chinh-sua', [\App\Http\Controllers\CompliancePolicyController::class, 'edit'])->middleware('permission:edit-compliance-policies')->name('compliance.policies.edit');
+            Route::redirect('compliance/policies', 'quan-ly-tuan-thu/chinh-sach');
+            Route::get('compliance/policies/create', fn () => redirect()->route('compliance.policies.create'));
+            Route::get('compliance/policies/{policy}/edit', fn ($policy) => redirect()->route('compliance.policies.edit', $policy));
+            Route::get('compliance/policies/{policy}', fn ($policy) => redirect()->route('compliance.policies.show', $policy));
             Route::put('compliance/policies/{policy}', [\App\Http\Controllers\CompliancePolicyController::class, 'update'])->middleware('permission:edit-compliance-policies')->name('compliance.policies.update');
             Route::delete('compliance/policies/{policy}', [\App\Http\Controllers\CompliancePolicyController::class, 'destroy'])->middleware('permission:delete-compliance-policies')->name('compliance.policies.destroy');
             Route::put('compliance/policies/{policy}/toggle-status', [\App\Http\Controllers\CompliancePolicyController::class, 'toggleStatus'])->middleware('permission:toggle-status-compliance-policies')->name('compliance.policies.toggle-status');
@@ -1095,7 +1164,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Risk Categories routes
         Route::middleware('permission:manage-risk-categories')->group(function () {
-            Route::get('compliance/risk-categories', [\App\Http\Controllers\RiskCategoryController::class, 'index'])->name('compliance.risk-categories.index');
+            Route::get('quan-ly-tuan-thu/danh-muc-rui-ro', [\App\Http\Controllers\RiskCategoryController::class, 'index'])->name('compliance.risk-categories.index');
+            Route::redirect('compliance/risk-categories', 'quan-ly-tuan-thu/danh-muc-rui-ro');
             Route::post('compliance/risk-categories', [\App\Http\Controllers\RiskCategoryController::class, 'store'])->middleware('permission:create-risk-categories')->name('compliance.risk-categories.store');
             Route::put('compliance/risk-categories/{category}', [\App\Http\Controllers\RiskCategoryController::class, 'update'])->middleware('permission:edit-risk-categories')->name('compliance.risk-categories.update');
             Route::delete('compliance/risk-categories/{category}', [\App\Http\Controllers\RiskCategoryController::class, 'destroy'])->middleware('permission:delete-risk-categories')->name('compliance.risk-categories.destroy');
@@ -1104,7 +1174,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Risk Assessments routes
         Route::middleware('permission:manage-risk-assessments')->group(function () {
-            Route::get('compliance/risk-assessments', [\App\Http\Controllers\RiskAssessmentController::class, 'index'])->name('compliance.risk-assessments.index');
+            Route::get('quan-ly-tuan-thu/danh-gia-rui-ro', [\App\Http\Controllers\RiskAssessmentController::class, 'index'])->name('compliance.risk-assessments.index');
+            Route::redirect('compliance/risk-assessments', 'quan-ly-tuan-thu/danh-gia-rui-ro');
             Route::post('compliance/risk-assessments', [\App\Http\Controllers\RiskAssessmentController::class, 'store'])->middleware('permission:create-risk-assessments')->name('compliance.risk-assessments.store');
             Route::put('compliance/risk-assessments/{riskAssessment}', [\App\Http\Controllers\RiskAssessmentController::class, 'update'])->middleware('permission:edit-risk-assessments')->name('compliance.risk-assessments.update');
             Route::delete('compliance/risk-assessments/{riskAssessment}', [\App\Http\Controllers\RiskAssessmentController::class, 'destroy'])->middleware('permission:delete-risk-assessments')->name('compliance.risk-assessments.destroy');
@@ -1112,7 +1183,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Audit Types routes
         Route::middleware('permission:manage-audit-types')->group(function () {
-            Route::get('compliance/audit-types', [\App\Http\Controllers\AuditTypeController::class, 'index'])->name('compliance.audit-types.index');
+            Route::get('quan-ly-tuan-thu/loai-kiem-toan', [\App\Http\Controllers\AuditTypeController::class, 'index'])->name('compliance.audit-types.index');
+            Route::redirect('compliance/audit-types', 'quan-ly-tuan-thu/loai-kiem-toan');
             Route::post('compliance/audit-types', [\App\Http\Controllers\AuditTypeController::class, 'store'])->middleware('permission:create-audit-types')->name('compliance.audit-types.store');
             Route::put('compliance/audit-types/{auditType}', [\App\Http\Controllers\AuditTypeController::class, 'update'])->middleware('permission:edit-audit-types')->name('compliance.audit-types.update');
             Route::delete('compliance/audit-types/{auditType}', [\App\Http\Controllers\AuditTypeController::class, 'destroy'])->middleware('permission:delete-audit-types')->name('compliance.audit-types.destroy');
@@ -1121,7 +1193,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Compliance Audits routes
         Route::middleware('permission:manage-compliance-audits')->group(function () {
-            Route::get('compliance/audits', [\App\Http\Controllers\ComplianceAuditController::class, 'index'])->name('compliance.audits.index');
+            Route::get('quan-ly-tuan-thu/kiem-toan', [\App\Http\Controllers\ComplianceAuditController::class, 'index'])->name('compliance.audits.index');
+            Route::redirect('compliance/audits', 'quan-ly-tuan-thu/kiem-toan');
             Route::post('compliance/audits', [\App\Http\Controllers\ComplianceAuditController::class, 'store'])->middleware('permission:create-compliance-audits')->name('compliance.audits.store');
             Route::put('compliance/audits/{audit}', [\App\Http\Controllers\ComplianceAuditController::class, 'update'])->middleware('permission:edit-compliance-audits')->name('compliance.audits.update');
             Route::delete('compliance/audits/{audit}', [\App\Http\Controllers\ComplianceAuditController::class, 'destroy'])->middleware('permission:delete-compliance-audits')->name('compliance.audits.destroy');
@@ -1253,7 +1326,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Task Type routes
         Route::middleware('permission:manage-task-types')->group(function () {
-            Route::get('task/task-types', [\App\Http\Controllers\TaskTypeController::class, 'index'])->name('tasks.task-types.index');
+            Route::get('cong-viec/loai-cong-viec', [\App\Http\Controllers\TaskTypeController::class, 'index'])->name('tasks.task-types.index');
+            Route::redirect('task/task-types', 'cong-viec/loai-cong-viec');
             Route::post('task/task-types', [\App\Http\Controllers\TaskTypeController::class, 'store'])->middleware('permission:create-task-types')->name('tasks.task-types.store');
             Route::put('task/task-types/{taskType}', [\App\Http\Controllers\TaskTypeController::class, 'update'])->middleware('permission:edit-task-types')->name('tasks.task-types.update');
             Route::delete('task/task-types/{taskType}', [\App\Http\Controllers\TaskTypeController::class, 'destroy'])->middleware('permission:delete-task-types')->name('tasks.task-types.destroy');
@@ -1262,7 +1336,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Task Status routes
         Route::middleware('permission:manage-task-statuses')->group(function () {
-            Route::get('task/task-statuses', [\App\Http\Controllers\TaskStatusController::class, 'index'])->name('tasks.task-statuses.index');
+            Route::get('cong-viec/trang-thai', [\App\Http\Controllers\TaskStatusController::class, 'index'])->name('tasks.task-statuses.index');
+            Route::redirect('task/task-statuses', 'cong-viec/trang-thai');
             Route::post('task/task-statuses', [\App\Http\Controllers\TaskStatusController::class, 'store'])->middleware('permission:create-task-statuses')->name('tasks.task-statuses.store');
             Route::put('task/task-statuses/{taskStatus}', [\App\Http\Controllers\TaskStatusController::class, 'update'])->middleware('permission:edit-task-statuses')->name('tasks.task-statuses.update');
             Route::delete('task/task-statuses/{taskStatus}', [\App\Http\Controllers\TaskStatusController::class, 'destroy'])->middleware('permission:delete-task-statuses')->name('tasks.task-statuses.destroy');
@@ -1271,7 +1346,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Workflow routes
         Route::middleware('permission:manage-workflows')->group(function () {
-            Route::get('task/workflows', [\App\Http\Controllers\WorkflowController::class, 'index'])->name('tasks.workflows.index');
+            Route::get('cong-viec/quy-trinh', [\App\Http\Controllers\WorkflowController::class, 'index'])->name('tasks.workflows.index');
+            Route::redirect('task/workflows', 'cong-viec/quy-trinh');
             Route::post('task/workflows', [\App\Http\Controllers\WorkflowController::class, 'store'])->middleware('permission:create-workflows')->name('tasks.workflows.store');
             Route::put('task/workflows/{workflow}', [\App\Http\Controllers\WorkflowController::class, 'update'])->middleware('permission:edit-workflows')->name('tasks.workflows.update');
             Route::delete('task/workflows/{workflow}', [\App\Http\Controllers\WorkflowController::class, 'destroy'])->middleware('permission:delete-workflows')->name('tasks.workflows.destroy');
@@ -1334,6 +1410,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('mau-email/{emailTemplate}/content', [\App\Http\Controllers\EmailTemplateController::class, 'updateContent'])->name('email-templates.update-content');
 
             Route::get('cai-dat-trang-chu', [LandingPageController::class, 'settings'])->name('landing-page');
+            Route::get('chinh-sua-giao-dien-trang-chu', [LandingPageController::class, 'appearanceSettings'])->name('landing-page.appearance');
             Route::get('landing-page', function () {
                 return redirect()->route('landing-page');
             });

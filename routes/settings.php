@@ -36,7 +36,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
     // Payment Settings (admin only)
-    Route::post('/payment-settings', [PaymentSettingController::class, 'store'])->name('payment.settings');
+    Route::post('/payment-settings', [PaymentSettingController::class, 'store'])->middleware('permission:manage-payment-settings')->name('payment.settings');
 
     // Profile settings page with profile and password sections
     Route::get('ho-so-ca-nhan', function () {
@@ -55,18 +55,18 @@ Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
     // Email settings page
     Route::get('cai-dat/email', function () {
         return Inertia::render('settings/components/email-settings');
-    })->name('settings.email');
+    })->middleware('permission:manage-email-settings')->name('settings.email');
     Route::get('settings/email', function () {
         return redirect()->route('settings.email');
     });
 
     // Email settings routes
-    Route::get('settings/email/get', [EmailSettingController::class, 'getEmailSettings'])->name('settings.email.get');
-    Route::post('settings/email/update', [EmailSettingController::class, 'updateEmailSettings'])->name('settings.email.update');
-    Route::post('settings/email/test', [EmailSettingController::class, 'sendTestEmail'])->name('settings.email.test');
+    Route::get('settings/email/get', [EmailSettingController::class, 'getEmailSettings'])->middleware('permission:manage-email-settings')->name('settings.email.get');
+    Route::post('settings/email/update', [EmailSettingController::class, 'updateEmailSettings'])->middleware('permission:manage-email-settings')->name('settings.email.update');
+    Route::post('settings/email/test', [EmailSettingController::class, 'sendTestEmail'])->middleware('permission:manage-email-settings')->name('settings.email.test');
 
     // General settings page with system and company settings
-    Route::get('cai-dat', [SettingsController::class, 'index'])->name('settings');
+    Route::get('cai-dat', [SettingsController::class, 'index'])->middleware('permission:manage-system-settings')->name('settings');
     Route::get('settings', function () {
         return redirect()->route('settings');
     });
@@ -74,51 +74,51 @@ Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
     Route::post('settings/layout-direction', [SettingsController::class, 'updateLayoutDirection'])->name('settings.layout-direction.update');
 
     // System Settings routes
-    Route::post('settings/system', [SystemSettingsController::class, 'update'])->name('settings.system.update');
-    Route::post('settings/brand', [SystemSettingsController::class, 'updateBrand'])->name('settings.brand.update');
-    Route::post('settings/storage', [SystemSettingsController::class, 'updateStorage'])->name('settings.storage.update');
-    Route::post('settings/recaptcha', [SystemSettingsController::class, 'updateRecaptcha'])->name('settings.recaptcha.update');
-    Route::post('settings/chatgpt', [SystemSettingsController::class, 'updateChatgpt'])->name('settings.chatgpt.update');
-    Route::post('settings/cookie', [SystemSettingsController::class, 'updateCookie'])->name('settings.cookie.update');
-    Route::post('settings/seo', [SystemSettingsController::class, 'updateSeo'])->name('settings.seo.update');
-    Route::post('settings/cache/clear', [SystemSettingsController::class, 'clearCache'])->name('settings.cache.clear');
+    Route::post('settings/system', [SystemSettingsController::class, 'update'])->middleware('permission:manage-system-settings')->name('settings.system.update');
+    Route::post('settings/brand', [SystemSettingsController::class, 'updateBrand'])->middleware('permission:manage-brand-settings')->name('settings.brand.update');
+    Route::post('settings/storage', [SystemSettingsController::class, 'updateStorage'])->middleware('permission:manage-storage-settings')->name('settings.storage.update');
+    Route::post('settings/recaptcha', [SystemSettingsController::class, 'updateRecaptcha'])->middleware('permission:manage-recaptcha-settings')->name('settings.recaptcha.update');
+    Route::post('settings/chatgpt', [SystemSettingsController::class, 'updateChatgpt'])->middleware('permission:manage-chatgpt-settings')->name('settings.chatgpt.update');
+    Route::post('settings/cookie', [SystemSettingsController::class, 'updateCookie'])->middleware('permission:manage-cookie-settings')->name('settings.cookie.update');
+    Route::post('settings/seo', [SystemSettingsController::class, 'updateSeo'])->middleware('permission:manage-seo-settings')->name('settings.seo.update');
+    Route::post('settings/cache/clear', [SystemSettingsController::class, 'clearCache'])->middleware('permission:manage-cache-settings')->name('settings.cache.clear');
 
     // Currency Settings routes
-    Route::post('settings/currency', [CurrencySettingController::class, 'update'])->name('settings.currency.update');
+    Route::post('settings/currency', [CurrencySettingController::class, 'update'])->middleware('permission:manage-currency-settings')->name('settings.currency.update');
 
     // Webhook Settings routes
-    Route::get('settings/webhooks', [WebhookController::class, 'index'])->name('settings.webhooks.index');
-    Route::post('settings/webhooks', [WebhookController::class, 'store'])->name('settings.webhooks.store');
-    Route::put('settings/webhooks/{webhook}', [WebhookController::class, 'update'])->name('settings.webhooks.update');
-    Route::delete('settings/webhooks/{webhook}', [WebhookController::class, 'destroy'])->name('settings.webhooks.destroy');
+    Route::get('settings/webhooks', [WebhookController::class, 'index'])->middleware('permission:manage-webhook-settings')->name('settings.webhooks.index');
+    Route::post('settings/webhooks', [WebhookController::class, 'store'])->middleware('permission:manage-webhook-settings')->name('settings.webhooks.store');
+    Route::put('settings/webhooks/{webhook}', [WebhookController::class, 'update'])->middleware('permission:manage-webhook-settings')->name('settings.webhooks.update');
+    Route::delete('settings/webhooks/{webhook}', [WebhookController::class, 'destroy'])->middleware('permission:manage-webhook-settings')->name('settings.webhooks.destroy');
 
     // Google Calendar Settings routes
-    Route::post('settings/google-calendar', [SystemSettingsController::class, 'updateGoogleCalendar'])->name('settings.google-calendar.update');
-    Route::post('settings/google-calendar/sync', [SystemSettingsController::class, 'syncGoogleCalendar'])->name('settings.google-calendar.sync');
+    Route::post('settings/google-calendar', [SystemSettingsController::class, 'updateGoogleCalendar'])->middleware('permission:manage-google-calendar-settings')->name('settings.google-calendar.update');
+    Route::post('settings/google-calendar/sync', [SystemSettingsController::class, 'syncGoogleCalendar'])->middleware('permission:manage-google-calendar-settings')->name('settings.google-calendar.sync');
 
     // Google Wallet Settings routes
-    Route::post('settings/google-wallet', [SystemSettingsController::class, 'updateGoogleWallet'])->name('settings.google-wallet.update');
+    Route::post('settings/google-wallet', [SystemSettingsController::class, 'updateGoogleWallet'])->middleware('permission:manage-system-settings')->name('settings.google-wallet.update');
 
     // Email Notification Settings routes
-    Route::get('settings/email-notifications/get', [EmailNotificationController::class, 'getNotificationSettings'])->name('settings.email-notifications.get');
-    Route::post('settings/email-notifications/update', [EmailNotificationController::class, 'updateNotificationSettings'])->name('settings.email-notifications.update');
+    Route::get('settings/email-notifications/get', [EmailNotificationController::class, 'getNotificationSettings'])->middleware('permission:manage-email-notifications')->name('settings.email-notifications.get');
+    Route::post('settings/email-notifications/update', [EmailNotificationController::class, 'updateNotificationSettings'])->middleware('permission:manage-email-notifications')->name('settings.email-notifications.update');
 
     // Slack Settings routes
     // Route::get('settings/slack/get', [SlackSettingController::class, 'getSlackSettings'])->name('slack.settings.get');
     // Route::post('settings/slack/update', [SlackSettingController::class, 'updateSlackSettings'])->name('slack.settings.update');
     // Route::post('settings/slack/test-webhook', [SlackSettingController::class, 'testSlackWebhook'])->name('slack.test-webhook');
-    Route::get('settings/slack-notifications/available', [SystemSettingsController::class, 'getAvailableSlackNotifications'])->name('settings.slack-notifications.available');
-    Route::get('settings/slack-notifications', [SystemSettingsController::class, 'getSlackNotifications'])->name('settings.slack-notifications.get');
-    Route::get('settings/slack-config', [SystemSettingsController::class, 'getSlackConfig'])->name('settings.slack-config.get');
-    Route::post('settings/slack-notifications', [SystemSettingsController::class, 'updateSlackNotifications'])->name('settings.slack-notifications.update');
+    Route::get('settings/slack-notifications/available', [SystemSettingsController::class, 'getAvailableSlackNotifications'])->middleware('permission:manage-slack-notifications')->name('settings.slack-notifications.available');
+    Route::get('settings/slack-notifications', [SystemSettingsController::class, 'getSlackNotifications'])->middleware('permission:manage-slack-notifications')->name('settings.slack-notifications.get');
+    Route::get('settings/slack-config', [SystemSettingsController::class, 'getSlackConfig'])->middleware('permission:manage-slack-notifications')->name('settings.slack-config.get');
+    Route::post('settings/slack-notifications', [SystemSettingsController::class, 'updateSlackNotifications'])->middleware('permission:manage-slack-notifications')->name('settings.slack-notifications.update');
 
     // Twilio Settings routes
-    Route::get('settings/twilio-notifications/available', [SystemSettingsController::class, 'getAvailableTwilioNotifications'])->name('settings.twilio-notifications.available');
-    Route::get('settings/twilio-notifications', [SystemSettingsController::class, 'getTwilioNotifications'])->name('settings.twilio-notifications.get');
-    Route::get('settings/twilio-config', [SystemSettingsController::class, 'getTwilioConfig'])->name('settings.twilio-config.get');
-    Route::post('settings/twilio-notifications', [SystemSettingsController::class, 'updateTwilioNotifications'])->name('settings.twilio-notifications.update');
-    Route::post('settings/sms/test', [SystemSettingsController::class, 'testTwilioSMS'])->name('settings.sms.test');
-    Route::post('settings/slack/test', [SystemSettingsController::class, 'testSlackWebhook'])->name('settings.slack.test');
+    Route::get('settings/twilio-notifications/available', [SystemSettingsController::class, 'getAvailableTwilioNotifications'])->middleware('permission:manage-twilio-notifications')->name('settings.twilio-notifications.available');
+    Route::get('settings/twilio-notifications', [SystemSettingsController::class, 'getTwilioNotifications'])->middleware('permission:manage-twilio-notifications')->name('settings.twilio-notifications.get');
+    Route::get('settings/twilio-config', [SystemSettingsController::class, 'getTwilioConfig'])->middleware('permission:manage-twilio-notifications')->name('settings.twilio-config.get');
+    Route::post('settings/twilio-notifications', [SystemSettingsController::class, 'updateTwilioNotifications'])->middleware('permission:manage-twilio-notifications')->name('settings.twilio-notifications.update');
+    Route::post('settings/sms/test', [SystemSettingsController::class, 'testTwilioSMS'])->middleware('permission:manage-twilio-notifications')->name('settings.sms.test');
+    Route::post('settings/slack/test', [SystemSettingsController::class, 'testSlackWebhook'])->middleware('permission:manage-slack-notifications')->name('settings.slack.test');
 
     // Notification Template routes
     Route::get('mau-thong-bao', [NotificationTemplateController::class, 'index'])->name('notification-templates.index');

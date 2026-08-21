@@ -44,6 +44,7 @@ export function BrandProvider({ children, globalSettings, user }: { children: Re
       path.startsWith('/contact') ||
       path.startsWith('/lien-he') ||
       path.startsWith('/gioi-thieu') ||
+      path.startsWith('/cong-ty-tu-van') ||
       path.startsWith('/luat-su-tu-van') ||
       path.includes('/auth/') ||
       path === '/login' ||

@@ -41,6 +41,7 @@ class SlackService
             'icon_emoji' => ':bell:'
         ];
 
+        app(OutboundUrlGuard::class)->assertAllowed($webhookUrl);
         $jsonPayload = json_encode($payload);
         $ch = curl_init($webhookUrl);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
@@ -52,6 +53,11 @@ class SlackService
         ]);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+        curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
+        curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -121,6 +127,7 @@ class SlackService
     private function sendCurlRequest($webhookUrl, $payload)
     {
 
+        app(OutboundUrlGuard::class)->assertAllowed($webhookUrl);
         $jsonPayload = json_encode($payload);
         $ch = curl_init($webhookUrl);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
@@ -132,6 +139,11 @@ class SlackService
         ]);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+        curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
+        curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

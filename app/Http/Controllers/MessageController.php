@@ -208,6 +208,7 @@ class MessageController extends Controller
 
     public function markRead($conversationId)
     {
+        $this->findAccessibleConversation($conversationId);
         Message::where('conversation_id', $conversationId)
             ->where('recipient_id', auth()->id())
             ->where('is_read', false)
@@ -225,6 +226,8 @@ class MessageController extends Controller
         }
 
         $companyId = getCompanyId(auth()->id());
+        $recipient = User::findOrFail($userId);
+        abort_unless($this->userBelongsToCurrentCompany($recipient), 404);
 
         $conversation = Conversation::where('company_id', $companyId)
             ->where('type', 'direct')
@@ -254,13 +257,7 @@ class MessageController extends Controller
         if (!Auth::user()->can('manage-messages')) {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
-        $conversation = Conversation::with(['case'])
-            ->where('id', $conversationId)
-            ->first();
-
-        if (!$conversation) {
-            return redirect()->route('communication.messages.index')->with('error', 'Conversation not found.');
-        }
+        $conversation = $this->findAccessibleConversation($conversationId, ['case']);
 
         $conversation->receiver = collect($conversation->participant_users)->first(fn($u) => $u->id !== auth()->id());
 
@@ -309,6 +306,19 @@ class MessageController extends Controller
             $validated['priority'] = $validated['priority'] ?? 'normal';
             $validated['created_by'] = auth()->id();
 
+            if (isset($validated['recipient_id'])) {
+                $recipient = User::findOrFail($validated['recipient_id']);
+                abort_unless($this->userBelongsToCurrentCompany($recipient), 404);
+            }
+            if (isset($validated['case_id'])) {
+                abort_unless(
+                    \App\Models\CaseModel::whereKey($validated['case_id'])
+                        ->whereIn('created_by', getCompanyAndUsersId())
+                        ->exists(),
+                    404,
+                );
+            }
+
             // Create or find conversation
             if (!isset($validated['conversation_id'])) {
                 $conversation = Conversation::create([
@@ -321,7 +331,7 @@ class MessageController extends Controller
                 ]);
                 $validated['conversation_id'] = $conversation->id;
             } else {
-                $conversation = Conversation::find($validated['conversation_id']);
+                $conversation = $this->findAccessibleConversation($validated['conversation_id']);
                 $conversation->update(['last_message_at' => now()]);
 
                 // Set recipient_id from conversation participants
@@ -363,21 +373,26 @@ class MessageController extends Controller
     public function getUserDetails($userId)
     {
         $user = User::with(['roles', 'creator'])->findOrFail($userId);
+        abort_unless($this->userBelongsToCurrentCompany($user), 404);
 
         // Get client data if user is a client
         $client = null;
         if ($user->type === 'client') {
-            $client = \App\Models\Client::where('email', $user->email)->first();
+            $client = \App\Models\Client::where('email', $user->email)
+                ->whereIn('created_by', getCompanyAndUsersId())
+                ->first();
         }
 
         // Get cases related to this user
         $cases = collect();
         if ($client) {
             $cases = \App\Models\CaseModel::where('client_id', $client->id)
+                ->whereIn('created_by', getCompanyAndUsersId())
                 ->with(['caseStatus', 'caseType'])
                 ->get();
         } elseif ($user->hasRole('team_member')) {
-            $cases = \App\Models\CaseModel::whereHas('teamMembers', function ($q) use ($user) {
+            $cases = \App\Models\CaseModel::whereIn('created_by', getCompanyAndUsersId())
+                ->whereHas('teamMembers', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })->with(['caseStatus', 'caseType'])->get();
         }
@@ -396,12 +411,7 @@ class MessageController extends Controller
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
         try {
-            $conversation = Conversation::where('id', $conversationId)
-                ->first();
-
-            if (!$conversation) {
-                return redirect()->back()->with('error', 'Conversation not found.');
-            }
+            $conversation = $this->findAccessibleConversation($conversationId);
 
             // Delete all messages in the conversation
             Message::where('conversation_id', $conversationId)->delete();
@@ -414,5 +424,35 @@ class MessageController extends Controller
             \Log::error('Conversation deletion failed: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to delete conversation.');
         }
+    }
+
+    private function findAccessibleConversation($conversationId, array $with = []): Conversation
+    {
+        $query = Conversation::query()
+            ->whereKey($conversationId)
+            ->where('company_id', getCompanyId(auth()->id()));
+
+        if ($with !== []) {
+            $query->with($with);
+        }
+
+        if (!$this->canManageAnyCompanyConversation()) {
+            $query->whereJsonContains('participants', auth()->id());
+        }
+
+        return $query->firstOrFail();
+    }
+
+    private function userBelongsToCurrentCompany(User $user): bool
+    {
+        return getCompanyId($user->id) === getCompanyId(auth()->id());
+    }
+
+    private function canManageAnyCompanyConversation(): bool
+    {
+        $user = auth()->user();
+
+        return $user->can('manage-any-messages')
+            || ($user->hasRole('company') && $user->can('manage-messages'));
     }
 }

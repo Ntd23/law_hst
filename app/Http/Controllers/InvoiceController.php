@@ -187,6 +187,7 @@ class InvoiceController extends BaseController
 
     public function show(Invoice $invoice)
     {
+        $this->ensureInvoiceAccess($invoice);
         $invoice->load(['client.user', 'case', 'payments']);
 
         // Get all payments for this invoice
@@ -234,6 +235,7 @@ class InvoiceController extends BaseController
 
     public function edit(Invoice $invoice)
     {
+        $this->ensureInvoiceAccess($invoice);
         $invoice->load(['client', 'case', 'emailTemplate', 'currency']);
 
         $clients = Client::active()->select('id', 'name', 'tax_rate')->get();
@@ -288,6 +290,8 @@ class InvoiceController extends BaseController
             'line_items.*.amount' => 'required|numeric|min:0',
         ]);
 
+        $this->ensureInvoiceResourcesBelongToCompany($request);
+
         $taxAmount = $request->tax_amount ?? 0;
         $subtotal = $request->subtotal ?? collect($request->line_items)->sum('amount');
         $totalAmount = $subtotal + $taxAmount;
@@ -320,8 +324,18 @@ class InvoiceController extends BaseController
                 }
             }
 
-            if (!empty($expenseIds)) Expense::whereIn('id', $expenseIds)->update(['invoice_id' => $invoice->id]);
-            if (!empty($timeEntryIds)) TimeEntry::whereIn('id', $timeEntryIds)->update(['invoice_id' => $invoice->id]);
+            if (!empty($expenseIds)) {
+                Expense::whereIn('id', $expenseIds)
+                    ->whereIn('created_by', getCompanyAndUsersId())
+                    ->whereNull('invoice_id')
+                    ->update(['invoice_id' => $invoice->id]);
+            }
+            if (!empty($timeEntryIds)) {
+                TimeEntry::whereIn('id', $timeEntryIds)
+                    ->whereIn('created_by', getCompanyAndUsersId())
+                    ->whereNull('invoice_id')
+                    ->update(['invoice_id' => $invoice->id]);
+            }
 
             return $invoice;
         });
@@ -356,6 +370,7 @@ class InvoiceController extends BaseController
         if (!Auth::user()->can('edit-invoices')) {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
+        $this->ensureInvoiceAccess($invoice);
         $request->validate([
             'client_id' => 'required|exists:clients,id',
             'case_id' => 'nullable|integer',
@@ -372,6 +387,8 @@ class InvoiceController extends BaseController
             'line_items.*.rate' => 'required|numeric|min:0',
             'line_items.*.amount' => 'required|numeric|min:0',
         ]);
+
+        $this->ensureInvoiceResourcesBelongToCompany($request, $invoice);
 
         $taxAmount = $request->tax_amount ?? 0;
         $subtotal = $request->subtotal ?? collect($request->line_items)->sum('amount');
@@ -409,7 +426,12 @@ class InvoiceController extends BaseController
 
             // Newly added expense ids → link
             if (!empty($newExpenseIds)) {
-                Expense::whereIn('id', $newExpenseIds)->update(['invoice_id' => $invoice->id]);
+                Expense::whereIn('id', $newExpenseIds)
+                    ->whereIn('created_by', getCompanyAndUsersId())
+                    ->where(function ($query) use ($invoice) {
+                        $query->whereNull('invoice_id')->orWhere('invoice_id', $invoice->id);
+                    })
+                    ->update(['invoice_id' => $invoice->id]);
             }
 
             // Time entries previously linked but no longer in line_items → unlink
@@ -419,7 +441,12 @@ class InvoiceController extends BaseController
 
             // Newly added time entry ids → link
             if (!empty($newTimeEntryIds)) {
-                TimeEntry::whereIn('id', $newTimeEntryIds)->update(['invoice_id' => $invoice->id]);
+                TimeEntry::whereIn('id', $newTimeEntryIds)
+                    ->whereIn('created_by', getCompanyAndUsersId())
+                    ->where(function ($query) use ($invoice) {
+                        $query->whereNull('invoice_id')->orWhere('invoice_id', $invoice->id);
+                    })
+                    ->update(['invoice_id' => $invoice->id]);
             }
         });
 
@@ -431,6 +458,7 @@ class InvoiceController extends BaseController
         if (!Auth::user()->can('delete-invoices')) {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
+        $this->ensureInvoiceAccess($invoice);
 
         DB::transaction(function () use ($invoice) {
             Expense::where('invoice_id', $invoice->id)->update(['invoice_id' => null]);
@@ -446,6 +474,7 @@ class InvoiceController extends BaseController
         if (!Auth::user()->can('send-invoices')) {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
+        $this->ensureInvoiceAccess($invoice);
         $invoice->load(['client', 'case']);
 
         // Trigger notifications
@@ -485,6 +514,7 @@ class InvoiceController extends BaseController
 
     public function generate(Invoice $invoice)
     {
+        $this->ensureInvoiceAccess($invoice);
         $invoice->load(['client', 'case', 'creator']);
 
         $companyProfile = \App\Models\CompanyProfile::where('created_by', createdBy())->first();
@@ -539,6 +569,7 @@ class InvoiceController extends BaseController
         if (!Auth::user()->can('view-invoices')) {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
+        $this->ensureInvoiceAccess($invoice);
 
         $invoice->load(['client', 'case', 'creator', 'currency', 'payments']);
 
@@ -589,7 +620,10 @@ class InvoiceController extends BaseController
             'due_date' => 'required|date|after:invoice_date',
         ]);
 
+        $this->ensureInvoiceResourcesBelongToCompany($request, null, $request->time_entry_ids);
+
         $timeEntries = \App\Models\TimeEntry::whereIn('id', $request->time_entry_ids)
+            ->whereIn('created_by', getCompanyAndUsersId())
             ->unbilled()
             ->get();
 
@@ -642,6 +676,13 @@ class InvoiceController extends BaseController
             'invoice_date' => 'required|date',
             'due_date' => 'required|date|after:invoice_date',
         ]);
+
+        $this->ensureInvoiceResourcesBelongToCompany(
+            $request,
+            null,
+            $request->input('time_entry_ids', []),
+            $request->input('expense_ids', []),
+        );
 
         $lineItems = [];
         $subtotal = 0;
@@ -741,7 +782,9 @@ class InvoiceController extends BaseController
 
     public function getClientCases($clientId)
     {
+        $this->ensureClientAccess((int) $clientId);
         $cases = \App\Models\CaseModel::active()->where('client_id', $clientId)
+            ->whereIn('created_by', getCompanyAndUsersId())
             ->select('id', 'title', 'case_id')
             ->get();
 
@@ -750,7 +793,9 @@ class InvoiceController extends BaseController
 
     public function getCaseTimeEntries($caseId)
     {
-        $case = \App\Models\CaseModel::find($caseId);
+        $case = \App\Models\CaseModel::whereKey($caseId)
+            ->whereIn('created_by', getCompanyAndUsersId())
+            ->first();
         if (!$case) {
             return response()->json([]);
         }
@@ -825,6 +870,7 @@ class InvoiceController extends BaseController
 
     public function getClientTimeEntries($clientId)
     {
+        $this->ensureClientAccess((int) $clientId);
         $timeEntries = \App\Models\TimeEntry::where(function ($query) use ($clientId) {
             // Case-specific time entries
             $query->whereHas('case', function ($q) use ($clientId) {
@@ -833,6 +879,7 @@ class InvoiceController extends BaseController
                 // OR general time entries for this client
                 ->orWhere('client_id', $clientId);
         })
+            ->whereIn('created_by', getCompanyAndUsersId())
             ->where('is_billable', true)
             ->where('status', 'approved')
             ->whereNull('invoice_id')
@@ -856,6 +903,8 @@ class InvoiceController extends BaseController
 
     public function getInvoiceItems($invoiceId)
     {
+        $invoice = Invoice::findOrFail($invoiceId);
+        $this->ensureInvoiceAccess($invoice);
         // Get time entries and expenses linked to this invoice with permission check
         $timeEntries = \App\Models\TimeEntry::where(function ($q) {
             if (Auth::user()->can('manage-any-time-entries')) {
@@ -907,6 +956,94 @@ class InvoiceController extends BaseController
             });
 
         return $timeEntries->concat($expenses)->toArray();
+    }
+
+    private function ensureInvoiceAccess(Invoice $invoice): void
+    {
+        abort_unless(
+            in_array($invoice->created_by, getCompanyAndUsersId(), true),
+            404,
+        );
+    }
+
+    private function ensureClientAccess(int $clientId): void
+    {
+        abort_unless(
+            Client::whereKey($clientId)
+                ->whereIn('created_by', getCompanyAndUsersId())
+                ->exists(),
+            404,
+        );
+    }
+
+    /**
+     * Assert every record that can be attached to an invoice belongs to the
+     * current company. Validation rules alone only prove that a numeric id
+     * exists; they do not provide a tenant boundary.
+     *
+     * @param array<int, int|string> $timeEntryIds
+     * @param array<int, int|string> $expenseIds
+     */
+    private function ensureInvoiceResourcesBelongToCompany(
+        Request $request,
+        ?Invoice $invoice = null,
+        array $timeEntryIds = [],
+        array $expenseIds = [],
+    ): void {
+        $companyUserIds = getCompanyAndUsersId();
+        $clientId = (int) $request->input('client_id');
+
+        abort_unless(
+            Client::whereKey($clientId)->whereIn('created_by', $companyUserIds)->exists(),
+            404,
+        );
+
+        if ($request->filled('case_id')) {
+            abort_unless(
+                \App\Models\CaseModel::whereKey($request->input('case_id'))
+                    ->where('client_id', $clientId)
+                    ->whereIn('created_by', $companyUserIds)
+                    ->exists(),
+                404,
+            );
+        }
+
+        foreach ((array) $request->input('line_items', []) as $lineItem) {
+            if (($lineItem['type'] ?? null) === 'time' && isset($lineItem['id'])) {
+                $timeEntryIds[] = $lineItem['id'];
+            }
+            if (($lineItem['type'] ?? null) === 'expense' && isset($lineItem['id'])) {
+                $expenseIds[] = $lineItem['id'];
+            }
+        }
+
+        $this->ensureInvoiceAttachmentsAreAccessible(TimeEntry::query(), $timeEntryIds, $companyUserIds, $invoice);
+        $this->ensureInvoiceAttachmentsAreAccessible(Expense::query(), $expenseIds, $companyUserIds, $invoice);
+    }
+
+    /**
+     * @param \Illuminate\Database\Eloquent\Builder<\Illuminate\Database\Eloquent\Model> $query
+     * @param array<int, int|string> $ids
+     * @param array<int, int> $companyUserIds
+     */
+    private function ensureInvoiceAttachmentsAreAccessible($query, array $ids, array $companyUserIds, ?Invoice $invoice): void
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        if ($ids === []) {
+            return;
+        }
+
+        $count = $query->whereIn('id', $ids)
+            ->whereIn('created_by', $companyUserIds)
+            ->where(function ($attachmentQuery) use ($invoice) {
+                $attachmentQuery->whereNull('invoice_id');
+                if ($invoice) {
+                    $attachmentQuery->orWhere('invoice_id', $invoice->id);
+                }
+            })
+            ->count();
+
+        abort_unless($count === count($ids), 404);
     }
 
     /**

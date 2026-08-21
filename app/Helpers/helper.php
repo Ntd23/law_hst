@@ -96,6 +96,32 @@ function settings($user_id = null)
     return $userSettings;
 }
 
+if (! function_exists('publicSettings')) {
+    /**
+     * Settings safe to serialize into a browser response. Keep this as an
+     * explicit allowlist: settings() also contains provider credentials and
+     * outbound integration secrets.
+     *
+     * @return array<string, mixed>
+     */
+    function publicSettings($user_id = null): array
+    {
+        $allowedKeys = [
+            'defaultLanguage', 'defaultCurrency', 'dateFormat', 'timeFormat', 'defaultTimezone',
+            'decimalFormat', 'thousandsSeparator', 'currencySymbolSpace', 'currencySymbolPosition',
+            'themeMode', 'themeColor', 'customColor', 'layoutDirection', 'sidebarVariant', 'sidebarStyle',
+            'logoDark', 'logoLight', 'logoFooter', 'favicon', 'logoSize', 'titleText', 'footerText',
+            'enableHeaderLogo', 'enableFooterLogo', 'enableAdminLogo', 'cookieTitle', 'cookieDescription',
+            'strictlyCookieTitle', 'strictlyCookieDescription', 'contactUsDescription', 'contactUsUrl',
+        ];
+
+        $allSettings = settings($user_id);
+        $allSettings = $allSettings instanceof \Illuminate\Support\Collection ? $allSettings->toArray() : $allSettings;
+
+        return array_intersect_key($allSettings, array_flip($allowedKeys));
+    }
+}
+
 
 
 
@@ -1315,7 +1341,7 @@ if (! function_exists('defaultSettings')) {
     {
         return [
             // System Settings
-            'defaultLanguage' => 'en',
+            'defaultLanguage' => 'vi',
             'dateFormat' => 'Y-m-d',
             'timeFormat' => 'H:i',
             'calendarStartDay' => 'sunday',

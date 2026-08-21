@@ -113,20 +113,8 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
   // Reusable text content block
   const textContent = (
     <div className={`space-y-6 sm:space-y-8 ${
-      (isFullLayout || isCenter) ? 'text-center max-w-4xl mx-auto' : 'text-center lg:text-left'
+      (isFullLayout || isCenter) ? 'text-center max-w-5xl mx-auto -translate-y-6' : 'text-center lg:text-left'
     }`}>
-      {sectionData.announcement_text && (
-        <div
-          className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium border shadow-sm backdrop-blur-sm"
-          style={{
-            borderColor: isFullLayout ? '#10b77f' : brandColor,
-            color: isFullLayout ? '#ffffff' : brandColor,
-            backgroundColor: isFullLayout ? 'rgba(16, 183, 127, 0.25)' : `${brandColor}15`
-          }}
-        >
-          {sectionData.announcement_text}
-        </div>
-      )}
       <h1
         className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight drop-shadow-md"
         style={{ color: textColor }}
@@ -136,7 +124,9 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
         {displayTitle}
       </h1>
       <p
-        className="text-lg md:text-xl leading-relaxed font-medium max-w-3xl mx-auto lg:mx-0 drop-shadow-sm"
+        className={`text-lg md:text-xl leading-relaxed font-medium max-w-3xl drop-shadow-sm ${
+          (isFullLayout || isCenter) ? 'mx-auto' : 'mx-auto lg:mx-0'
+        }`}
         style={{ color: subtitleColor, opacity: 0.95 }}
       >
         {displaySubtitle}

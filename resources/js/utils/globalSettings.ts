@@ -54,7 +54,7 @@ export function initializeGlobalSettings(settings: Record<string, any>) {
         dateFormat: settings.dateFormat ?? 'yyyy-MM-dd',
         timeFormat: settings.timeFormat ?? 'HH:mm',
         timezone: settings.defaultTimezone ?? 'UTC',
-        language: settings.defaultLanguage ?? 'en',
+        language: settings.defaultLanguage ?? 'vi',
         emailVerification: settings.emailVerification === true || settings.emailVerification === 'true',
         currencySettings,
         formatCurrency: (amount: number | string, options = { showSymbol: true, showCode: false }) => {

@@ -11,6 +11,7 @@ use App\Models\Business;
 use App\Models\contact;
 use App\Models\NewsletterSubscription;
 use App\Models\User;
+use App\Services\LandingPageHtmlSanitizer;
 
 class LandingPageController extends Controller
 {
@@ -25,6 +26,8 @@ class LandingPageController extends Controller
         }
 
         $landingSettings = LandingPageSetting::getSettings();
+        $landingSettings->config_sections = app(LandingPageHtmlSanitizer::class)
+            ->sanitizeConfigSections((array) $landingSettings->config_sections);
 
         $plans = Plan::where('is_plan_enable', 'on')->get()->take(3)->map(function ($plan) {
             $features = [];
@@ -119,7 +122,7 @@ class LandingPageController extends Controller
                         'avatar' => $authorAvatar,
                     ],
                     'image' => $img,
-                    'summary' => \Illuminate\Support\Str::limit(strip_tags($article->content), 180),
+                    'summary' => $paragraphs[0] ?? \Illuminate\Support\Str::limit(strip_tags($article->content), 180),
                     'content' => $paragraphs,
                     'tags' => $tags,
                 ];
@@ -180,7 +183,8 @@ class LandingPageController extends Controller
             'faqs' => $faqs,
             'articles' => $articles,
             'companies' => $companies,
-            'customPages' => LandingPageCustomPage::active()->ordered()->get() ?? [],
+            'customPages' => LandingPageCustomPage::active()->ordered()->get()
+                ->each(fn (LandingPageCustomPage $page) => $page->content = app(LandingPageHtmlSanitizer::class)->sanitize((string) $page->content)),
             'settings' => $landingSettings,
             'sectionData' => [
                 'faq' => [
@@ -271,17 +275,31 @@ class LandingPageController extends Controller
         ]);
     }
 
+    /**
+     * Public-facing appearance editor. Access is restricted by the route's
+     * SuperAdminMiddleware; it intentionally does not use the dashboard shell.
+     */
+    public function appearanceSettings()
+    {
+        return Inertia::render('landing-page/appearance-settings', [
+            'settings' => LandingPageSetting::getSettings(),
+        ]);
+    }
+
     public function updateSettings(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'company_name' => 'required|string|max:255',
             'contact_email' => 'required|email|max:255',
             'contact_phone' => 'required|string|max:255',
             'contact_address' => 'required|string|max:255',
             'config_sections' => 'required|array'
         ]);
+        $validated['config_sections'] = app(LandingPageHtmlSanitizer::class)
+            ->sanitizeConfigSections($validated['config_sections']);
+
         $landingSettings = LandingPageSetting::getSettings();
-        $landingSettings->update($request->all());
+        $landingSettings->update($validated);
 
         return back()->with('success', __('Landing page settings updated successfully!'));
     }

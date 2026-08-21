@@ -73,7 +73,7 @@
     "Aamarpay": "Aamarpay",
     "Aamarpay Payment": "Thanh toán Aamarpay",
     "Aamarpay not configured": "Aamarpay chưa được định cấu hình",
-    "About": "Luật sư tư vấn",
+    "About": "Giới thiệu về công ty",
     "About Advocate": "Giới thiệu về người ủng hộ",
     "About Advocate Saas": "Về người ủng hộ Saas",
     "About Content": "Nội dung giới thiệu",
@@ -84,11 +84,11 @@
     "About Section": "Phần giới thiệu",
     "About Statistics": "Giới thiệu về số liệu thống kê",
     "About Title": "Tiêu đề giới thiệu",
-    "About Us": "Luật sư tư vấn",
+    "About Us": "Giới thiệu về công ty",
     "About Values": "Về giá trị",
     "About section title": "Về tiêu đề phần",
     "About section title, description and story": "Về tiêu đề phần, mô tả và câu chuyện",
-    "About us": "Luật sư tư vấn",
+    "About us": "Giới thiệu về công ty",
     "Accent": "Nhấn mạnh",
     "Accent Color": "Màu nhấn mạnh",
     "Accept All": "Chấp nhận tất cả",
@@ -4924,5 +4924,7 @@
     "Tất cả Công ty": "Tất cả Công ty",
     "Tự động": "Tự động",
     "Hệ thống tự động phân công Luật sư": "Hệ thống tự động phân công Luật sư",
-    "Hệ thống tự động phân công Công ty": "Hệ thống tự động phân công Công ty"
+    "Hệ thống tự động phân công Công ty": "Hệ thống tự động phân công Công ty",
+    "Roles & Permissions": "Vai trò & Phân quyền",
+    "Homepage Appearance": "Giao diện trang chủ"
 }

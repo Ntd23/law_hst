@@ -4,6 +4,7 @@ namespace App\Http\Controllers\LandingPage;
 
 use App\Http\Controllers\Controller;
 use App\Models\LandingPageCustomPage;
+use App\Services\LandingPageHtmlSanitizer;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -69,6 +70,7 @@ class CustomPageController extends Controller
             return back()->with('error', __('A page with this title already exists. Please use a different title.'));
         }
 
+        $validated['content'] = app(LandingPageHtmlSanitizer::class)->sanitize($validated['content']);
         LandingPageCustomPage::create($validated);
 
         return back()->with('success', __('Custom page created successfully!'));
@@ -98,6 +100,7 @@ class CustomPageController extends Controller
             return back()->with('error', __('A page with this title already exists. Please use a different title.'));
         }
 
+        $validated['content'] = app(LandingPageHtmlSanitizer::class)->sanitize($validated['content']);
         $customPage->update($validated);
 
         return back()->with('success', __('Custom page updated successfully!'));
@@ -139,8 +142,56 @@ class CustomPageController extends Controller
         }
 
         if (!$page) {
-            $page = LandingPageCustomPage::where('is_active', true)->firstOrFail();
+            $canonicalSlug = $slugMap[$slug] ?? $slug;
+            $defaults = [
+                'luat-su-tu-van' => [
+                    'title' => 'Công ty tư vấn',
+                    'slug' => 'luat-su-tu-van',
+                    'meta_title' => 'Công ty tư vấn - Văn phòng luật sư',
+                    'meta_description' => 'Danh bạ tổ chức hành nghề và luật sư tư vấn pháp lý uy tín.',
+                    'content' => '',
+                    'is_active' => true,
+                    'sort_order' => 1,
+                ],
+                'gioi-thieu-ve-cong-ty' => [
+                    'title' => 'Giới thiệu về công ty',
+                    'slug' => 'gioi-thieu-ve-cong-ty',
+                    'meta_title' => 'Giới thiệu về công ty - Văn phòng luật sư',
+                    'meta_description' => 'Tìm hiểu về văn phòng luật sư và dịch vụ pháp lý chuyên nghiệp.',
+                    'content' => '',
+                    'is_active' => true,
+                    'sort_order' => 2,
+                ],
+                'lien-he-voi-chung-toi' => [
+                    'title' => 'Liên hệ với chúng tôi',
+                    'slug' => 'lien-he-voi-chung-toi',
+                    'meta_title' => 'Liên hệ với chúng tôi - Văn phòng luật sư',
+                    'meta_description' => 'Liên hệ với chúng tôi để được tư vấn pháp lý.',
+                    'content' => '',
+                    'is_active' => true,
+                    'sort_order' => 3,
+                ],
+            ];
+
+            if (isset($defaults[$canonicalSlug])) {
+                $page = LandingPageCustomPage::firstOrCreate(
+                    ['slug' => $canonicalSlug],
+                    $defaults[$canonicalSlug]
+                );
+            }
         }
+
+        if (!$page) {
+            $page = LandingPageCustomPage::where('is_active', true)->first() ?? new LandingPageCustomPage([
+                'title' => 'Trang tùy chỉnh',
+                'slug' => $slug,
+                'content' => '',
+                'is_active' => true
+            ]);
+        }
+
+        // Existing records predate sanitization; sanitize at render time too.
+        $page->content = app(LandingPageHtmlSanitizer::class)->sanitize((string) $page->content);
 
         $landingSettings = \App\Models\LandingPageSetting::getSettings();
 
@@ -241,7 +292,7 @@ class CustomPageController extends Controller
                         'avatar' => $authorAvatar,
                     ],
                     'image' => $img,
-                    'summary' => \Illuminate\Support\Str::limit(strip_tags($article->content), 180),
+                    'summary' => $paragraphs[0] ?? \Illuminate\Support\Str::limit(strip_tags($article->content), 180),
                     'content' => $paragraphs,
                     'tags' => $tags,
                 ];
@@ -322,7 +373,7 @@ class CustomPageController extends Controller
                     'avatar' => $authorAvatar,
                 ],
                 'image' => $img,
-                'summary' => \Illuminate\Support\Str::limit(strip_tags($article->content), 180),
+                'summary' => $paragraphs[0] ?? \Illuminate\Support\Str::limit(strip_tags($article->content), 180),
                 'content' => $paragraphs,
                 'tags' => $tags,
             ];

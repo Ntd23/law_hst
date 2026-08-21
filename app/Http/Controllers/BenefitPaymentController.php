@@ -16,45 +16,12 @@ class BenefitPaymentController extends Controller
 {
     public function processPayment(Request $request)
     {
-        $validated = validatePaymentRequest($request, [
-            'payment_id' => 'required|string',
-            'transaction_id' => 'required|string',
+        // A browser-controlled request is never proof of a successful payment.
+        // Benefit verification has not been implemented against the provider API yet,
+        // so fail closed instead of activating a plan from request data.
+        return back()->withErrors([
+            'error' => __('Benefit payments are awaiting verified confirmation.'),
         ]);
-
-        try {
-            $plan = Plan::findOrFail($validated['plan_id']);
-                $pricing = calculatePlanPricing($plan, $validated['coupon_code'] ?? null, $validated['billing_cycle']);
-            $settings = getPaymentGatewaySettings();
-
-            if (!isset($settings['payment_settings']['benefit_secret_key']) || !isset($settings['payment_settings']['benefit_public_key'])) {
-                return back()->withErrors(['error' => __('Benefit payment not configured')]);
-            }
-
-            // Verify payment with Benefit API
-            $isPaymentValid = $this->verifyBenefitPayment(
-                $validated['payment_id'],
-                $validated['transaction_id'],
-                $settings['payment_settings']
-            );
-
-            if ($isPaymentValid) {
-                processPaymentSuccess([
-                    'user_id' => auth()->id(),
-                    'plan_id' => $plan->id,
-                    'billing_cycle' => $validated['billing_cycle'],
-                    'payment_method' => 'benefit',
-                    'coupon_code' => $validated['coupon_code'] ?? null,
-                    'payment_id' => $validated['payment_id'],
-                ]);
-
-                return back()->with('success', __('Payment successful and plan activated'));
-            }
-
-            return back()->withErrors(['error' => __('Payment verification failed')]);
-
-        } catch (\Exception $e) {
-            return handlePaymentError($e, 'benefit');
-        }
     }
 
     public function createPaymentSession(Request $request)
@@ -92,13 +59,8 @@ class BenefitPaymentController extends Controller
                 ],
                 "source" => ["id" => "src_bh.benefit"],
                 "post" => ["url" => route('benefit.callback')],
-                "redirect" => ["url" => route('benefit.success', [
-                    'plan_id' => $plan->id,
-                    'amount' => $pricing['final_price'],
-                    'coupon' => $validated['coupon_code'] ?? '',
-                    'user_id' => $user->id,
-                    'billing_cycle' => $validated['billing_cycle']
-                ])]
+                // Redirects are informational only. They never activate a plan.
+                "redirect" => ["url" => route('benefit.success')]
             ];
 
             $responseData = json_encode($userData);
@@ -128,137 +90,28 @@ class BenefitPaymentController extends Controller
 
     public function callback(Request $request)
     {
-        try {
-            $paymentId = $request->input('payment_id');
-            $transactionId = $request->input('transaction_id');
-            $status = $request->input('status');
-
-            $settings = getPaymentGatewaySettings();
-
-            if (!$paymentId || !$transactionId) {
-                return redirect()->route('plans.index')->withErrors(['error' => __('Invalid payment response')]);
-            }
-
-            $paymentResult = $this->retrieveBenefitPayment($paymentId, $settings['payment_settings']);
-
-            if ($paymentResult && $paymentResult['status'] === 'completed') {
-                $parts = explode('_', $transactionId);
-
-                if (count($parts) >= 3) {
-                    $planId = $parts[1];
-                    $userId = $parts[2];
-
-                    $plan = Plan::find($planId);
-                    $user = User::find($userId);
-
-                    if ($plan && $user) {
-                        processPaymentSuccess([
-                            'user_id' => $user->id,
-                            'plan_id' => $plan->id,
-                            'billing_cycle' => 'monthly',
-                            'payment_method' => 'benefit',
-                            'payment_id' => $paymentId,
-                        ]);
-
-                        return redirect()->route('plans.index')->with('success', __('Payment successful and plan activated'));
-                    }
-                }
-            }
-
-            return redirect()->route('plans.index')->withErrors(['error' => __('Payment failed or cancelled')]);
-
-        } catch (\Exception $e) {
-            return redirect()->route('plans.index')->withErrors(['error' => __('Payment processing failed')]);
-        }
+        return redirect()->route('plans.index')->with(
+            'info',
+            __('Benefit payment is being verified. Your plan will not change until confirmation is verified.')
+        );
     }
 
     public function success(Request $request)
     {
-        try {
-            $planId = $request->input('plan_id');
-            $userId = $request->input('user_id');
-            $amount = $request->input('amount');
-            $coupon = $request->input('coupon');
-            $billingCycle = $request->input('billing_cycle', 'monthly');
-
-            if ($planId && $userId) {
-                $plan = Plan::find($planId);
-                $user = User::find($userId);
-
-                if ($plan && $user) {
-                    processPaymentSuccess([
-                        'user_id' => $user->id,
-                        'plan_id' => $plan->id,
-                        'billing_cycle' => $billingCycle,
-                        'payment_method' => 'benefit',
-                        'coupon_code' => $coupon,
-                        'payment_id' => $request->input('tap_id', 'benefit_' . time()),
-                    ]);
-
-                    // Log the user in if not already authenticated
-                    if (!auth()->check()) {
-                        auth()->login($user);
-                    }
-
-                    return redirect()->route('plans.index')->with('success', __('Payment completed successfully and plan activated'));
-                }
-            }
-
-            return redirect()->route('plans.index')->with('error', __('Payment verification failed'));
-
-        } catch (\Exception $e) {
-            return redirect()->route('plans.index')->with('error', __('Payment processing failed'));
-        }
+        // Do not trust plan_id, user_id, amount, or status from a redirect.
+        return redirect()->route('plans.index')->with(
+            'info',
+            __('Benefit payment is being verified. Your plan will not change until confirmation is verified.')
+        );
     }
 
     public function webhook(Request $request)
     {
-        try {
-            $payload = $request->all();
-            $settings = getPaymentGatewaySettings();
+        \Log::warning('Rejected Benefit webhook because provider signature verification is not implemented.', [
+            'has_signature' => $request->hasHeader('X-Benefit-Signature'),
+        ]);
 
-            // Verify webhook signature
-            if (!$this->verifyBenefitWebhook($payload, $request->header('X-Benefit-Signature'), $settings['payment_settings'])) {
-                return response()->json(['error' => 'Invalid signature'], 400);
-            }
-
-            $paymentId = $payload['payment_id'] ?? null;
-            $status = $payload['status'] ?? null;
-            $transactionId = $payload['transaction_id'] ?? null;
-
-            if ($paymentId && $status === 'completed' && $transactionId) {
-                // Process successful payment
-                $parts = explode('_', $transactionId);
-
-                if (count($parts) >= 3) {
-                    $planId = $parts[1];
-                    $userId = $parts[2];
-
-                    $plan = Plan::find($planId);
-                    $user = User::find($userId);
-
-                    if ($plan && $user) {
-                        // Check if payment already processed
-                        $existingOrder = PlanOrder::where('payment_id', $paymentId)->first();
-
-                        if (!$existingOrder) {
-                            processPaymentSuccess([
-                                'user_id' => $user->id,
-                                'plan_id' => $plan->id,
-                                'billing_cycle' => 'monthly',
-                                'payment_method' => 'benefit',
-                                'payment_id' => $paymentId,
-                            ]);
-                        }
-                    }
-                }
-            }
-
-            return response()->json(['status' => 'success']);
-
-        } catch (\Exception $e) {
-            return response()->json(['error' => __('Webhook processing failed')], 500);
-        }
+        return response()->json(['error' => __('Benefit webhook verification is not configured')], 503);
     }
 
     private function verifyBenefitPayment($paymentId, $transactionId, $settings)
@@ -367,37 +220,12 @@ class BenefitPaymentController extends Controller
 
     public function invoiceSuccess(Request $request)
     {
+        $invoiceToken = (string) $request->input('invoice_token', 'invalid');
 
-        try {
-            $invoiceId = $request->input('invoice_id');
-            $amount = $request->input('amount');
-            $invoiceToken = $request->input('invoice_token');
-            $tap_id = $request->input('tap_id') ?: $request->input('charge_id');
-
-            // Handle both GET and POST parameters
-            if (!$invoiceId) $invoiceId = $request->get('invoice_id');
-            if (!$amount) $amount = $request->get('amount');
-            if (!$invoiceToken) $invoiceToken = $request->get('invoice_token');
-            if (!$tap_id) $tap_id = $request->get('tap_id') ?: $request->get('charge_id');
-
-            if ($invoiceId && $amount && $invoiceToken) {
-                $invoice = \App\Models\Invoice::find($invoiceId);
-
-                if ($invoice && $invoice->payment_token === $invoiceToken) {
-                    $invoice->createPaymentRecord($amount, 'benefit', $tap_id ?: 'benefit_' . time());
-
-                    return redirect()->route('invoice.payment', $invoiceToken)
-                        ->with('success', __('Payment completed successfully'));
-                }
-            }
-
-            return redirect()->route('invoice.payment', $invoiceToken ?: 'invalid')
-                ->with('error', __('Payment verification failed'));
-
-        } catch (\Exception $e) {
-            return redirect()->route('home')
-                ->with('error', __('Payment processing failed'));
-        }
+        return redirect()->route('invoice.payment', $invoiceToken)->with(
+            'info',
+            __('Benefit payment is being verified. The invoice will update only after verified confirmation.')
+        );
     }
 
     public function invoiceCallback(Request $request)

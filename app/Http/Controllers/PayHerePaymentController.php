@@ -84,73 +84,22 @@ class PayHerePaymentController extends Controller
 
     public function success(Request $request)
     {
-        try {
-            $orderId = $request->input('order_id') ?? $request->input('merchant_order_id');
-            $statusCode = $request->input('status_code') ?? $request->input('payhere_status_code');
-            $paymentId = $request->input('payment_id') ?? $request->input('payhere_payment_id');
-
-            if ($orderId) {
-                $parts = explode('_', $orderId);
-
-                if (count($parts) >= 3) {
-                    $planId = $parts[1];
-                    $userId = $parts[2];
-
-                    $plan = \App\Models\Plan::find($planId);
-                    $user = \App\Models\User::find($userId);
-
-                    if ($plan && $user) {
-                        processPaymentSuccess([
-                            'user_id' => $user->id,
-                            'plan_id' => $plan->id,
-                            'billing_cycle' => 'monthly',
-                            'payment_method' => 'payhere',
-                            'payment_id' => $paymentId ?? $orderId,
-                        ]);
-
-                        return redirect()->route('plans.index')->with('success', __('Payment completed successfully and plan activated!'));
-                    }
-                }
-            }
-
-            return redirect()->route('plans.index')->with('error', __('Payment verification failed'));
-        } catch (\Exception $e) {
-            return redirect()->route('plans.index')->with('error', __('Payment processing failed'));
-        }
+        // Return URLs are controlled by the browser and are never payment proof.
+        return redirect()->route('plans.index')->with(
+            'info',
+            __('Your payment is awaiting verified confirmation.'),
+        );
     }
 
     public function callback(Request $request)
     {
-        try {
-            $orderId = $request->input('order_id');
-            $statusCode = $request->input('status_code');
+        // There is no persisted pending plan order to bind a signed PayHere
+        // callback to. Reject instead of accepting an attacker-supplied order id.
+        Log::warning('Rejected PayHere plan callback until verified pending orders are implemented.', [
+            'request_id' => $request->header('X-Request-Id'),
+        ]);
 
-            if ($orderId && $statusCode === '2') {
-                $parts = explode('_', $orderId);
-
-                if (count($parts) >= 3) {
-                    $planId = $parts[1];
-                    $userId = $parts[2];
-
-                    $plan = Plan::find($planId);
-                    $user = User::find($userId);
-
-                    if ($plan && $user) {
-                        processPaymentSuccess([
-                            'user_id' => $user->id,
-                            'plan_id' => $plan->id,
-                            'billing_cycle' => 'monthly',
-                            'payment_method' => 'payhere',
-                            'payment_id' => $request->input('payment_id'),
-                        ]);
-                    }
-                }
-            }
-
-            return response()->json(['status' => 'success']);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Callback processing failed'], 500);
-        }
+        return response()->json(['error' => 'Verified pending order required'], 503);
     }
 
     public function processInvoicePayment(Request $request)
@@ -246,7 +195,19 @@ class PayHerePaymentController extends Controller
                     ->with('error', __('Invoice not found'));
             }
 
-            $payherePaymentId = $request->input('payment_id');
+            // A return URL is public. Only a signed PayHere response for the
+            // invoice encoded in our server-generated order ID can update it.
+            $orderParts = explode('_', (string) $orderId);
+            if (
+                count($orderParts) < 4 ||
+                $orderParts[0] !== 'invoice' ||
+                (int) $orderParts[1] !== $invoice->id ||
+                ! $this->verifyPayHerePayment($request, $invoice)
+            ) {
+                return redirect()->route('invoice.payment', $token)
+                    ->with('error', __('Payment verification failed'));
+            }
+
             $transactionId = $orderId;
 
             // Check if payment already exists
@@ -332,12 +293,20 @@ class PayHerePaymentController extends Controller
             $statusCode = $request->input('status_code');
             $hash = $request->input('md5sig');
 
+            if (
+                empty($paymentSettings['payhere_merchant_id']) ||
+                empty($paymentSettings['payhere_merchant_secret']) ||
+                !hash_equals((string) $paymentSettings['payhere_merchant_id'], (string) $merchantId)
+            ) {
+                return false;
+            }
+
             $localHash = strtoupper(md5(
                 $merchantId . $orderId . $paymentAmount . $currency . $statusCode .
                     strtoupper(md5($paymentSettings['payhere_merchant_secret']))
             ));
 
-            return $hash === $localHash && $statusCode == 2;
+            return hash_equals($localHash, (string) $hash) && $statusCode == 2;
         } catch (\Exception $e) {
             return false;
         }

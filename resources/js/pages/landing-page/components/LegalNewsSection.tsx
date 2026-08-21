@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Newspaper, Calendar, Clock, ArrowRight, ChevronLeft, ChevronRight, X, Tag } from 'lucide-react';
+import { translateLegalContent } from '../utils/legal-content-translations';
 
 interface Article {
     id: number;
@@ -25,7 +26,7 @@ interface LegalNewsSectionProps {
 }
 
 export default function LegalNewsSection({ brandColor = '#3b82f6', articles: propArticles }: LegalNewsSectionProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [activeArticle, setActiveArticle] = useState<Article | null>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -49,6 +50,7 @@ export default function LegalNewsSection({ brandColor = '#3b82f6', articles: pro
     }, []);
 
     const articles: Article[] = propArticles || [];
+    const tl = (value: unknown) => translateLegalContent(value, t, i18n.language);
 
     if (articles.length === 0) {
         return null;
@@ -60,7 +62,7 @@ export default function LegalNewsSection({ brandColor = '#3b82f6', articles: pro
         { key: 'all', label: t('All News') },
         ...uniqueCategories.map(cat => ({
             key: cat,
-            label: t(cat),
+            label: tl(cat),
         }))
     ];
 
@@ -176,11 +178,11 @@ export default function LegalNewsSection({ brandColor = '#3b82f6', articles: pro
                                     <div className="relative overflow-hidden aspect-[16/10]">
                                         <img
                                             src={article.image}
-                                            alt={article.title}
+                                            alt={tl(article.title)}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                         />
                                         <div className="absolute top-3 left-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md text-primary text-[11px] font-semibold px-2.5 py-1 rounded-md shadow-sm border border-white/20">
-                                            {categories.find(c => c.key === article.category)?.label || article.category}
+                                            {categories.find(c => c.key === article.category)?.label || tl(article.category)}
                                         </div>
                                     </div>
 
@@ -193,14 +195,14 @@ export default function LegalNewsSection({ brandColor = '#3b82f6', articles: pro
                                             <span>•</span>
                                             <span className="flex items-center gap-1">
                                                 <Clock className="w-3.5 h-3.5 text-primary" />
-                                                {article.readTime}
+                                                {tl(article.readTime)}
                                             </span>
                                         </div>
                                         <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors line-clamp-2 leading-snug">
-                                            {article.title}
+                                            {tl(article.title)}
                                         </h3>
                                         <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300 line-clamp-3 leading-relaxed">
-                                            {article.summary}
+                                            {tl(article.summary)}
                                         </p>
                                     </div>
                                 </div>
@@ -259,7 +261,7 @@ export default function LegalNewsSection({ brandColor = '#3b82f6', articles: pro
                         <div className="relative aspect-[21/9] w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
                             <img 
                                 src={activeArticle.image} 
-                                alt={activeArticle.title} 
+                                alt={tl(activeArticle.title)}
                                 className="w-full h-full object-cover"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent" />
@@ -271,10 +273,10 @@ export default function LegalNewsSection({ brandColor = '#3b82f6', articles: pro
                             </button>
                             <div className="absolute bottom-4 left-6 right-6">
                                 <span className="inline-block px-2.5 py-1 rounded bg-primary text-white text-xs font-bold uppercase tracking-wider mb-2">
-                                    {categories.find(c => c.key === activeArticle.category)?.label || activeArticle.category}
+                                    {categories.find(c => c.key === activeArticle.category)?.label || tl(activeArticle.category)}
                                 </span>
                                 <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight">
-                                    {activeArticle.title}
+                                    {tl(activeArticle.title)}
                                 </h2>
                             </div>
                         </div>
@@ -290,7 +292,7 @@ export default function LegalNewsSection({ brandColor = '#3b82f6', articles: pro
                                     />
                                     <div>
                                         <p className="font-semibold text-gray-900 dark:text-white">{activeArticle.author.name}</p>
-                                        <p className="text-xs text-gray-500">{activeArticle.author.role}</p>
+                                        <p className="text-xs text-gray-500">{tl(activeArticle.author.role)}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4">
@@ -300,24 +302,24 @@ export default function LegalNewsSection({ brandColor = '#3b82f6', articles: pro
                                     </span>
                                     <span className="flex items-center gap-1.5">
                                         <Clock className="w-4 h-4 text-primary" />
-                                        {activeArticle.readTime}
+                                        {tl(activeArticle.readTime)}
                                     </span>
                                 </div>
                             </div>
 
                             {/* Summary Box */}
                             <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-blue-900 dark:text-blue-200 text-sm italic leading-relaxed">
-                                "{activeArticle.summary}"
+                                "{tl(activeArticle.summary)}"
                             </div>
 
                             {/* Paragraphs */}
                             <div className="space-y-4 text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
                                 {Array.isArray(activeArticle.content) ? (
                                     activeArticle.content.map((paragraph, idx) => (
-                                        <p key={idx}>{paragraph}</p>
+                                        <p key={idx}>{tl(paragraph)}</p>
                                     ))
                                 ) : (
-                                    <div className="whitespace-pre-line">{activeArticle.content}</div>
+                                    <div className="whitespace-pre-line">{tl(activeArticle.content)}</div>
                                 )}
                             </div>
 
@@ -326,7 +328,7 @@ export default function LegalNewsSection({ brandColor = '#3b82f6', articles: pro
                                 <Tag className="w-4 h-4 text-gray-400" />
                                 {activeArticle.tags.map((tag, idx) => (
                                     <span key={idx} className="px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300">
-                                        #{tag}
+                                        #{tl(tag)}
                                     </span>
                                 ))}
                             </div>

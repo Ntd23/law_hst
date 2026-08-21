@@ -81,7 +81,7 @@ export default function AuthLayout({
     // RTL Support for auth pages - Apply immediately and persist
     const applyRTLDirection = React.useCallback(() => {
         const isDemo = globalSettings?.is_demo || false;
-        const currentLang = userLanguage || globalSettings?.defaultLanguage || 'en';
+        const currentLang = userLanguage || globalSettings?.defaultLanguage || 'vi';
         const isRTLLanguage = ['ar', 'he'].includes(currentLang);
         let dir = 'ltr';
 

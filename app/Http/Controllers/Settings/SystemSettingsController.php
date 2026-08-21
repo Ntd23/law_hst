@@ -619,7 +619,16 @@ class SystemSettingsController extends Controller
 
             $rules = [
                 'slack_enabled' => 'boolean',
-                'slack_webhook_url' => 'nullable|url'
+                'slack_webhook_url' => ['nullable', 'url', function (string $attribute, mixed $value, \Closure $fail) {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    try {
+                        app(\App\Services\OutboundUrlGuard::class)->assertAllowed((string) $value);
+                    } catch (\InvalidArgumentException $exception) {
+                        $fail($exception->getMessage());
+                    }
+                }]
             ];
 
             foreach ($availableTemplates as $templateId => $templateName) {
@@ -702,7 +711,16 @@ class SystemSettingsController extends Controller
 
             $rules = [
                 'slack_enabled' => 'boolean',
-                'slack_webhook_url' => 'nullable|url'
+                'slack_webhook_url' => ['nullable', 'url', function (string $attribute, mixed $value, \Closure $fail) {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    try {
+                        app(\App\Services\OutboundUrlGuard::class)->assertAllowed((string) $value);
+                    } catch (\InvalidArgumentException $exception) {
+                        $fail($exception->getMessage());
+                    }
+                }]
             ];
 
             foreach ($availableTemplates as $templateId => $templateName) {

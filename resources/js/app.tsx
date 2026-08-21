@@ -137,7 +137,7 @@ createInertiaApp({
                 // Force layout direction update from cookies/settings
                 setTimeout(() => {
                     const isDemo = isDemoMode();
-                    const currentLang = getCookie('app_language') || localStorage.getItem('i18nextLng') || 'en';
+                    const currentLang = getCookie('app_language') || localStorage.getItem('i18nextLng') || 'vi';
                     const isRTLLang = ['ar', 'he'].includes(currentLang);
                     let layoutDirection = 'left';
 
@@ -223,7 +223,7 @@ const isDashboardPage = () => {
 
     // Only handle RTL for auth pages here, let landing page handle its own RTL
     if (isAuthPage) {
-        const currentLang = getCookie('app_language') || localStorage.getItem('i18nextLng') || 'en';
+        const currentLang = getCookie('app_language') || localStorage.getItem('i18nextLng') || 'vi';
         const isRTL = ['ar', 'he'].includes(currentLang);
 
         // Check if we're in demo mode

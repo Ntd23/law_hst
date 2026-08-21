@@ -43,21 +43,53 @@ export default function Header({ settings, sectionData, customPages = [], brandC
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Filter out "FAQ" and "Refund Policy"
-    const filteredPages = customPages.filter(page => {
-        const slug = (page.slug || '').toLowerCase();
-        const title = (page.title || '').toLowerCase();
-        return !['faq', 'refund-policy', 'refund'].includes(slug) &&
-               !title.includes('faq') &&
-               !title.includes('refund') &&
-               !title.includes('câu hỏi thường gặp') &&
-               !title.includes('chính sách hoàn tiền');
-    });
+    // Build standard, clean navigation menu items
+    const menuItems = (() => {
+        const items: Array<{ name: string; href: string }> = [
+            {
+                name: t('Công ty tư vấn'),
+                href: route('vi.cong-ty-tu-van')
+            },
+            {
+                name: t('Giới thiệu về công ty'),
+                href: route('vi.gioi-thieu-ve-cong-ty')
+            },
+            {
+                name: t('Liên hệ với chúng tôi'),
+                href: route('vi.lien-he-voi-chung-toi')
+            }
+        ];
 
-    const menuItems = filteredPages.map(page => ({
-        name: page.title,
-        href: route('custom-page.show', page.slug)
-    }));
+        const excludedSlugs = [
+            'faq', 'refund-policy', 'refund', 'privacy-policy', 'terms-of-service', 
+            'chinh-sach-bao-mat', 'chinh-sach-hoan-tien', 'cau-hoi-thuong-gap', 'dieu-khoan-dich-vu',
+            'about-us', 'gioi-thieu-ve-cong-ty', 'gioi-thieu', 'luat-su-tu-van', 'lawyers', 
+            'lien-he-voi-chung-toi', 'lien-he', 'contact-us'
+        ];
+
+        customPages.forEach(page => {
+            const slug = (page.slug || '').toLowerCase();
+            const title = (page.title || '').toLowerCase();
+            if (
+                !excludedSlugs.includes(slug) &&
+                !title.includes('faq') &&
+                !title.includes('refund') &&
+                !title.includes('câu hỏi') &&
+                !title.includes('chính sách') &&
+                !title.includes('điều khoản') &&
+                !title.includes('giới thiệu') &&
+                !title.includes('liên hệ') &&
+                !title.includes('luật sư')
+            ) {
+                items.push({
+                    name: t(page.title),
+                    href: route('custom-page.show', page.slug)
+                });
+            }
+        });
+
+        return items;
+    })();
 
     const isTransparent = sectionData?.transparent;
     const backgroundColor = sectionData?.background_color || '#ffffff';

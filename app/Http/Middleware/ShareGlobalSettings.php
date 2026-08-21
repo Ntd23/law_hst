@@ -27,7 +27,7 @@ class ShareGlobalSettings
                     if (session('force_reload')) {
                         session()->forget('force_reload');
                     }
-                    return settings(); // Use our helper function
+                    return publicSettings();
                 }
             ]);
         }
