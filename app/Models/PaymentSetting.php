@@ -21,6 +21,16 @@ class PaymentSetting extends Model
 
     public function setValueAttribute($value)
     {
+        $encryptedKeys = [
+            'sepay_access_token',
+            'sepay_refresh_token',
+        ];
+
+        if (in_array($this->key, $encryptedKeys, true) && $value) {
+            $this->attributes['value'] = Crypt::encryptString((string) $value);
+            return;
+        }
+
         $sensitiveKeys = [
             'stripe_secret',
             'paypal_secret_key',
@@ -42,6 +52,10 @@ class PaymentSetting extends Model
             'payfast_merchant_id',
             'payfast_merchant_key',
             'payfast_passphrase',
+            'sepay_api_key',
+            'sepay_webhook_secret',
+            'sepay_access_token',
+            'sepay_refresh_token',
             'tap_secret_key',
             'xendit_api_key',
             'paytr_merchant_key',
@@ -83,6 +97,19 @@ class PaymentSetting extends Model
 
     public function getValueAttribute($value)
     {
+        $encryptedKeys = [
+            'sepay_access_token',
+            'sepay_refresh_token',
+        ];
+
+        if (in_array($this->key, $encryptedKeys, true) && $value) {
+            try {
+                return Crypt::decryptString($value);
+            } catch (\Throwable $e) {
+                return $value;
+            }
+        }
+
         $sensitiveKeys = [
             'stripe_secret',
             'paypal_secret_key',
@@ -103,12 +130,18 @@ class PaymentSetting extends Model
             'coingate_api_token',
             'payfast_merchant_id',
             'payfast_merchant_key',
-            'payfast_passphrase'
+            'payfast_passphrase',
+            'sepay_api_key',
+            'sepay_webhook_secret',
+            'sepay_access_token',
+            'sepay_refresh_token'
         ];
 
         $booleanKeys = [
             'is_manually_enabled',
             'is_bank_enabled',
+            'is_sepay_enabled',
+            'sepay_oauth_connected',
             'is_stripe_enabled',
             'is_paypal_enabled',
             'is_razorpay_enabled',

@@ -61,6 +61,7 @@ class EmailTemplateService
             // Replace variables in subject and content
             $subject = $this->replaceVariables($templateLang->subject, $variables);
             $content = $this->replaceVariables($templateLang->content, $variables);
+            $content = $this->appendInvoicePaymentLinkIfMissing($templateName, $templateLang->content, $content, $variables, $language);
             $fromName = $this->replaceVariables($template->from, $variables);
 
             // Configure SMTP settings
@@ -111,6 +112,32 @@ class EmailTemplateService
         return str_replace(array_keys($variables), array_values($variables), $content);
     }
 
+    private function appendInvoicePaymentLinkIfMissing(string $templateName, ?string $templateContent, string $content, array $variables, string $language): string
+    {
+        $paymentUrl = $variables['{payment_url}'] ?? null;
+
+        if ($templateName !== 'Invoice Sent' || !$paymentUrl || str_contains((string) $templateContent, '{payment_url}')) {
+            return $content;
+        }
+
+        $buttonText = $language === 'vi' ? 'Thanh toán hoá đơn' : 'Pay Invoice';
+        $fallbackText = $language === 'vi'
+            ? 'Nếu nút không mở được, vui lòng sao chép đường dẫn này:'
+            : 'If the button does not work, please copy this link:';
+        $escapedUrl = e($paymentUrl);
+
+        return $content . '
+            <div style="margin: 24px 0; text-align: center;">
+                <a href="' . $escapedUrl . '" style="display: inline-block; padding: 12px 22px; background: #10b77f; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                    ' . e($buttonText) . '
+                </a>
+            </div>
+            <p style="font-size: 13px; color: #6b7280;">
+                ' . e($fallbackText) . '<br>
+                <a href="' . $escapedUrl . '">' . $escapedUrl . '</a>
+            </p>';
+    }
+
     public function sendTemplateEmailWithLanguage(string $templateName, array $variables, string $toEmail, string $toName = null, string $language = 'en')
     {
         // Skip email sending in demo mode
@@ -154,6 +181,7 @@ class EmailTemplateService
             // Replace variables in subject and content
             $subject = $this->replaceVariables($templateLang->subject, $variables);
             $content = $this->replaceVariables($templateLang->content, $variables);
+            $content = $this->appendInvoicePaymentLinkIfMissing($templateName, $templateLang->content, $content, $variables, $language);
             $fromName = $this->replaceVariables($template->from, $variables);
 
             // Configure SMTP settings

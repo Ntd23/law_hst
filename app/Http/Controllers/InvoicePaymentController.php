@@ -57,14 +57,16 @@ class InvoicePaymentController extends Controller
             ->with(['client', 'case', 'creator'])
             ->firstOrFail();
 
+        $settingsUserId = getCompanyId($invoice->created_by) ?: $invoice->created_by;
+
         // Get company information
-        $company = \App\Models\User::where('id', $invoice->created_by)
+        $company = \App\Models\User::where('id', $settingsUserId)
             ->where('type', 'company')
             ->select('id', 'name', 'email')
             ->first();
 
         // Get favicon and app name from settings table
-        $settings = \App\Models\Setting::where('user_id', $invoice->created_by)
+        $settings = \App\Models\Setting::where('user_id', $settingsUserId)
             ->whereIn('key', ['favicon', 'app_name'])
             ->pluck('value', 'key')
             ->toArray();
@@ -94,15 +96,15 @@ class InvoicePaymentController extends Controller
             ->get();
 
         // Get PayPal settings for frontend
-        $paypalSettings = getPaymentMethodConfig('paypal', $invoice->created_by);
+        $paypalSettings = getPaymentMethodConfig('paypal', $settingsUserId);
 
         // Get payment gateway settings for frontend
-        $paymentSettings = PaymentSetting::where('user_id', $invoice->created_by)
+        $paymentSettings = PaymentSetting::where('user_id', $settingsUserId)
             ->pluck('value', 'key')
             ->toArray();
 
         // Get company currency setting
-        $companyCurrency = \App\Models\Setting::where('user_id', $invoice->created_by)
+        $companyCurrency = \App\Models\Setting::where('user_id', $settingsUserId)
             ->where('key', 'currency')
             ->value('value');
 
@@ -115,9 +117,9 @@ class InvoicePaymentController extends Controller
                 ->first();
         }
 
-        $themeColor = getSetting('themeColor','#3b82f6',getCompanyId($invoice->created_by));
+        $themeColor = getSetting('themeColor','#3b82f6',$settingsUserId);
         if($themeColor=='custom'){
-            $themeColor= getSetting('customColor','#3b82f6',getCompanyId($invoice->created_by));
+            $themeColor= getSetting('customColor','#3b82f6',$settingsUserId);
         }
 
         return Inertia::render('invoice/payment', [
@@ -132,6 +134,12 @@ class InvoicePaymentController extends Controller
             'flutterwavePublicKey' => $paymentSettings['flutterwave_public_key'] ?? null,
             'tapPublicKey' => $paymentSettings['tap_secret_key'] ?? null,
             'paystackPublicKey' => $paymentSettings['paystack_public_key'] ?? null,
+            'sepaySettings' => [
+                'bank_code' => ($paymentSettings['sepay_bank_code'] ?? '') ?: config('services.sepay.bank_name', ''),
+                'account_number' => ($paymentSettings['sepay_account_number'] ?? '') ?: config('services.sepay.account_number', ''),
+                'account_name' => ($paymentSettings['sepay_account_name'] ?? '') ?: config('services.sepay.account_holder', ''),
+                'payment_prefix' => ($paymentSettings['sepay_payment_prefix'] ?? '') ?: config('services.sepay.order_prefix', 'SEPAY'),
+            ],
             'company' => $company,
             'favicon' => $favicon,
             'appName' => $appName
@@ -166,6 +174,7 @@ class InvoicePaymentController extends Controller
         // Call specific invoice payment methods
         $controllerMap = [
             'bank' => '\App\Http\Controllers\BankPaymentController',
+            'sepay' => '\App\Http\Controllers\SepayPaymentController',
             'stripe' => '\App\Http\Controllers\StripePaymentController',
             'paypal' => '\App\Http\Controllers\PayPalPaymentController',
             'razorpay' => '\App\Http\Controllers\RazorpayController',
@@ -237,6 +246,7 @@ class InvoicePaymentController extends Controller
         $gateways = [];
         $paymentGateways = [
             'bank' => ['name' => 'Bank Transfer', 'icon' => '🏦'],
+            'sepay' => ['name' => 'SePay', 'icon' => '🏦'],
             'stripe' => ['name' => 'Credit Card (Stripe)', 'icon' => '💳'],
             'paypal' => ['name' => 'PayPal', 'icon' => '🅿️'],
             'razorpay' => ['name' => 'Razorpay', 'icon' => '💰'],
@@ -283,4 +293,3 @@ class InvoicePaymentController extends Controller
         return $gateways;
     }
 }
-

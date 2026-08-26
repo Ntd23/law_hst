@@ -75,6 +75,7 @@ class EmailTemplateController extends Controller
                 '{due_date}' => 'Due Date',
                 '{total_amount}' => 'Total Amount',
                 '{invoice_number}' => 'Invoice Number',
+                '{payment_url}' => 'Invoice Payment URL',
                 '{app_name}' => 'App Name'
             ];
         } elseif ($template->name === 'Invoice Sent') {
@@ -85,6 +86,8 @@ class EmailTemplateController extends Controller
                 '{invoice_date}' => 'Invoice Date',
                 '{due_date}' => 'Due Date',
                 '{total_amount}' => 'Total Amount',
+                '{invoice_number}' => 'Invoice Number',
+                '{payment_url}' => 'Invoice Payment URL',
                 '{app_name}' => 'App Name'
             ];
         } elseif ($template->name === 'New Team Member') {

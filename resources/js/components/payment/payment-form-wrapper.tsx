@@ -7,6 +7,7 @@ import { StripePaymentForm } from './stripe-payment-form';
 import { RazorpayPaymentForm } from './razorpay-payment-form';
 import { PaypalPaymentForm } from './paypal-payment-form';
 import { BankTransferForm } from './bank-transfer-form';
+import { SepayPaymentForm } from './sepay-payment-form';
 import { MercadopagoPaymentForm } from './mercadopago-payment-form';
 
 interface PaymentMethod {
@@ -109,6 +110,20 @@ export function PaymentFormWrapper({
         });
       }
 
+      if (data.is_sepay_enabled) {
+        methods.push({
+          id: 'sepay',
+          name: 'SePay',
+          enabled: true,
+          config: {
+            bank_code: data.sepay_bank_code,
+            account_number: data.sepay_account_number,
+            account_name: data.sepay_account_name,
+            payment_prefix: data.sepay_payment_prefix
+          }
+        });
+      }
+
       setPaymentMethods(methods);
       if (methods.length > 0) {
         setSelectedMethod(methods[0].id);
@@ -170,6 +185,17 @@ export function PaymentFormWrapper({
           <BankTransferForm
             {...commonProps}
             bankDetails={method.config.details}
+          />
+        );
+
+      case 'sepay':
+        return (
+          <SepayPaymentForm
+            {...commonProps}
+            bankCode={method.config.bank_code}
+            accountNumber={method.config.account_number}
+            accountName={method.config.account_name}
+            paymentPrefix={method.config.payment_prefix}
           />
         );
 

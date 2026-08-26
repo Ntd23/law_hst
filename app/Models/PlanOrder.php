@@ -19,6 +19,11 @@ class PlanOrder extends Model
         'coupon_code',
         'payment_method',
         'payment_id',
+        'paid_amount',
+        'sepay_order_code',
+        'sepay_transaction_id',
+        'sepay_transaction_date',
+        'sepay_payload',
         'status',
         'ordered_at',
         'processed_at',
@@ -30,9 +35,12 @@ class PlanOrder extends Model
     protected $casts = [
         'ordered_at' => 'datetime',
         'processed_at' => 'datetime',
+        'sepay_transaction_date' => 'datetime',
         'original_price' => 'decimal:2',
         'discount_amount' => 'decimal:2',
-        'final_price' => 'decimal:2'
+        'final_price' => 'decimal:2',
+        'paid_amount' => 'decimal:2',
+        'sepay_payload' => 'array',
     ];
 
 

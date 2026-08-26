@@ -31,6 +31,7 @@ class SettingsController extends Controller
             ->orderByRaw("FIELD(code, 'VND', 'USD')")
             ->get();
         $paymentSettings = PaymentSetting::getUserSettings(auth()->id());
+        unset($paymentSettings['sepay_access_token'], $paymentSettings['sepay_refresh_token']);
         $webhooks = Webhook::where('user_id', auth()->id())->get();
         $companySettings = CompanySetting::where('created_by', createdBy())->get();
 

@@ -28,3 +28,4 @@ yarn-error.log
 /vcardv5-refer
 # /public/screenshots
 /storage/media-library
+.DS_Store

@@ -40,6 +40,7 @@ class InvoiceSentListener
                 '{due_date}' => $invoice->due_date ? $invoice->due_date->format('F j, Y') : 'Not specified',
                 '{total_amount}' => $invoice->total_amount ? number_format($invoice->total_amount, 2) : '0.00',
                 '{invoice_number}' => $invoice->invoice_number ?? 'INV' . str_pad($invoice->id, 6, '0', STR_PAD_LEFT),
+                '{payment_url}' => $invoice->payment_url,
                 '{app_name}' => config('app.name', 'Legal Management System'),
             ];
 
