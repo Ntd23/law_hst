@@ -27,6 +27,7 @@ import {
   Zap,
   Clock,
   Banknote,
+  QrCode,
   CreditCard,
   IndianRupee,
   Wallet,
@@ -184,6 +185,15 @@ const breadcrumbs = [
         id: 'bank',
         name: t('Bank Transfer'),
         icon: <Banknote className="h-5 w-5" />,
+        enabled: true
+      });
+    }
+
+    if (paymentSettings?.is_sepay_enabled === true || paymentSettings?.is_sepay_enabled === '1') {
+      methods.push({
+        id: 'sepay',
+        name: t('SePay'),
+        icon: <QrCode className="h-5 w-5" />,
         enabled: true
       });
     }

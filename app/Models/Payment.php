@@ -18,6 +18,10 @@ class Payment extends BaseModel
         'amount',
         'payment_date',
         'transaction_id',
+        'sepay_order_code',
+        'sepay_transaction_id',
+        'sepay_transaction_date',
+        'sepay_payload',
         'status',
         'notes',
         'receipt_path',
@@ -26,6 +30,8 @@ class Payment extends BaseModel
     protected $casts = [
         'amount' => 'decimal:2',
         'payment_date' => 'date',
+        'sepay_transaction_date' => 'datetime',
+        'sepay_payload' => 'array',
     ];
 
     protected static function booted()
@@ -97,6 +103,7 @@ class Payment extends BaseModel
             'bank_transfer' => 'Bank Transfer',
             'online' => 'Online Payment',
             'bank' => 'Bank Transfer',
+            'sepay' => 'SePay',
             'stripe' => 'Stripe',
             'paypal' => 'PayPal',
             'razorpay' => 'Razorpay',

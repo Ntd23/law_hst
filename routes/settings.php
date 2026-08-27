@@ -15,6 +15,7 @@ use App\Http\Controllers\NotificationTemplateController;
 use App\Http\Controllers\StripePaymentController;
 use App\Http\Controllers\PayPalPaymentController;
 use App\Http\Controllers\BankPaymentController;
+use App\Http\Controllers\SepayOAuthController;
 use Inertia\Inertia;
 
 /*
@@ -37,7 +38,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
     // Payment Settings (admin only)
     Route::post('/payment-settings', [PaymentSettingController::class, 'store'])->middleware('permission:manage-payment-settings')->name('payment.settings');
-
+    Route::get('/sepay/oauth/connect', [SepayOAuthController::class, 'connect'])->middleware('permission:manage-payment-settings')->name('sepay.oauth.connect');
+    Route::get('/sepay/oauth/disconnect', [SepayOAuthController::class, 'disconnect'])->middleware('permission:manage-payment-settings')->name('sepay.oauth.disconnect');
+    Route::post('/sepay/sync', [SepayOAuthController::class, 'sync'])->middleware('permission:manage-payment-settings')->name('sepay.sync');
+    Route::get('/sepay/status', [SepayOAuthController::class, 'status'])->middleware('permission:manage-payment-settings')->name('sepay.status');
     // Profile settings page with profile and password sections
     Route::get('ho-so-ca-nhan', function () {
         return Inertia::render('settings/profile-settings');

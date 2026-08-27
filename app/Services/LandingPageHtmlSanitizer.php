@@ -6,6 +6,10 @@ class LandingPageHtmlSanitizer
 {
     public function sanitize(string $html): string
     {
+        if (!class_exists(\HTMLPurifier_Config::class) || !class_exists(\HTMLPurifier::class)) {
+            return strip_tags($html, '<p><br><hr><blockquote><pre><code><strong><b><em><i><u><s><span><h1><h2><h3><h4><h5><h6><ul><ol><li><a><img><table><thead><tbody><tfoot><tr><th><td>');
+        }
+
         $config = \HTMLPurifier_Config::createDefault();
         $config->set('Core.Encoding', 'UTF-8');
         $config->set('Cache.DefinitionImpl', null);

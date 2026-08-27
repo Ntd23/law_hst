@@ -6,6 +6,7 @@ export const PAYMENT_METHODS = {
   PAYSTACK: 'paystack',
   FLUTTERWAVE: 'flutterwave',
   BANK: 'bank',
+  SEPAY: 'sepay',
   PAYTABS: 'paytabs',
   SKRILL: 'skrill',
   COINGATE: 'coingate',
@@ -40,6 +41,7 @@ export const PAYMENT_METHOD_LABELS = {
   [PAYMENT_METHODS.PAYSTACK]: 'Paystack',
   [PAYMENT_METHODS.FLUTTERWAVE]: 'Flutterwave',
   [PAYMENT_METHODS.BANK]: 'Bank Transfer',
+  [PAYMENT_METHODS.SEPAY]: 'SePay',
   [PAYMENT_METHODS.PAYTABS]: 'PayTabs',
   [PAYMENT_METHODS.SKRILL]: 'Skrill',
   [PAYMENT_METHODS.COINGATE]: 'CoinGate',
@@ -73,6 +75,7 @@ export const PAYMENT_METHOD_HELP_URLS = {
   [PAYMENT_METHODS.MERCADOPAGO]: 'https://www.mercadopago.com.br/developers/panel/app',
   [PAYMENT_METHODS.PAYSTACK]: 'https://dashboard.paystack.com/#/settings/developers',
   [PAYMENT_METHODS.FLUTTERWAVE]: 'https://dashboard.flutterwave.com/settings/apis',
+  [PAYMENT_METHODS.SEPAY]: 'https://sepay.vn/',
   [PAYMENT_METHODS.PAYTABS]: 'https://www.paytabs.com/en/support/',
   [PAYMENT_METHODS.SKRILL]: 'https://www.skrill.com/en/business/',
   [PAYMENT_METHODS.COINGATE]: 'https://coingate.com/api/docs',
@@ -164,6 +167,12 @@ export function validatePaymentMethodCredentials(method: PaymentMethod, config: 
       if (!config.details) errors.push('Bank details are required');
       break;
 
+    case PAYMENT_METHODS.SEPAY:
+      if (!config.bank_code) errors.push('SePay bank code is required');
+      if (!config.account_number) errors.push('SePay account number is required');
+      if (!config.account_name) errors.push('SePay account name is required');
+      break;
+
     case PAYMENT_METHODS.PAYTABS:
       if (!config.server_key) errors.push('PayTabs server key is required');
       if (!config.client_key) errors.push('PayTabs client key is required');
@@ -229,6 +238,7 @@ export function getPaymentMethodIcon(method: PaymentMethod): string {
     [PAYMENT_METHODS.PAYSTACK]: 'credit-card',
     [PAYMENT_METHODS.FLUTTERWAVE]: 'credit-card',
     [PAYMENT_METHODS.BANK]: 'banknote',
+    [PAYMENT_METHODS.SEPAY]: 'qr-code',
     [PAYMENT_METHODS.PAYTABS]: 'credit-card',
     [PAYMENT_METHODS.SKRILL]: 'wallet',
     [PAYMENT_METHODS.COINGATE]: 'coins',

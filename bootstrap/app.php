@@ -77,6 +77,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'cashfree/invoice/success',
             'cashfree/invoice/callback',
             'api/media/batch',
+            'sepay/oauth/callback',
             ],
         );
 

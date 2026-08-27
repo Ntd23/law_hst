@@ -11,6 +11,7 @@ import { formatCurrencyForPlansAndReferrals } from '@/utils/helpers';
 import { StripePaymentForm } from './stripe-payment-form';
 import { PayPalPaymentForm } from './paypal-payment-form';
 import { BankTransferForm } from './bank-transfer-form';
+import { SepayPaymentForm } from './sepay-payment-form';
 import { RazorpayPaymentForm } from './razorpay-payment-form';
 import { MercadoPagoPaymentForm } from './mercadopago-payment-form';
 import { PaystackPaymentForm } from './paystack-payment-form';
@@ -169,6 +170,17 @@ export function PaymentProcessor({
             {...commonProps}
             planPrice={finalPrice}
             bankDetails={plan.paymentMethods?.bank_detail || ''}
+          />
+        );
+      case 'sepay':
+        return (
+          <SepayPaymentForm
+            {...commonProps}
+            planPrice={finalPrice}
+            bankCode={plan.paymentMethods?.sepay_bank_code || ''}
+            accountNumber={plan.paymentMethods?.sepay_account_number || ''}
+            accountName={plan.paymentMethods?.sepay_account_name || ''}
+            paymentPrefix={plan.paymentMethods?.sepay_payment_prefix || 'SEPAY'}
           />
         );
       case 'razorpay':

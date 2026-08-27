@@ -628,6 +628,15 @@ if (! function_exists('getPaymentMethodConfig')) {
                     'details' => $settings['bank_detail'] ?? null,
                 ];
 
+            case 'sepay':
+                return [
+                    'enabled' => isPaymentMethodEnabled('sepay', $userId),
+                    'bank_code' => ($settings['sepay_bank_code'] ?? '') ?: config('services.sepay.bank_name'),
+                    'account_number' => ($settings['sepay_account_number'] ?? '') ?: config('services.sepay.account_number'),
+                    'account_name' => ($settings['sepay_account_name'] ?? '') ?: config('services.sepay.account_holder'),
+                    'payment_prefix' => ($settings['sepay_payment_prefix'] ?? '') ?: config('services.sepay.order_prefix', 'SEPAY'),
+                ];
+
             case 'paytabs':
                 return [
                     'enabled' => isPaymentMethodEnabled('paytabs', $userId),
@@ -823,7 +832,7 @@ if (! function_exists('getEnabledPaymentMethods')) {
     function getEnabledPaymentMethods($userId = null)
     {
         $userId = $userId ?: getPaymentSettingsUserId();
-        $methods = ['stripe', 'paypal', 'razorpay', 'mercadopago', 'paystack', 'flutterwave', 'bank', 'paytabs', 'skrill', 'coingate', 'payfast', 'tap', 'xendit', 'paytr', 'mollie', 'toyyibpay', 'cashfree', 'iyzipay', 'benefit', 'ozow', 'easebuzz', 'khalti', 'authorizenet', 'fedapay', 'payhere', 'cinetpay', 'paiement', 'yookassa', 'aamarpay'];
+        $methods = ['stripe', 'paypal', 'razorpay', 'mercadopago', 'paystack', 'flutterwave', 'bank', 'sepay', 'paytabs', 'skrill', 'coingate', 'payfast', 'tap', 'xendit', 'paytr', 'mollie', 'toyyibpay', 'cashfree', 'iyzipay', 'benefit', 'ozow', 'easebuzz', 'khalti', 'authorizenet', 'fedapay', 'payhere', 'cinetpay', 'paiement', 'yookassa', 'aamarpay'];
         $enabled = [];
 
         foreach ($methods as $method) {
@@ -885,6 +894,18 @@ if (! function_exists('validatePaymentMethodConfig')) {
             case 'bank':
                 if (empty($config['details'])) {
                     $errors[] = 'Bank details are required';
+                }
+                break;
+
+            case 'sepay':
+                if (empty($config['bank_code'])) {
+                    $errors[] = 'SePay bank code is required';
+                }
+                if (empty($config['account_number'])) {
+                    $errors[] = 'SePay account number is required';
+                }
+                if (empty($config['account_name'])) {
+                    $errors[] = 'SePay account name is required';
                 }
                 break;
 
@@ -1382,12 +1403,12 @@ if (! function_exists('defaultSettings')) {
 
             // Currency Settings
             'decimalFormat' => '2',
-            'defaultCurrency' => 'USD',
+            'defaultCurrency' => 'VND',
             'decimalSeparator' => '.',
             'thousandsSeparator' => ',',
             'floatNumber' => true,
-            'currencySymbolSpace' => false,
-            'currencySymbolPosition' => 'before',
+            'currencySymbolSpace' => true,
+            'currencySymbolPosition' => 'after',
 
             // Slack Settings
             'slack_enabled' => false,

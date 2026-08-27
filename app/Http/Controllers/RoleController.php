@@ -30,6 +30,10 @@ class RoleController extends BaseController
                     $q->whereRaw('1 = 0');
                 }
             });
+
+            if ((Auth::user()->type ?? null) === 'company') {
+                $query->whereNotIn('name', ['client']);
+            }
         }
 
         if ($request->filled('search')) {

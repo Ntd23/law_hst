@@ -27,8 +27,18 @@ class SettingsController extends Controller
     {
         // Get system settings using helper function
         $systemSettings = settings();
-        $currencies = Currency::all();
+        $currencies = Currency::whereIn('code', ['VND', 'USD'])
+            ->orderByRaw("FIELD(code, 'VND', 'USD')")
+            ->get();
         $paymentSettings = PaymentSetting::getUserSettings(auth()->id());
+        $sepayBankAccounts = json_decode((string) ($paymentSettings['sepay_bank_accounts'] ?? '[]'), true);
+        $sepayHasBankAccounts = is_array($sepayBankAccounts) && count($sepayBankAccounts) > 0;
+        $paymentSettings['sepay_has_bank_accounts'] = $sepayHasBankAccounts;
+        $paymentSettings['sepay_is_connected'] = !empty($paymentSettings['sepay_access_token'])
+            && !empty($paymentSettings['sepay_connected_at'])
+            && ($paymentSettings['sepay_connection_status'] ?? '') === 'connected'
+            && $sepayHasBankAccounts;
+        unset($paymentSettings['sepay_access_token'], $paymentSettings['sepay_refresh_token']);
         $webhooks = Webhook::where('user_id', auth()->id())->get();
         $companySettings = CompanySetting::where('created_by', createdBy())->get();
 

@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Models\PaymentSetting;
+use App\Services\SepayClient;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class PaymentSettingController extends Controller
@@ -47,6 +49,13 @@ class PaymentSettingController extends Controller
                 'paypal_secret_key' => 'nullable|string',
                 'paypal_mode' => 'in:sandbox,live',
                 'bank_detail' => 'nullable|string',
+                'sepay_bank_code' => 'nullable|string',
+                'sepay_account_number' => 'nullable|string',
+                'sepay_account_name' => 'nullable|string',
+                'sepay_payment_prefix' => 'nullable|string|max:30',
+                'sepay_bank_account_id' => 'nullable|string|max:100',
+                'sepay_gateway_name' => 'nullable|string|max:100',
+                'sepay_payment_note' => 'nullable|string|max:500',
                 'razorpay_key' => 'nullable|string',
                 'razorpay_secret' => 'nullable|string',
                 'mercadopago_mode' => 'in:sandbox,live',
@@ -123,6 +132,7 @@ class PaymentSettingController extends Controller
             $settings = $this->preparePaymentSettings($request, $validatedData);
             $this->validateEnabledPaymentMethods($request, $validatedData);
             $this->savePaymentSettings($settings);
+            $this->configureSepayAutomation($request);
 
             if (auth()?->user()?->type == 'superadmin') {
                 \Cache::forget('admin_settings');
@@ -141,6 +151,7 @@ class PaymentSettingController extends Controller
         return [
             'is_manually_enabled' => $request->boolean('is_manually_enabled'),
             'is_bank_enabled' => $request->boolean('is_bank_enabled'),
+            'is_sepay_enabled' => $request->boolean('is_sepay_enabled'),
             'is_stripe_enabled' => $request->boolean('is_stripe_enabled'),
             'is_paypal_enabled' => $request->boolean('is_paypal_enabled'),
             'is_razorpay_enabled' => $request->boolean('is_razorpay_enabled'),
@@ -174,6 +185,13 @@ class PaymentSettingController extends Controller
             'paypal_mode' => $validatedData['paypal_mode'] ?? 'sandbox',
             'mercadopago_mode' => $validatedData['mercadopago_mode'] ?? 'sandbox',
             'bank_detail' => $validatedData['bank_detail'],
+            'sepay_bank_code' => $validatedData['sepay_bank_code'] ?? '',
+            'sepay_account_number' => $validatedData['sepay_account_number'] ?? '',
+            'sepay_account_name' => $validatedData['sepay_account_name'] ?? '',
+            'sepay_payment_prefix' => $validatedData['sepay_payment_prefix'] ?? 'SEPAY',
+            'sepay_bank_account_id' => $validatedData['sepay_bank_account_id'] ?? '',
+            'sepay_gateway_name' => $validatedData['sepay_gateway_name'] ?? 'SePay',
+            'sepay_payment_note' => $validatedData['sepay_payment_note'] ?? '',
             'stripe_key' => $validatedData['stripe_key'],
             'stripe_secret' => $validatedData['stripe_secret'],
             'paypal_client_id' => $validatedData['paypal_client_id'],
@@ -308,6 +326,20 @@ class PaymentSettingController extends Controller
             $validation = validatePaymentMethodConfig('bank', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
+            }
+        }
+
+        if ($request->boolean('is_sepay_enabled')) {
+            if (empty($validatedData['sepay_bank_account_id'])) {
+                $config = [
+                    'bank_code' => $validatedData['sepay_bank_code'] ?? null,
+                    'account_number' => $validatedData['sepay_account_number'] ?? null,
+                    'account_name' => $validatedData['sepay_account_name'] ?? null,
+                ];
+                $validation = validatePaymentMethodConfig('sepay', $config);
+                if (!$validation['valid']) {
+                    $errors = array_merge($errors, $validation['errors']);
+                }
             }
         }
 
@@ -524,6 +556,80 @@ class PaymentSettingController extends Controller
         }
     }
 
+    private function configureSepayAutomation(Request $request): void
+    {
+        if (!$request->boolean('is_sepay_enabled') || !$request->filled('sepay_bank_account_id')) {
+            return;
+        }
+
+        $settingsUserId = getPaymentSettingsUserId() ?: auth()->id();
+        $settings = PaymentSetting::getUserSettings($settingsUserId);
+
+        if (
+            empty($settings['sepay_access_token'])
+            || empty($settings['sepay_connected_at'])
+            || ($settings['sepay_connection_status'] ?? '') !== 'connected'
+        ) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'sepay' => [__('Please connect SePay before selecting a receiving bank account.')],
+            ]);
+        }
+
+        $client = new SepayClient($settingsUserId);
+        $bankAccount = $client->bankAccount($request->string('sepay_bank_account_id')->toString());
+
+        $bank = $bankAccount['bank'] ?? [];
+        $bankCode = $bankAccount['bank_code'] ?? $bankAccount['bankCode'] ?? $bankAccount['bank_short_name'] ?? $bankAccount['bankShortName'] ?? $bank['code'] ?? $bank['short_name'] ?? '';
+        $accountNumber = $bankAccount['account_number'] ?? $bankAccount['accountNumber'] ?? $bankAccount['bank_account_number'] ?? $bankAccount['bankAccountNumber'] ?? $bankAccount['number'] ?? '';
+        $accountName = $bankAccount['account_name'] ?? $bankAccount['accountName'] ?? $bankAccount['account_holder_name'] ?? $bankAccount['accountHolderName'] ?? $bankAccount['account_holder'] ?? $bankAccount['accountHolder'] ?? $bankAccount['name'] ?? '';
+
+        updatePaymentSetting('sepay_bank_code', $bankCode, $settingsUserId);
+        updatePaymentSetting('sepay_bank_name', $bankAccount['bank_name'] ?? $bankAccount['bankName'] ?? $bankAccount['bank_full_name'] ?? $bankAccount['bankFullName'] ?? $bank['name'] ?? '', $settingsUserId);
+        updatePaymentSetting('sepay_bank_brand_name', $bankAccount['brand_name'] ?? $bankAccount['brandName'] ?? $bankAccount['bank_short_name'] ?? $bankAccount['bankShortName'] ?? '', $settingsUserId);
+        updatePaymentSetting('sepay_account_number', $accountNumber, $settingsUserId);
+        updatePaymentSetting('sepay_account_name', $accountName, $settingsUserId);
+        updatePaymentSetting('sepay_bank_logo', $bankAccount['logo'] ?? $bankAccount['bank_logo'] ?? $bank['logo'] ?? '', $settingsUserId);
+
+        $apiKey = (string) ($settings['sepay_api_key'] ?? '');
+        if ($apiKey === '') {
+            $apiKey = bin2hex(random_bytes(16));
+            updatePaymentSetting('sepay_api_key', $apiKey, $settingsUserId);
+        }
+
+        $payload = [
+            'name' => 'Webhook - ' . config('app.name'),
+            'bank_account_id' => $request->string('sepay_bank_account_id')->toString(),
+            'event_type' => 'In_only',
+            'authen_type' => 'Api_Key',
+            'api_key' => $apiKey,
+            'webhook_url' => url('/api/sepay/webhook'),
+            'is_verify_payment' => 1,
+            'skip_if_no_code' => 1,
+            'request_content_type' => 'Json',
+            'only_va' => 0,
+        ];
+
+        try {
+            if (!empty($settings['sepay_webhook_id'])) {
+                $webhook = $client->updateWebhook($settings['sepay_webhook_id'], $payload);
+            } else {
+                $webhook = $client->createWebhook($payload);
+            }
+
+            updatePaymentSetting('sepay_webhook_id', $webhook['id'] ?? $webhook['webhook_id'] ?? $settings['sepay_webhook_id'] ?? '', $settingsUserId);
+            updatePaymentSetting('sepay_last_synced_at', now()->toDateTimeString(), $settingsUserId);
+        } catch (\Throwable $e) {
+            Log::warning('SePay webhook auto registration failed', [
+                'settings_user_id' => $settingsUserId,
+                'message' => $e->getMessage(),
+            ]);
+
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'sepay' => [__('Could not create SePay webhook automatically. Please try again.')],
+            ]);
+        }
+    }
+
     public function getEnabledMethods()
     {
         $enabledMethods = getEnabledPaymentMethods();
@@ -545,6 +651,7 @@ class PaymentSettingController extends Controller
         $enabledKeys = [
             'is_manually_enabled',
             'is_bank_enabled',
+            'is_sepay_enabled',
             'is_stripe_enabled',
             'is_paypal_enabled',
             'is_razorpay_enabled',
@@ -625,7 +732,22 @@ class PaymentSettingController extends Controller
             'yookassa_shop_id',
 
             // Bank details (non-sensitive display info)
-            'bank_detail'
+            'bank_detail',
+            'sepay_bank_code',
+            'sepay_account_number',
+            'sepay_account_name',
+            'sepay_payment_prefix',
+            'sepay_bank_account_id',
+            'sepay_gateway_name',
+            'sepay_payment_note',
+            'sepay_bank_accounts',
+            'sepay_account_email',
+            'sepay_account_display_name',
+            'sepay_account_avatar',
+            'sepay_oauth_connected',
+            'sepay_connected_at',
+            'sepay_last_synced_at',
+            'sepay_connection_status'
         ];
 
         // Include enabled status, modes, and frontend keys only

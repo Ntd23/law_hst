@@ -6,12 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 
-import { Save, CreditCard, AlertCircle, Banknote, IndianRupee, Wallet, Coins, Search, X } from 'lucide-react';
+import { Save, CreditCard, AlertCircle, Banknote, IndianRupee, Wallet, Coins, Search, X, QrCode, Link2, ExternalLink, CheckCircle } from 'lucide-react';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, PAYMENT_METHOD_HELP_URLS } from '@/utils/payment';
 import { SettingsSection } from '@/components/settings-section';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useTranslation } from 'react-i18next';
-import { useForm, usePage } from '@inertiajs/react';
+import { router, useForm, usePage } from '@inertiajs/react';
 import { toast } from '@/components/custom-toast';
 import { useState, useMemo, useEffect } from 'react';
 import { PaymentMethodCard } from '@/components/payment/payment-method-card';
@@ -24,6 +24,24 @@ interface PaymentSettings {
   is_manually_enabled: boolean;
   is_bank_enabled: boolean;
   bank_detail: string;
+  is_sepay_enabled: boolean;
+  sepay_bank_code: string;
+  sepay_account_number: string;
+  sepay_account_name: string;
+  sepay_payment_prefix: string;
+  sepay_bank_account_id: string;
+  sepay_gateway_name: string;
+  sepay_payment_note: string;
+  sepay_oauth_connected: boolean;
+  sepay_is_connected: boolean;
+  sepay_has_bank_accounts: boolean;
+  sepay_connection_status: string;
+  sepay_connected_at: string;
+  sepay_last_synced_at: string;
+  sepay_account_email: string;
+  sepay_account_display_name: string;
+  sepay_account_avatar: string;
+  sepay_bank_accounts: string;
   is_stripe_enabled: boolean;
   stripe_key: string;
   stripe_secret: string;
@@ -139,6 +157,7 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
+  const [testingSepay, setTestingSepay] = useState(false);
 
   // Form state
   const { data, setData, post, processing, errors } = useForm<PaymentSettings>({
@@ -147,6 +166,24 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
     is_manually_enabled: settings.is_manually_enabled === true || settings.is_manually_enabled === '1',
     is_bank_enabled: settings.is_bank_enabled === true || settings.is_bank_enabled === '1',
     bank_detail: settings.bank_detail || '',
+    is_sepay_enabled: settings.is_sepay_enabled === true || settings.is_sepay_enabled === '1',
+    sepay_bank_code: settings.sepay_bank_code || '',
+    sepay_account_number: settings.sepay_account_number || '',
+    sepay_account_name: settings.sepay_account_name || '',
+    sepay_payment_prefix: settings.sepay_payment_prefix || 'SEPAY',
+    sepay_bank_account_id: settings.sepay_bank_account_id || '',
+    sepay_gateway_name: settings.sepay_gateway_name || 'SePay',
+    sepay_payment_note: settings.sepay_payment_note || '',
+    sepay_oauth_connected: settings.sepay_oauth_connected === true || settings.sepay_oauth_connected === '1',
+    sepay_is_connected: settings.sepay_is_connected === true || settings.sepay_is_connected === '1',
+    sepay_has_bank_accounts: settings.sepay_has_bank_accounts === true || settings.sepay_has_bank_accounts === '1',
+    sepay_connection_status: settings.sepay_connection_status || 'disconnected',
+    sepay_connected_at: settings.sepay_connected_at || '',
+    sepay_last_synced_at: settings.sepay_last_synced_at || '',
+    sepay_account_email: settings.sepay_account_email || '',
+    sepay_account_display_name: settings.sepay_account_display_name || '',
+    sepay_account_avatar: settings.sepay_account_avatar || '',
+    sepay_bank_accounts: settings.sepay_bank_accounts || '[]',
     is_stripe_enabled: settings.is_stripe_enabled === true || settings.is_stripe_enabled === '1',
     stripe_key: settings.stripe_key || '',
     stripe_secret: settings.stripe_secret || '',
@@ -259,6 +296,7 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
   // Payment methods data for search - All payment methods enabled
   const paymentMethods = useMemo(() => [
     { key: 'bank', name: t(PAYMENT_METHOD_LABELS[PAYMENT_METHODS.BANK]) },
+    { key: 'sepay', name: t(PAYMENT_METHOD_LABELS[PAYMENT_METHODS.SEPAY]) },
     { key: 'stripe', name: t(PAYMENT_METHOD_LABELS[PAYMENT_METHODS.STRIPE]) },
     { key: 'paypal', name: t(PAYMENT_METHOD_LABELS[PAYMENT_METHODS.PAYPAL]) },
     { key: 'razorpay', name: t(PAYMENT_METHOD_LABELS[PAYMENT_METHODS.RAZORPAY]) },
@@ -312,6 +350,233 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
     return filtered;
   }, [paymentMethods, searchTerm, statusFilter, data]);
 
+  const sepayBankAccounts = useMemo(() => {
+    try {
+      const parsed = JSON.parse(data.sepay_bank_accounts || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }, [data.sepay_bank_accounts]);
+
+  const isSepayConnected = Boolean(
+    data.sepay_is_connected
+    && data.sepay_connection_status === 'connected'
+    && data.sepay_connected_at
+    && sepayBankAccounts.length > 0
+  );
+
+  const sepayStatusMessage = useMemo(() => {
+    switch (data.sepay_connection_status) {
+      case 'missing_bank_accounts':
+        return {
+          title: t('Đã xác thực SePay nhưng chưa có tài khoản ngân hàng'),
+          description: t('SePay đã cho phép kết nối, nhưng API chưa trả về tài khoản ngân hàng nào. Hãy kiểm tra tài khoản SePay đã liên kết ngân hàng và bấm đồng bộ lại.'),
+          action: t('Đồng bộ tài khoản SePay'),
+        };
+      case 'reconnect_required':
+        return {
+          title: t('Phiên kết nối SePay đã hết hạn'),
+          description: t('Refresh token không còn hợp lệ. Hãy kết nối lại SePay để cấp quyền mới.'),
+          action: t('Kết nối lại SePay'),
+        };
+      case 'sync_failed':
+      case 'failed':
+        return {
+          title: t('Chưa thể hoàn tất kết nối SePay'),
+          description: t('Hệ thống chưa lấy được đầy đủ hồ sơ và danh sách tài khoản ngân hàng từ SePay, nên chưa bật trạng thái đã kết nối.'),
+          action: t('Thử đồng bộ lại'),
+        };
+      case 'syncing':
+        return {
+          title: t('Đang đồng bộ SePay'),
+          description: t('Hệ thống đang hoàn tất đồng bộ hồ sơ và tài khoản ngân hàng từ SePay.'),
+          action: t('Đồng bộ tài khoản SePay'),
+        };
+      default:
+        return null;
+    }
+  }, [data.sepay_connection_status, t]);
+
+  const toBool = (value: unknown) => value === true || value === '1' || value === 1 || value === 'true';
+
+  const normalizeBankAccounts = (value: unknown) => {
+    if (Array.isArray(value)) {
+      return JSON.stringify(value);
+    }
+
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? JSON.stringify(parsed) : '[]';
+      } catch {
+        return '[]';
+      }
+    }
+
+    return '[]';
+  };
+
+  const applySepaySnapshot = (snapshot: any = {}) => {
+    const next = snapshot.sepay || snapshot;
+
+    setData((current) => ({
+      ...current,
+      sepay_oauth_connected: toBool(next.sepay_oauth_connected ?? next.connected ?? current.sepay_oauth_connected),
+      sepay_is_connected: toBool(next.sepay_is_connected ?? next.connected ?? current.sepay_is_connected),
+      sepay_has_bank_accounts: toBool(next.sepay_has_bank_accounts ?? next.has_bank_accounts ?? current.sepay_has_bank_accounts),
+      sepay_connection_status: next.sepay_connection_status ?? next.status ?? current.sepay_connection_status,
+      sepay_connected_at: next.sepay_connected_at ?? next.connected_at ?? current.sepay_connected_at,
+      sepay_last_synced_at: next.sepay_last_synced_at ?? current.sepay_last_synced_at,
+      sepay_account_email: next.sepay_account_email ?? current.sepay_account_email,
+      sepay_account_display_name: next.sepay_account_display_name ?? current.sepay_account_display_name,
+      sepay_account_avatar: next.sepay_account_avatar ?? current.sepay_account_avatar,
+      sepay_bank_accounts: normalizeBankAccounts(next.sepay_bank_accounts ?? current.sepay_bank_accounts),
+      sepay_bank_account_id: next.sepay_bank_account_id ?? current.sepay_bank_account_id,
+      sepay_bank_code: next.sepay_bank_code ?? current.sepay_bank_code,
+      sepay_account_number: next.sepay_account_number ?? current.sepay_account_number,
+      sepay_account_name: next.sepay_account_name ?? current.sepay_account_name,
+    }));
+  };
+
+  const csrfToken = () => {
+    const metaToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+
+    if (metaToken) {
+      return metaToken;
+    }
+
+    const cookie = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('XSRF-TOKEN='));
+
+    return cookie ? decodeURIComponent(cookie.split('=')[1] || '') : '';
+  };
+
+  const refreshSepaySnapshot = async () => {
+    const response = await fetch(route('sepay.status'), {
+      headers: {
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      credentials: 'same-origin',
+    });
+
+    if (!response.ok) {
+      throw new Error('Could not fetch SePay status.');
+    }
+
+    const snapshot = await response.json();
+    applySepaySnapshot(snapshot);
+
+    return snapshot;
+  };
+
+  useEffect(() => {
+    applySepaySnapshot(settings);
+  }, [
+    settings.sepay_oauth_connected,
+    settings.sepay_is_connected,
+    settings.sepay_has_bank_accounts,
+    settings.sepay_connection_status,
+    settings.sepay_connected_at,
+    settings.sepay_last_synced_at,
+    settings.sepay_account_email,
+    settings.sepay_account_display_name,
+    settings.sepay_account_avatar,
+    settings.sepay_bank_accounts,
+    settings.sepay_bank_account_id,
+    settings.sepay_bank_code,
+    settings.sepay_account_number,
+    settings.sepay_account_name,
+  ]);
+
+  const openSepayOAuth = () => {
+    const w = 600;
+    const h = 700;
+    const top = Math.max((window.innerHeight - h) / 2, 0);
+    const left = Math.max((window.innerWidth - w) / 2, 0);
+
+    setTestingSepay(true);
+
+    const popup = window.open(
+      route('sepay.oauth.connect'),
+      'sepayOAuthWindow',
+      `width=${w},height=${h},top=${top},left=${left},scrollbars=yes`
+    );
+
+    let attempts = 0;
+    const terminalStatuses = ['connected', 'missing_bank_accounts', 'sync_failed', 'failed', 'reconnect_required'];
+    const handleOAuthMessage = async (event: MessageEvent) => {
+      if (event.data?.type !== 'sepay-oauth-complete') {
+        return;
+      }
+
+      try {
+        const status = await refreshSepaySnapshot();
+
+        if (status.connected === true) {
+          toast.success(t('SePay connected successfully.'));
+        } else if (status.status === 'missing_bank_accounts') {
+          toast.error(t('SePay đã xác thực nhưng chưa đồng bộ được tài khoản ngân hàng.'));
+        } else {
+          toast.error(event.data?.message || t('Could not connect SePay. Please try again.'));
+        }
+      } catch {
+        toast.error(t('Could not update SePay connection status.'));
+      } finally {
+        window.clearInterval(poll);
+        window.removeEventListener('message', handleOAuthMessage);
+        setTestingSepay(false);
+
+        try {
+          popup?.close();
+        } catch {
+          // Ignore cross-origin popup close errors.
+        }
+      }
+    };
+
+    window.addEventListener('message', handleOAuthMessage);
+
+    const poll = window.setInterval(async () => {
+      attempts += 1;
+
+      try {
+        const status = await refreshSepaySnapshot();
+
+        if (status.connected === true || terminalStatuses.includes(status.status)) {
+          window.clearInterval(poll);
+          window.removeEventListener('message', handleOAuthMessage);
+          setTestingSepay(false);
+
+          try {
+            popup?.close();
+          } catch {
+            // Ignore cross-origin popup close errors.
+          }
+
+          if (status.connected === true) {
+            toast.success(t('SePay connected successfully.'));
+          } else if (status.status === 'missing_bank_accounts') {
+            toast.error(t('SePay đã xác thực nhưng chưa đồng bộ được tài khoản ngân hàng.'));
+          } else {
+            toast.error(t('Could not connect SePay. Please try again.'));
+          }
+        }
+      } catch {
+        // Keep polling while the OAuth popup is active.
+      }
+
+      if (attempts >= 80 || popup?.closed) {
+        window.clearInterval(poll);
+        window.removeEventListener('message', handleOAuthMessage);
+        setTestingSepay(false);
+        refreshSepaySnapshot().catch(() => undefined);
+      }
+    }, 3000);
+  };
+
   // Check if method should be shown
   const shouldShowMethod = (methodKey: string) => {
     return filteredMethods.some(m => m.key === methodKey);
@@ -336,6 +601,65 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
         toast.error(t('Failed to update payment settings'));
       }
     });
+  };
+
+  const handleSyncSepayAccount = async () => {
+    setTestingSepay(true);
+
+    try {
+      const token = csrfToken();
+      const response = await fetch(route('sepay.sync'), {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(token ? { 'X-CSRF-TOKEN': token, 'X-XSRF-TOKEN': token } : {}),
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({}),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      applySepaySnapshot(result);
+
+      if (response.ok && result.success !== false) {
+        toast.success(result.message || t('SePay account synced successfully.'));
+      } else {
+        toast.error(result.message || t('Could not sync SePay account.'));
+      }
+    } catch {
+      toast.error(t('Could not sync SePay account.'));
+    } finally {
+      setTestingSepay(false);
+    }
+  };
+
+  const handleDisconnectSepayAccount = async () => {
+    setTestingSepay(true);
+
+    try {
+      const response = await fetch(route('sepay.oauth.disconnect'), {
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin',
+      });
+
+      const result = await response.json().catch(() => ({}));
+      applySepaySnapshot(result);
+
+      if (response.ok && result.success !== false) {
+        toast.success(result.message || t('SePay disconnected successfully.'));
+      } else {
+        toast.error(result.message || t('Could not disconnect SePay account.'));
+      }
+    } catch {
+      toast.error(t('Could not disconnect SePay account.'));
+    } finally {
+      setTestingSepay(false);
+    }
   };
 
   return (
@@ -486,6 +810,161 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
                     </p>
                     {errors.bank_detail && (
                       <p className="text-sm text-destructive">{errors.bank_detail}</p>
+                    )}
+                  </div>
+                </PaymentMethodCard>
+              )}
+
+              {/* SePay */}
+              {shouldShowMethod('sepay') && (
+                <PaymentMethodCard
+                  title={t("Chuyển khoản Ngân hàng tự động qua SePay")}
+                  icon={<QrCode className="h-5 w-5" />}
+                  enabled={data.is_sepay_enabled}
+                  onToggle={(checked) => setData('is_sepay_enabled', checked)}
+                  helpUrl={PAYMENT_METHOD_HELP_URLS[PAYMENT_METHODS.SEPAY]}
+                  helpText={t("Kết nối SePay để tự động xác nhận giao dịch chuyển khoản")}
+                >
+                  <div className="rounded-xl border bg-white p-8 shadow-sm">
+                    {isSepayConnected ? (
+                      <div className="mx-auto max-w-4xl space-y-6">
+                        <div className="flex flex-col items-center text-center">
+                          {data.sepay_account_avatar ? (
+                            <img src={data.sepay_account_avatar} alt="SePay" className="mb-4 h-20 w-20 rounded-full object-cover" />
+                          ) : (
+                            <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-50 text-green-600">
+                              <CheckCircle className="h-11 w-11" />
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-3xl font-bold text-green-600">{t("Đã kết nối SePay")}</h3>
+                            <Badge variant="secondary" className="bg-green-100 text-green-700">{t("Đã kết nối")}</Badge>
+                          </div>
+                          <p className="mt-3 max-w-2xl text-lg leading-8 text-muted-foreground">
+                            {t("Chọn tài khoản ngân hàng nhận tiền rồi bấm Lưu thay đổi. Hệ thống sẽ tự đồng bộ thông tin ngân hàng và đăng ký webhook SePay.")}
+                          </p>
+                        </div>
+
+                        <div className="grid gap-4 rounded-lg border bg-muted/30 p-4 md:grid-cols-2">
+                          <div>
+                            <p className="text-sm text-muted-foreground">{t("Họ tên")}</p>
+                            <p className="font-semibold">{data.sepay_account_display_name || t("Chưa cập nhật")}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Email</p>
+                            <p className="font-semibold">{data.sepay_account_email || t("Chưa cập nhật")}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>{t("Chọn tài khoản ngân hàng nhận tiền")}</Label>
+                          <Select
+                            value={data.sepay_bank_account_id || undefined}
+                            onValueChange={(value) => setData('sepay_bank_account_id', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("Chọn tài khoản ngân hàng từ SePay")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {sepayBankAccounts.map((account: any) => (
+                                <SelectItem key={account.id} value={account.id}>
+                                  {(account.bank_code || account.bank_name || t("Ngân hàng"))}
+                                  {account.account_number ? ` - ${account.account_number}` : ''}
+                                  {account.account_name ? ` (${account.account_name})` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {sepayBankAccounts.length === 0 && (
+                            <p className="text-xs text-orange-600">
+                              {t("Chưa có danh sách tài khoản ngân hàng. Hãy bấm Đồng bộ tài khoản SePay.")}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <PaymentInputField
+                            id="sepay_gateway_name"
+                            label={t("Tên cổng thanh toán")}
+                            value={data.sepay_gateway_name}
+                            onChange={(value) => setData('sepay_gateway_name', value)}
+                            placeholder="SePay"
+                            error={errors.sepay_gateway_name}
+                          />
+                          <PaymentInputField
+                            id="sepay_payment_prefix"
+                            label={t("Tiền tố mã đơn hàng")}
+                            value={data.sepay_payment_prefix}
+                            onChange={(value) => setData('sepay_payment_prefix', value)}
+                            placeholder="DH_"
+                            error={errors.sepay_payment_prefix}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="sepay_payment_note">{t("Ghi chú thanh toán")}</Label>
+                          <Textarea
+                            id="sepay_payment_note"
+                            value={data.sepay_payment_note}
+                            onChange={(e) => setData('sepay_payment_note', e.target.value)}
+                            placeholder={t("Ví dụ: Vui lòng giữ nguyên nội dung chuyển khoản để hệ thống tự động xác nhận.")}
+                            rows={3}
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+                          <Button type="button" onClick={handleSyncSepayAccount} disabled={testingSepay}>
+                            {testingSepay ? t("Đang đồng bộ...") : t("Đồng bộ tài khoản SePay")}
+                          </Button>
+                          <Button type="button" variant="outline" onClick={handleDisconnectSepayAccount} disabled={testingSepay}>
+                            {t("Ngắt kết nối")}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : sepayStatusMessage ? (
+                      <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+                        <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-orange-50 text-orange-600">
+                          <AlertCircle className="h-11 w-11" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-3xl font-bold text-orange-600">{sepayStatusMessage.title}</h3>
+                          <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                            {data.sepay_connection_status}
+                          </Badge>
+                        </div>
+                        <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
+                          {sepayStatusMessage.description}
+                        </p>
+                        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                          <Button
+                            type="button"
+                            size="lg"
+                            className="px-8 py-6 text-lg font-semibold"
+                            onClick={data.sepay_connection_status === 'reconnect_required' || data.sepay_connection_status === 'failed' ? openSepayOAuth : handleSyncSepayAccount}
+                            disabled={testingSepay}
+                          >
+                            <ExternalLink className="mr-2 h-5 w-5" />
+                            {testingSepay ? t("Đang xử lý...") : sepayStatusMessage.action}
+                          </Button>
+                          <Button type="button" size="lg" variant="outline" className="px-8 py-6 text-lg font-semibold" onClick={handleDisconnectSepayAccount} disabled={testingSepay}>
+                            {t("Ngắt kết nối")}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+                        <div className="mb-5 text-primary">
+                          <Link2 className="h-16 w-16" />
+                        </div>
+                        <h3 className="text-4xl font-bold text-primary">{t("Kết nối với SePay")}</h3>
+                        <p className="mt-5 max-w-2xl text-xl leading-9 text-muted-foreground">
+                          {t("Kết nối tài khoản SePay của bạn qua OAuth2 để tự động đồng bộ tài khoản ngân hàng và kích hoạt tính năng tự động xác nhận giao dịch chuyển khoản.")}
+                        </p>
+                        <Button type="button" size="lg" className="mt-8 px-10 py-6 text-lg font-semibold" onClick={openSepayOAuth}>
+                          <ExternalLink className="mr-2 h-5 w-5" />
+                          {t("Kết nối tài khoản SePay ngay")}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </PaymentMethodCard>

@@ -6,11 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Link2, CheckCircle2, Banknote, CreditCard, IndianRupee, Wallet, Coins, MapPin, Mail, Phone, Briefcase, CalendarDays, Hash } from 'lucide-react';
+import { Link2, CheckCircle2, Banknote, CreditCard, IndianRupee, Wallet, Coins, MapPin, Mail, Phone, Briefcase, CalendarDays, Hash, QrCode } from 'lucide-react';
 import { toast } from '@/components/custom-toast';
 import { PaymentGatewaySelection } from '@/components/payment-gateway-selection';
 import { StripePaymentModal } from '@/components/payment-modals/stripe-payment-modal';
 import { BankPaymentModal } from '@/components/payment-modals/bank-payment-modal';
+import { SepayPaymentModal } from '@/components/payment-modals/sepay-payment-modal';
 import { PayPalPaymentModal } from '@/components/payment-modals/paypal-payment-modal';
 import { RazorpayPaymentModal } from '@/components/payment-modals/razorpay-payment-modal';
 import { FlutterwavePaymentModal } from '@/components/payment-modals/flutterwave-payment-modal';
@@ -45,7 +46,7 @@ import { isDemoMode } from '@/utils/cookies';
 
 export default function InvoicePayment() {
     useFavicon();
-    const { invoice, themeColor, enabledGateways, remainingAmount, clientBillingInfo, currencies, paypalClientId, flutterwavePublicKey, tapPublicKey, paystackPublicKey, flash, company, favicon, appName } = usePage().props as any;
+    const { invoice, themeColor, enabledGateways, remainingAmount, clientBillingInfo, currencies, paypalClientId, flutterwavePublicKey, tapPublicKey, paystackPublicKey, sepaySettings, flash, company, favicon, appName } = usePage().props as any;
     const themeColors: Record<string, string> = { blue: '#3b82f6', green: '#10b77f', purple: '#8b5cf6', orange: '#f97316', red: '#ef4444' };
     const resolvedColor = themeColor?.startsWith('#') ? themeColor : (themeColors[themeColor] || '#3b82f6');
     const [selectedGateway, setSelectedGateway] = useState<string | null>(null);
@@ -67,6 +68,7 @@ export default function InvoicePayment() {
     const getPaymentMethodIcon = (gatewayId: string) => {
         const iconMap = {
             bank: <Banknote className="h-5 w-5" />,
+            sepay: <QrCode className="h-5 w-5" />,
             stripe: <CreditCard className="h-5 w-5" />,
             paypal: <CreditCard className="h-5 w-5" />,
             razorpay: <IndianRupee className="h-5 w-5" />,
@@ -202,6 +204,8 @@ export default function InvoicePayment() {
                 return <StripePaymentModal {...modalProps} />;
             case 'bank':
                 return <BankPaymentModal {...modalProps} />;
+            case 'sepay':
+                return <SepayPaymentModal {...modalProps} sepaySettings={sepaySettings} />;
             case 'paypal':
                 return <PayPalPaymentModal {...modalProps} paypalClientId={paypalClientId} />;
             case 'razorpay':

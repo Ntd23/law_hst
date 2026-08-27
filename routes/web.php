@@ -48,6 +48,8 @@ use App\Http\Controllers\PaiementPaymentController;
 use App\Http\Controllers\YooKassaPaymentController;
 use App\Http\Controllers\AamarpayPaymentController;
 use App\Http\Controllers\MidtransPaymentController;
+use App\Http\Controllers\SepayPaymentController;
+use App\Http\Controllers\SepayOAuthController;
 use App\Http\Controllers\PublicFormController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskTypeController;
@@ -66,6 +68,17 @@ use Inertia\Inertia;
 
 Route::get('/', [LandingPageController::class, 'show'])->name('home');
 Route::get('/directory', [DirectoryController::class, 'index'])->name('directory.index');
+Route::post('webhooks/sepay', [SepayPaymentController::class, 'webhook'])
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
+    ->name('sepay.webhook');
+Route::post('api/sepay/webhook', [SepayPaymentController::class, 'webhook'])
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
+    ->name('sepay.webhook.api');
+Route::get('api/orders/{order_code}/check-status', [SepayPaymentController::class, 'checkStatus'])
+    ->name('sepay.order-status');
+Route::match(['GET', 'POST'], 'sepay/oauth/callback', [SepayOAuthController::class, 'callback'])
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
+    ->name('sepay.oauth.callback');
 
 // Redirect misspelled 'referal' to correct 'referral'
 Route::redirect('referal/{path?}', 'referral/{path?}')->where('path', '.*');
@@ -361,6 +374,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('payments/stripe', [StripePaymentController::class, 'processPayment'])->name('stripe.payment');
     Route::post('payments/paypal', [PayPalPaymentController::class, 'processPayment'])->name('paypal.payment');
     Route::post('payments/bank', [BankPaymentController::class, 'processPayment'])->name('bank.payment');
+    Route::post('payments/sepay', [SepayPaymentController::class, 'processPayment'])->name('sepay.payment');
     Route::post('payments/paystack', [PaystackPaymentController::class, 'processPayment'])->name('paystack.payment');
     Route::post('payments/flutterwave', [FlutterwavePaymentController::class, 'processPayment'])->name('flutterwave.payment');
     Route::post('payments/paytabs', [PayTabsPaymentController::class, 'processPayment'])->name('paytabs.payment');
