@@ -44,9 +44,10 @@ return [
         'qr_base_url' => env('SEPAY_QR_BASE_URL', 'https://qr.sepay.vn/img'),
         'amount_tolerance' => (float) env('SEPAY_AMOUNT_TOLERANCE', 1000),
         'redirect_uri' => env('SEPAY_REDIRECT_URI'),
+        'oauth_proxy_url' => env('SEPAY_OAUTH_PROXY_URL', 'https://friendsofbotble.com/oauth/sepay/init'),
         'refresh_token_url' => env('SEPAY_REFRESH_TOKEN_URL', 'https://friendsofbotble.com/oauth/sepay/token'),
         'api_base_url' => env('SEPAY_API_BASE_URL', 'https://my.sepay.vn/api/v1'),
-        'profile_endpoint' => env('SEPAY_PROFILE_ENDPOINT', '/user/profile'),
+        'profile_endpoint' => env('SEPAY_PROFILE_ENDPOINT', '/me'),
         'bank_accounts_endpoint' => env('SEPAY_BANK_ACCOUNTS_ENDPOINT', '/bank-accounts'),
     ],
 

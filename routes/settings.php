@@ -41,6 +41,7 @@ Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
     Route::get('/sepay/oauth/connect', [SepayOAuthController::class, 'connect'])->middleware('permission:manage-payment-settings')->name('sepay.oauth.connect');
     Route::get('/sepay/oauth/disconnect', [SepayOAuthController::class, 'disconnect'])->middleware('permission:manage-payment-settings')->name('sepay.oauth.disconnect');
     Route::post('/sepay/sync', [SepayOAuthController::class, 'sync'])->middleware('permission:manage-payment-settings')->name('sepay.sync');
+    Route::get('/sepay/status', [SepayOAuthController::class, 'status'])->middleware('permission:manage-payment-settings')->name('sepay.status');
     // Profile settings page with profile and password sections
     Route::get('ho-so-ca-nhan', function () {
         return Inertia::render('settings/profile-settings');

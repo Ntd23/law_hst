@@ -138,6 +138,11 @@ class SepayPaymentController extends Controller
         return response()->json(['success' => true, 'message' => $result]);
     }
 
+    public function callbackPayment(Request $request)
+    {
+        return $this->webhook($request);
+    }
+
     public function checkStatus(string $orderCode)
     {
         $orderCode = strtoupper(trim($orderCode));
@@ -292,7 +297,10 @@ class SepayPaymentController extends Controller
 
         $content = trim((string) ($payload['content'] ?? $payload['description'] ?? ''));
         $code = trim((string) ($payload['code'] ?? ''));
-        $references = array_values(array_unique(array_filter([$code, $this->extractInternalReference($content)])));
+        $references = array_values(array_unique(array_filter([
+            $code ? strtoupper($code) : null,
+            ...$this->extractInternalReferences($content),
+        ])));
 
         $processed = DB::transaction(function () use ($references, $transactionId, $sepayTransactionId, $content, $amount, $payload) {
             return $this->completePendingInvoicePayment($references, $transactionId, $sepayTransactionId, $amount, $payload)
@@ -358,7 +366,7 @@ class SepayPaymentController extends Controller
         $invoiceId = null;
 
         foreach ($references as $reference) {
-            if (preg_match('/INV(\d+)/i', $reference, $matches)) {
+            if (preg_match('/INV[-_]?(\d+)/i', $reference, $matches)) {
                 $invoiceId = (int) $matches[1];
                 break;
             }
@@ -445,17 +453,22 @@ class SepayPaymentController extends Controller
         return true;
     }
 
-    private function extractInternalReference(string $content): ?string
+    private function extractInternalReferences(string $content): array
     {
         if ($content === '') {
-            return null;
+            return [];
         }
 
-        if (preg_match('/\b[A-Z0-9_]*(?:PLAN|INV)\d+[A-Z0-9_]*\b/i', $content, $matches)) {
-            return strtoupper($matches[0]);
+        preg_match_all('/\b(?:SEPAY[-_])?(?:PLAN|INV)[-_]?\d+(?:[-_][A-Z0-9]+)?\b/i', $content, $matches);
+
+        if (empty($matches[0])) {
+            return [];
         }
 
-        return null;
+        return array_values(array_unique(array_map(
+            static fn (string $reference): string => strtoupper($reference),
+            $matches[0],
+        )));
     }
 
     private function parseTransactionDate(?string $date): \Illuminate\Support\Carbon

@@ -56,8 +56,6 @@ class PaymentSettingController extends Controller
                 'sepay_bank_account_id' => 'nullable|string|max:100',
                 'sepay_gateway_name' => 'nullable|string|max:100',
                 'sepay_payment_note' => 'nullable|string|max:500',
-                'sepay_api_key' => 'nullable|string',
-                'sepay_webhook_secret' => 'nullable|string',
                 'razorpay_key' => 'nullable|string',
                 'razorpay_secret' => 'nullable|string',
                 'mercadopago_mode' => 'in:sandbox,live',
@@ -194,8 +192,6 @@ class PaymentSettingController extends Controller
             'sepay_bank_account_id' => $validatedData['sepay_bank_account_id'] ?? '',
             'sepay_gateway_name' => $validatedData['sepay_gateway_name'] ?? 'SePay',
             'sepay_payment_note' => $validatedData['sepay_payment_note'] ?? '',
-            'sepay_api_key' => $validatedData['sepay_api_key'] ?? '',
-            'sepay_webhook_secret' => $validatedData['sepay_webhook_secret'] ?? '',
             'stripe_key' => $validatedData['stripe_key'],
             'stripe_secret' => $validatedData['stripe_secret'],
             'paypal_client_id' => $validatedData['paypal_client_id'],
@@ -569,7 +565,11 @@ class PaymentSettingController extends Controller
         $settingsUserId = getPaymentSettingsUserId() ?: auth()->id();
         $settings = PaymentSetting::getUserSettings($settingsUserId);
 
-        if (empty($settings['sepay_access_token']) || empty($settings['sepay_connected_at'])) {
+        if (
+            empty($settings['sepay_access_token'])
+            || empty($settings['sepay_connected_at'])
+            || ($settings['sepay_connection_status'] ?? '') !== 'connected'
+        ) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'sepay' => [__('Please connect SePay before selecting a receiving bank account.')],
             ]);
@@ -579,13 +579,13 @@ class PaymentSettingController extends Controller
         $bankAccount = $client->bankAccount($request->string('sepay_bank_account_id')->toString());
 
         $bank = $bankAccount['bank'] ?? [];
-        $bankCode = $bankAccount['bank_code'] ?? $bankAccount['bankCode'] ?? $bankAccount['bank_short_name'] ?? $bank['code'] ?? $bank['short_name'] ?? '';
-        $accountNumber = $bankAccount['account_number'] ?? $bankAccount['accountNumber'] ?? $bankAccount['number'] ?? '';
-        $accountName = $bankAccount['account_name'] ?? $bankAccount['accountName'] ?? $bankAccount['account_holder_name'] ?? $bankAccount['name'] ?? '';
+        $bankCode = $bankAccount['bank_code'] ?? $bankAccount['bankCode'] ?? $bankAccount['bank_short_name'] ?? $bankAccount['bankShortName'] ?? $bank['code'] ?? $bank['short_name'] ?? '';
+        $accountNumber = $bankAccount['account_number'] ?? $bankAccount['accountNumber'] ?? $bankAccount['bank_account_number'] ?? $bankAccount['bankAccountNumber'] ?? $bankAccount['number'] ?? '';
+        $accountName = $bankAccount['account_name'] ?? $bankAccount['accountName'] ?? $bankAccount['account_holder_name'] ?? $bankAccount['accountHolderName'] ?? $bankAccount['account_holder'] ?? $bankAccount['accountHolder'] ?? $bankAccount['name'] ?? '';
 
         updatePaymentSetting('sepay_bank_code', $bankCode, $settingsUserId);
-        updatePaymentSetting('sepay_bank_name', $bankAccount['bank_name'] ?? $bankAccount['bankName'] ?? $bank['name'] ?? '', $settingsUserId);
-        updatePaymentSetting('sepay_bank_brand_name', $bankAccount['brand_name'] ?? $bankAccount['brandName'] ?? '', $settingsUserId);
+        updatePaymentSetting('sepay_bank_name', $bankAccount['bank_name'] ?? $bankAccount['bankName'] ?? $bankAccount['bank_full_name'] ?? $bankAccount['bankFullName'] ?? $bank['name'] ?? '', $settingsUserId);
+        updatePaymentSetting('sepay_bank_brand_name', $bankAccount['brand_name'] ?? $bankAccount['brandName'] ?? $bankAccount['bank_short_name'] ?? $bankAccount['bankShortName'] ?? '', $settingsUserId);
         updatePaymentSetting('sepay_account_number', $accountNumber, $settingsUserId);
         updatePaymentSetting('sepay_account_name', $accountName, $settingsUserId);
         updatePaymentSetting('sepay_bank_logo', $bankAccount['logo'] ?? $bankAccount['bank_logo'] ?? $bank['logo'] ?? '', $settingsUserId);
@@ -746,7 +746,8 @@ class PaymentSettingController extends Controller
             'sepay_account_avatar',
             'sepay_oauth_connected',
             'sepay_connected_at',
-            'sepay_last_synced_at'
+            'sepay_last_synced_at',
+            'sepay_connection_status'
         ];
 
         // Include enabled status, modes, and frontend keys only

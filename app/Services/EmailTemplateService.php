@@ -62,6 +62,7 @@ class EmailTemplateService
             $subject = $this->replaceVariables($templateLang->subject, $variables);
             $content = $this->replaceVariables($templateLang->content, $variables);
             $content = $this->appendInvoicePaymentLinkIfMissing($templateName, $templateLang->content, $content, $variables, $language);
+            $content = $this->appendInvoiceSepayQrIfMissing($templateName, $templateLang->content, $content, $variables);
             $fromName = $this->replaceVariables($template->from, $variables);
 
             // Configure SMTP settings
@@ -138,6 +139,17 @@ class EmailTemplateService
             </p>';
     }
 
+    private function appendInvoiceSepayQrIfMissing(string $templateName, ?string $templateContent, string $content, array $variables): string
+    {
+        $qrBlock = $variables['{sepay_qr_block}'] ?? null;
+
+        if ($templateName !== 'Invoice Sent' || !$qrBlock || str_contains((string) $templateContent, '{sepay_qr_block}')) {
+            return $content;
+        }
+
+        return $content . $qrBlock;
+    }
+
     public function sendTemplateEmailWithLanguage(string $templateName, array $variables, string $toEmail, string $toName = null, string $language = 'en')
     {
         // Skip email sending in demo mode
@@ -182,6 +194,7 @@ class EmailTemplateService
             $subject = $this->replaceVariables($templateLang->subject, $variables);
             $content = $this->replaceVariables($templateLang->content, $variables);
             $content = $this->appendInvoicePaymentLinkIfMissing($templateName, $templateLang->content, $content, $variables, $language);
+            $content = $this->appendInvoiceSepayQrIfMissing($templateName, $templateLang->content, $content, $variables);
             $fromName = $this->replaceVariables($template->from, $variables);
 
             // Configure SMTP settings

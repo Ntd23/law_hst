@@ -27,75 +27,106 @@ KEY;
         $state = bin2hex(random_bytes(16));
         $settingsUserId = getPaymentSettingsUserId() ?: auth()->id();
 
-        session(['sepay_oauth_state' => $state, 'sepay_oauth_user_id' => $settingsUserId]);
-        Cache::put($this->stateCacheKey($state), $settingsUserId, now()->addMinutes(10));
-
-        $callbackUrl = config('services.sepay.redirect_uri') ?: route('sepay.oauth.callback');
-        $url = 'https://friendsofbotble.com/oauth/sepay/init?' . http_build_query([
-            'callback_url' => $callbackUrl,
-            'state' => $state,
+        session([
+            'sepay_oauth_state' => $state,
+            'sepay_oauth_user_id' => $settingsUserId,
         ]);
 
-        return redirect()->away($url);
+        Cache::put($this->stateCacheKey($state), $settingsUserId, now()->addMinutes(10));
+        $this->save((int) $settingsUserId, 'sepay_connection_status', 'connecting');
+
+        return redirect()->away($this->proxyInitUrl($state));
     }
 
     public function callback(Request $request)
     {
-        $validated = $request->validate([
-            'access_token' => 'required|string',
-            'refresh_token' => 'nullable|string',
-            'expires_in' => 'nullable|integer',
-            'state' => 'required|string',
-            'signature' => 'required|string',
-        ]);
+        $state = (string) $request->query('state', $request->input('state', ''));
+        $settingsUserId = $this->resolveSettingsUserId($state);
 
-        if (!$this->verifySignature($validated['access_token'], $validated['state'], $validated['signature'])) {
-            Log::warning('SePay OAuth callback rejected: invalid RSA signature', [
-                'state' => $validated['state'],
+        if ($request->filled('error')) {
+            $this->markConnectionFailed($settingsUserId, 'failed');
+
+            Log::warning('SePay OAuth authorization failed', [
+                'settings_user_id' => $settingsUserId,
+                'error' => $request->query('error', $request->input('error')),
             ]);
 
-            return response()->json(['success' => false, 'message' => 'Invalid signature'], 401);
+            return $this->popupComplete(false, __('SePay authorization failed. Please try again.'));
         }
 
-        $settingsUserId = Cache::pull($this->stateCacheKey($validated['state']))
-            ?: ((string) session('sepay_oauth_state') === (string) $validated['state'] ? session('sepay_oauth_user_id') : null);
+        $accessToken = (string) $request->query('access_token', $request->input('access_token', ''));
+        $refreshToken = (string) $request->query('refresh_token', $request->input('refresh_token', ''));
+        $signature = (string) $request->query('signature', $request->input('signature', ''));
+        $expiresIn = $request->query('expires_in', $request->input('expires_in'));
+
+        if ($accessToken === '' || $state === '' || $signature === '') {
+            $this->markConnectionFailed($settingsUserId, 'failed');
+
+            return $this->popupComplete(false, __('Missing SePay token, state or signature.'));
+        }
 
         if (!$settingsUserId) {
-            return response()->json(['success' => false, 'message' => 'Invalid state'], 419);
+            Log::warning('SePay OAuth callback rejected: invalid state', ['state' => $state]);
+
+            return $this->popupComplete(false, __('Invalid SePay connection state. Please start the connection again.'));
         }
 
-        $this->save($settingsUserId, 'sepay_oauth_connected', true);
-        $this->save($settingsUserId, 'sepay_access_token', $validated['access_token']);
-        $this->save($settingsUserId, 'sepay_refresh_token', $validated['refresh_token'] ?? '');
-        $this->save($settingsUserId, 'sepay_expired_at', isset($validated['expires_in']) ? now()->addSeconds((int) $validated['expires_in'])->toDateTimeString() : '');
-        $this->save($settingsUserId, 'sepay_connected_at', now()->toDateTimeString());
-        $this->save($settingsUserId, 'sepay_connection_status', 'connected');
+        try {
+            if (!$this->verifySignature($accessToken, $state, $signature)) {
+                Log::warning('SePay OAuth callback rejected: invalid RSA signature', [
+                    'settings_user_id' => $settingsUserId,
+                    'state' => $state,
+                ]);
 
-        session()->forget(['sepay_oauth_state', 'sepay_oauth_user_id']);
+                $this->markConnectionFailed($settingsUserId, 'failed');
 
-        (new SepayClient((int) $settingsUserId))->syncProfileAndAccounts();
+                return $this->popupComplete(false, __('Invalid SePay callback signature.'));
+            }
 
-        if ($request->expectsJson()) {
-            return response()->json(['success' => true]);
+            $this->saveProxyTokens((int) $settingsUserId, $accessToken, $refreshToken, $expiresIn);
+
+            if (!(new SepayClient((int) $settingsUserId))->syncProfileAndAccounts()) {
+                return $this->popupComplete(false, __('SePay was authorized, but no bank account could be synced. Please add a bank account in SePay and sync again.'));
+            }
+
+            session()->forget(['sepay_oauth_state', 'sepay_oauth_user_id']);
+
+            return $this->popupComplete(true, __('SePay connected successfully.'));
+        } catch (\Throwable $e) {
+            $this->markConnectionFailed($settingsUserId, 'failed');
+
+            Log::warning('SePay OAuth callback failed', [
+                'settings_user_id' => $settingsUserId,
+                'message' => $e->getMessage(),
+            ]);
+
+            return $this->popupComplete(false, __('Could not connect SePay. Please check your OAuth configuration and try again.'));
         }
-
-        return $this->popupComplete();
     }
 
-    public function popupComplete()
-    {
-        return response(
-            '<!doctype html><html><body><script>if(window.opener){window.opener.location.reload();}window.close();</script></body></html>'
-        )->header('Content-Type', 'text/html');
-    }
-
-    public function sync()
+    public function sync(Request $request)
     {
         $settingsUserId = getPaymentSettingsUserId() ?: auth()->id();
 
         try {
             if (!(new SepayClient((int) $settingsUserId))->syncProfileAndAccounts()) {
-                return back()->with('error', __('Could not sync SePay account. Please disconnect and connect SePay again.'));
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('SePay account synced, but no receiving bank account was found.'),
+                        'sepay' => $this->statusPayload((int) $settingsUserId),
+                    ]);
+                }
+
+                return back()->with('error', __('SePay account synced, but no receiving bank account was found.'));
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('SePay account synced successfully.'),
+                    'sepay' => $this->statusPayload((int) $settingsUserId),
+                ]);
             }
 
             return back()->with('success', __('SePay account synced successfully.'));
@@ -105,11 +136,26 @@ KEY;
                 'message' => $e->getMessage(),
             ]);
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('Could not sync SePay account. Please try again.'),
+                    'sepay' => $this->statusPayload((int) $settingsUserId),
+                ], 422);
+            }
+
             return back()->with('error', __('Could not sync SePay account. Please try again.'));
         }
     }
 
-    public function disconnect()
+    public function status()
+    {
+        $settingsUserId = getPaymentSettingsUserId() ?: auth()->id();
+
+        return response()->json($this->statusPayload((int) $settingsUserId));
+    }
+
+    public function disconnect(Request $request)
     {
         $settingsUserId = getPaymentSettingsUserId() ?: auth()->id();
 
@@ -117,6 +163,8 @@ KEY;
             'sepay_oauth_connected',
             'sepay_access_token',
             'sepay_refresh_token',
+            'sepay_token_type',
+            'sepay_scope',
             'sepay_expired_at',
             'sepay_connected_at',
             'sepay_connection_status',
@@ -128,10 +176,133 @@ KEY;
             'sepay_webhook_id',
             'sepay_last_synced_at',
         ] as $key) {
-            $this->save($settingsUserId, $key, '');
+            $this->save((int) $settingsUserId, $key, '');
+        }
+
+        Cache::forget("sepay:{$settingsUserId}:profile");
+        Cache::forget("sepay:{$settingsUserId}:bank_accounts");
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => __('SePay disconnected successfully.'),
+                'sepay' => $this->statusPayload((int) $settingsUserId),
+            ]);
         }
 
         return back()->with('success', __('SePay disconnected successfully.'));
+    }
+
+    private function statusPayload(int $settingsUserId): array
+    {
+        $settings = PaymentSetting::getUserSettings($settingsUserId);
+        $bankAccounts = json_decode((string) ($settings['sepay_bank_accounts'] ?? '[]'), true);
+
+        if (!is_array($bankAccounts)) {
+            $bankAccounts = [];
+        }
+
+        $hasBankAccounts = count($bankAccounts) > 0;
+        $status = (string) ($settings['sepay_connection_status'] ?? 'disconnected');
+        $connected = !empty($settings['sepay_access_token'])
+            && !empty($settings['sepay_connected_at'])
+            && $status === 'connected'
+            && $hasBankAccounts;
+
+        return [
+            'connected' => $connected,
+            'status' => $status,
+            'connected_at' => $settings['sepay_connected_at'] ?? '',
+            'has_bank_accounts' => $hasBankAccounts,
+            'sepay_oauth_connected' => (bool) ($settings['sepay_oauth_connected'] ?? false),
+            'sepay_is_connected' => $connected,
+            'sepay_has_bank_accounts' => $hasBankAccounts,
+            'sepay_connection_status' => $status,
+            'sepay_connected_at' => $settings['sepay_connected_at'] ?? '',
+            'sepay_last_synced_at' => $settings['sepay_last_synced_at'] ?? '',
+            'sepay_account_email' => $settings['sepay_account_email'] ?? '',
+            'sepay_account_display_name' => $settings['sepay_account_display_name'] ?? '',
+            'sepay_account_avatar' => $settings['sepay_account_avatar'] ?? '',
+            'sepay_bank_accounts' => json_encode($bankAccounts, JSON_UNESCAPED_UNICODE),
+            'sepay_bank_account_id' => $settings['sepay_bank_account_id'] ?? '',
+            'sepay_bank_code' => $settings['sepay_bank_code'] ?? '',
+            'sepay_account_number' => $settings['sepay_account_number'] ?? '',
+            'sepay_account_name' => $settings['sepay_account_name'] ?? '',
+        ];
+    }
+
+    private function proxyInitUrl(string $state): string
+    {
+        return rtrim((string) config('services.sepay.oauth_proxy_url'), '?') . '?' . http_build_query([
+            'callback_url' => $this->redirectUri(),
+            'state' => $state,
+        ]);
+    }
+
+    private function popupComplete(bool $success, string $message)
+    {
+        $payload = json_encode([
+            'type' => 'sepay-oauth-complete',
+            'success' => $success,
+            'message' => $message,
+        ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+
+        return response(
+            '<!doctype html><html><body><script>
+                const payload = ' . $payload . ';
+                if (window.opener) {
+                    try { window.opener.postMessage(payload, "*"); } catch (e) {}
+                }
+                window.close();
+            </script></body></html>'
+        )->header('Content-Type', 'text/html');
+    }
+
+    private function resolveSettingsUserId(string $state): ?int
+    {
+        if ($state === '') {
+            return null;
+        }
+
+        $settingsUserId = Cache::pull($this->stateCacheKey($state));
+
+        if (!$settingsUserId && (string) session('sepay_oauth_state') === $state) {
+            $settingsUserId = session('sepay_oauth_user_id');
+        }
+
+        return $settingsUserId ? (int) $settingsUserId : null;
+    }
+
+    private function redirectUri(): string
+    {
+        return (string) (config('services.sepay.redirect_uri') ?: route('sepay.oauth.callback'));
+    }
+
+    private function saveProxyTokens(int $settingsUserId, string $accessToken, string $refreshToken, mixed $expiresIn): void
+    {
+        $this->save($settingsUserId, 'sepay_access_token', $accessToken);
+        $this->save($settingsUserId, 'sepay_refresh_token', $refreshToken);
+        $this->save($settingsUserId, 'sepay_token_type', 'Bearer');
+        $this->save($settingsUserId, 'sepay_expired_at', is_numeric($expiresIn) ? now()->addSeconds((int) $expiresIn)->toDateTimeString() : '');
+        $this->save($settingsUserId, 'sepay_oauth_connected', true);
+        $this->save($settingsUserId, 'sepay_connected_at', now()->toDateTimeString());
+        $this->save($settingsUserId, 'sepay_connection_status', 'syncing');
+    }
+
+    private function markConnectionFailed(?int $settingsUserId, string $status): void
+    {
+        if (!$settingsUserId) {
+            return;
+        }
+
+        $this->save($settingsUserId, 'sepay_oauth_connected', false);
+        $this->save($settingsUserId, 'sepay_connected_at', '');
+        $this->save($settingsUserId, 'sepay_connection_status', $status);
+    }
+
+    private function save(int $settingsUserId, string $key, mixed $value): void
+    {
+        PaymentSetting::updateOrCreateSetting($settingsUserId, $key, $value);
     }
 
     private function verifySignature(string $accessToken, string $state, string $signature): bool
@@ -149,11 +320,6 @@ KEY;
         }
 
         return openssl_verify($accessToken . '.' . $state, $decodedSignature, self::PUBLIC_KEY, OPENSSL_ALGO_SHA256) === 1;
-    }
-
-    private function save(int $settingsUserId, string $key, mixed $value): void
-    {
-        PaymentSetting::updateOrCreateSetting($settingsUserId, $key, $value);
     }
 
     private function stateCacheKey(string $state): string

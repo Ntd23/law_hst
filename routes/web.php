@@ -76,11 +76,9 @@ Route::post('api/sepay/webhook', [SepayPaymentController::class, 'webhook'])
     ->name('sepay.webhook.api');
 Route::get('api/orders/{order_code}/check-status', [SepayPaymentController::class, 'checkStatus'])
     ->name('sepay.order-status');
-Route::post('sepay/oauth/callback', [SepayOAuthController::class, 'callback'])
+Route::match(['GET', 'POST'], 'sepay/oauth/callback', [SepayOAuthController::class, 'callback'])
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
     ->name('sepay.oauth.callback');
-Route::get('sepay/oauth/callback', [SepayOAuthController::class, 'popupComplete'])
-    ->name('sepay.oauth.callback.complete');
 
 // Redirect misspelled 'referal' to correct 'referral'
 Route::redirect('referal/{path?}', 'referral/{path?}')->where('path', '.*');
