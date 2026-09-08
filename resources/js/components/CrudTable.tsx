@@ -62,6 +62,7 @@ export function CrudTable({
         if (!column.sortable || !onSort) return;
         onSort(column.key);
     };
+    const hasLabeledAction = actions.some((action) => action.showLabel);
 
     // Check if any actions have permissions
     const hasAnyActionPermission = actions.some((action) => {
@@ -130,8 +131,8 @@ export function CrudTable({
                             ? getStatusLabel(row.status, t)
                             : typeof action.label === 'function'
                               ? action.label(row)
-                              : action.label;
-                    const IconComponent = (LucidIcons as any)[iconName] as React.ElementType;
+                              : action.label || '';
+                    const IconComponent = ((LucidIcons as any)[iconName || 'MoreHorizontal'] || MoreHorizontal) as React.ElementType;
 
                     // Handle link actions
                     if (action.href) {
@@ -142,8 +143,13 @@ export function CrudTable({
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Link href={href} target={action.openInNewTab ? '_blank' : undefined}>
-                                            <Button variant="ghost" size="icon" className={cn('h-8 w-8 text-gray-500')}>
+                                            <Button
+                                                variant="ghost"
+                                                size={action.showLabel ? 'sm' : 'icon'}
+                                                className={cn(action.showLabel ? 'h-8 px-2' : 'h-8 w-8', 'text-gray-500', action.className)}
+                                            >
                                                 <IconComponent size={16} />
+                                                {action.showLabel && <span>{actionLabel}</span>}
                                             </Button>
                                         </Link>
                                     </TooltipTrigger>
@@ -156,17 +162,24 @@ export function CrudTable({
                     }
 
                     // Handle regular action buttons
+                    if (!action.action) {
+                        return null;
+                    }
+
+                    const actionName = action.action;
+
                     return (
                         <TooltipProvider key={index}>
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button
                                         variant="ghost"
-                                        size="icon"
-                                        className={cn('h-8 w-8 text-gray-500')}
-                                        onClick={() => onAction(action.action, row)}
+                                        size={action.showLabel ? 'sm' : 'icon'}
+                                        className={cn(action.showLabel ? 'h-8 px-2' : 'h-8 w-8', 'text-gray-500', action.className)}
+                                        onClick={() => onAction(actionName, row)}
                                     >
                                         <IconComponent size={16} />
+                                        {action.showLabel && <span>{actionLabel}</span>}
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -271,7 +284,7 @@ export function CrudTable({
                                 </div>
                             </TableHead>
                         ))}
-                        {showActions && hasAnyActionPermission && <TableHead className="w-24 py-2.5 text-center font-semibold">{t('Actions')}</TableHead>}
+                        {showActions && hasAnyActionPermission && <TableHead className={cn('py-2.5 text-center font-semibold', hasLabeledAction ? 'min-w-40' : 'w-24')}>{t('Actions')}</TableHead>}
                      </TableRow>
                  </TableHeader>
                  <TableBody>
@@ -368,4 +381,3 @@ function DropdownAction({ row, items, onAction, row_status, t }: {
         </div>
     );
 }
-

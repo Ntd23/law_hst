@@ -331,6 +331,11 @@ class DashboardAnalyticsController extends Controller
         }
 
         // Calculate average resolution time for closed cases
+        $isSqlite = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite';
+        $diffSql = $isSqlite
+            ? 'AVG(julianday(updated_at) - julianday(created_at)) as avg_days'
+            : 'AVG(DATEDIFF(updated_at, created_at)) as avg_days';
+
         $avgDays = CaseModel::whereIn('created_by', $companyIds)
             ->where(function($query) {
                 $query->where('status', 'closed')
@@ -339,7 +344,7 @@ class DashboardAnalyticsController extends Controller
                       });
             })
             ->whereNotNull('updated_at')
-            ->selectRaw('AVG(DATEDIFF(updated_at, created_at)) as avg_days')
+            ->selectRaw($diffSql)
             ->value('avg_days');
 
         return $avgDays ? round($avgDays, 1) : 0;

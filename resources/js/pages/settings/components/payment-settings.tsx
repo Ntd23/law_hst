@@ -582,6 +582,16 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
     return filteredMethods.some(m => m.key === methodKey);
   };
 
+  const firstFormError = (formErrors: Record<string, unknown>) => {
+    const value = Object.values(formErrors)[0];
+
+    if (Array.isArray(value)) {
+      return value[0];
+    }
+
+    return typeof value === 'string' ? value : null;
+  };
+
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -598,7 +608,7 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
         }
       },
       onError: (errors) => {
-        toast.error(t('Failed to update payment settings'));
+        toast.error(firstFormError(errors) || t('Failed to update payment settings'));
       }
     });
   };

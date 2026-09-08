@@ -11,13 +11,14 @@ import { useTranslation } from 'react-i18next';
 import { Pagination } from '@/components/ui/pagination';
 import { SearchAndFilterBar } from '@/components/ui/search-and-filter-bar';
 import LineItemsBuilder from '@/components/LineItemsBuilder';
-import { formatCurrency, formatStatusText } from '@/utils/helpers';
+import { formatCurrency } from '@/utils/helpers';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useInitials } from '@/hooks/use-initials';
+import { SepayPaymentModal } from '@/components/payment-modals/sepay-payment-modal';
 
 export default function Invoices() {
     const { t } = useTranslation();
-    const { auth, invoices, clients, filters: pageFilters = {} } = usePage().props as any;
+    const { auth, invoices, clients, sepaySettingsByInvoice = {}, filters: pageFilters = {} } = usePage().props as any;
     const permissions = auth?.permissions || [];
 
     // State
@@ -28,6 +29,7 @@ export default function Invoices() {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState<any>(null);
+    const [paymentInvoice, setPaymentInvoice] = useState<any>(null);
     const [formMode, setFormMode] = useState<'create' | 'edit' | 'view'>('create');
 
     const hasActiveFilters = () => searchTerm !== '' || selectedClient !== '_empty_' || selectedStatus !== '_empty_';
@@ -68,6 +70,9 @@ export default function Invoices() {
                 break;
             case 'payment_link':
                 handleCopyPaymentLink(item);
+                break;
+            case 'pay_invoice':
+                setPaymentInvoice(item);
                 break;
         }
     };
@@ -162,6 +167,37 @@ export default function Invoices() {
         }, { preserveState: true, preserveScroll: true });
     };
 
+    const getSepaySettings = (invoice: any) => {
+        if (!invoice?.id) return {};
+        return sepaySettingsByInvoice?.[invoice.id] || {};
+    };
+
+    const hasSepayPaymentAccount = (invoice: any) => {
+        const settings = getSepaySettings(invoice);
+
+        return Boolean(
+            settings?.enabled
+            && settings?.bank_code
+            && settings?.account_number
+            && settings?.account_name
+        );
+    };
+
+    const getInvoicePaymentAmount = (invoice: any) => {
+        const remainingAmount = Number(invoice?.remaining_amount ?? 0);
+        const totalAmount = Number(invoice?.total_amount ?? 0);
+
+        return remainingAmount > 0 ? remainingAmount : totalAmount;
+    };
+
+    const canPayInvoice = (invoice: any) => {
+        return auth?.user?.type === 'client'
+            && !!invoice?.payment_token
+            && !['paid', 'cancelled'].includes(invoice?.status || '')
+            && hasSepayPaymentAccount(invoice)
+            && getInvoicePaymentAmount(invoice) > 0;
+    };
+
     const [pageInitialState, setPageInitialState] = useState(true);
 
     useEffect(() => {
@@ -246,17 +282,10 @@ export default function Invoices() {
             key: 'status',
             label: t('Status'),
             render: (value: string) => {
-                const statusColors = {
-                    draft: 'bg-gray-50 text-gray-700 ring-gray-600/20',
-                    sent: 'bg-blue-50 text-blue-700 ring-blue-600/20',
-                    paid: 'bg-green-50 text-green-700 ring-green-600/20',
-                    partial_paid: 'bg-yellow-50 text-yellow-700 ring-yellow-600/20',
-                    overdue: 'bg-red-50 text-red-700 ring-red-600/20',
-                    cancelled: 'bg-gray-50 text-gray-700 ring-gray-600/20'
-                };
+                const isPaid = value === 'paid';
                 return (
-                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${statusColors[value as keyof typeof statusColors] || statusColors.draft}`}>
-                        {t(formatStatusText(value))}
+                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${isPaid ? 'bg-green-50 text-green-700 ring-green-600/20' : 'bg-red-50 text-red-700 ring-red-600/20'}`}>
+                        {isPaid ? t('Paid') : t('Unpaid')}
                     </span>
                 );
             }
@@ -271,6 +300,15 @@ export default function Invoices() {
             action: 'view',
             className: 'text-blue-500',
             requiredPermission: 'view-invoices'
+        },
+        {
+            label: t('Pay'),
+            icon: 'CreditCard',
+            action: 'pay_invoice',
+            className: 'text-green-600 hover:text-green-700',
+            requiredPermission: 'view-invoices',
+            showLabel: true,
+            condition: canPayInvoice
         },
         {
             label: t('Edit'),
@@ -467,6 +505,16 @@ export default function Invoices() {
                 itemName={currentItem?.invoice_number || ''}
                 entityName="invoice"
             />
+
+            {paymentInvoice && (
+                <SepayPaymentModal
+                    isOpen={!!paymentInvoice}
+                    onClose={() => setPaymentInvoice(null)}
+                    invoice={paymentInvoice}
+                    amount={getInvoicePaymentAmount(paymentInvoice)}
+                    sepaySettings={getSepaySettings(paymentInvoice)}
+                />
+            )}
         </PageTemplate>
     );
 }

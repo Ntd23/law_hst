@@ -78,12 +78,12 @@ class ExpenseController extends BaseController
         $caseSummaries = [];
         if (!empty($caseIds)) {
             $aggregates = (clone $baseQuery)
-                ->selectRaw('case_id,
+                ->selectRaw("case_id,
                     SUM(amount) as total_amount,
-                    SUM(CASE WHEN status = "pending" THEN 1 ELSE 0 END) as pending_count,
-                    SUM(CASE WHEN status = "approved" THEN 1 ELSE 0 END) as approved_count,
-                    SUM(CASE WHEN status = "rejected" THEN 1 ELSE 0 END) as rejected_count,
-                    COUNT(*) as total_count')
+                    SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+                    SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved_count,
+                    SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected_count,
+                    COUNT(*) as total_count")
                 ->whereIn('case_id', $caseIds)
                 ->groupBy('case_id')
                 ->get()->keyBy('case_id');

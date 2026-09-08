@@ -52,8 +52,13 @@ class ExpenseSeeder extends Seeder
                 for ($i = 1; $i <= $expenseCount; $i++) {
                     $expenseDate = now()->subDays(rand(1, 60));
 
+                    $teamMembers = $case->teamMembers;
+                    $creatorId = ($teamMembers && $teamMembers->isNotEmpty())
+                        ? ($teamMembers->random()->user_id ?? $teamMembers->random()->user?->id ?? $company->id)
+                        : $company->id;
+
                     $expenseData = [
-                        'created_by' => $case->teamMembers?->random()?->user?->id,
+                        'created_by' => $creatorId,
                         'case_id' => $case->id,
                         'expense_category_id' => $categories->random()->id,
                         'invoice_id' => null,

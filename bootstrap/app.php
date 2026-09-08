@@ -13,6 +13,7 @@ use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -27,6 +28,8 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
             DemoModeMiddleware::class,
         ]);
+
+        $middleware->trustProxies(at: '*');
 
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
@@ -77,6 +80,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'cashfree/invoice/success',
             'cashfree/invoice/callback',
             'api/media/batch',
+            'api/sepay/webhook',
+            'webhooks/sepay',
             'sepay/oauth/callback',
             ],
         );

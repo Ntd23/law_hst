@@ -9,7 +9,7 @@ class SepayInvoiceQrService
 {
     public function buildVariables(Invoice $invoice): array
     {
-        $settingsUserId = getPaymentSettingsUserId($invoice->created_by);
+        $settingsUserId = getCompanyId($invoice->created_by) ?: $invoice->created_by;
 
         if (!$settingsUserId) {
             return [];
@@ -21,9 +21,9 @@ class SepayInvoiceQrService
             return [];
         }
 
-        $bankCode = $this->normalizeBankCode((string) (($settings['sepay_bank_code'] ?? '') ?: config('services.sepay.bank_name', '')));
-        $accountNumber = trim((string) (($settings['sepay_account_number'] ?? '') ?: config('services.sepay.account_number', '')));
-        $accountName = trim((string) (($settings['sepay_account_name'] ?? '') ?: config('services.sepay.account_holder', '')));
+        $bankCode = $this->normalizeBankCode((string) ($settings['sepay_bank_code'] ?? ''));
+        $accountNumber = trim((string) ($settings['sepay_account_number'] ?? ''));
+        $accountName = trim((string) ($settings['sepay_account_name'] ?? ''));
         $amount = (int) round((float) ($invoice->remaining_amount ?: $invoice->total_amount));
 
         if ($bankCode === '' || $accountNumber === '' || $amount <= 0) {
@@ -61,7 +61,7 @@ class SepayInvoiceQrService
 
     private function referenceCode(Invoice $invoice, string $prefix): string
     {
-        $safePrefix = strtoupper(preg_replace('/[^A-Z0-9_]/i', '', $prefix) ?: 'SEPAY');
+        $safePrefix = strtoupper(trim((string) preg_replace('/[^A-Z0-9_-]/i', '', $prefix), '-_')) ?: 'SEPAY';
 
         return $safePrefix . '-INV-' . $invoice->id;
     }

@@ -148,6 +148,8 @@ class PaymentSettingController extends Controller
 
     private function preparePaymentSettings(Request $request, array $validatedData): array
     {
+        $value = fn (string $key, string $default = ''): string => (string) ($validatedData[$key] ?? $default);
+
         return [
             'is_manually_enabled' => $request->boolean('is_manually_enabled'),
             'is_bank_enabled' => $request->boolean('is_bank_enabled'),
@@ -182,99 +184,100 @@ class PaymentSettingController extends Controller
             'is_easebuzz_enabled' => $request->boolean('is_easebuzz_enabled'),
             'is_ozow_enabled' => $request->boolean('is_ozow_enabled'),
             'is_cashfree_enabled' => $request->boolean('is_cashfree_enabled'),
-            'paypal_mode' => $validatedData['paypal_mode'] ?? 'sandbox',
-            'mercadopago_mode' => $validatedData['mercadopago_mode'] ?? 'sandbox',
-            'bank_detail' => $validatedData['bank_detail'],
-            'sepay_bank_code' => $validatedData['sepay_bank_code'] ?? '',
-            'sepay_account_number' => $validatedData['sepay_account_number'] ?? '',
-            'sepay_account_name' => $validatedData['sepay_account_name'] ?? '',
-            'sepay_payment_prefix' => $validatedData['sepay_payment_prefix'] ?? 'SEPAY',
-            'sepay_bank_account_id' => $validatedData['sepay_bank_account_id'] ?? '',
-            'sepay_gateway_name' => $validatedData['sepay_gateway_name'] ?? 'SePay',
-            'sepay_payment_note' => $validatedData['sepay_payment_note'] ?? '',
-            'stripe_key' => $validatedData['stripe_key'],
-            'stripe_secret' => $validatedData['stripe_secret'],
-            'paypal_client_id' => $validatedData['paypal_client_id'],
-            'paypal_secret_key' => $validatedData['paypal_secret_key'],
-            'razorpay_key' => $validatedData['razorpay_key'],
-            'razorpay_secret' => $validatedData['razorpay_secret'],
-            'mercadopago_access_token' => $validatedData['mercadopago_access_token'],
-            'paystack_public_key' => $validatedData['paystack_public_key'],
-            'paystack_secret_key' => $validatedData['paystack_secret_key'],
-            'flutterwave_public_key' => $validatedData['flutterwave_public_key'],
-            'flutterwave_secret_key' => $validatedData['flutterwave_secret_key'],
-            'paytabs_profile_id' => $validatedData['paytabs_profile_id'],
-            'paytabs_server_key' => $validatedData['paytabs_server_key'],
-            'paytabs_region' => $validatedData['paytabs_region'],
-            'paytabs_mode' => $validatedData['paytabs_mode'] ?? 'sandbox',
-            'skrill_merchant_id' => $validatedData['skrill_merchant_id'],
-            'skrill_secret_word' => $validatedData['skrill_secret_word'],
-            'coingate_api_token' => $validatedData['coingate_api_token'],
-            'coingate_mode' => $validatedData['coingate_mode'] ?? 'sandbox',
-            'payfast_merchant_id' => $validatedData['payfast_merchant_id'],
-            'payfast_merchant_key' => $validatedData['payfast_merchant_key'],
-            'payfast_passphrase' => $validatedData['payfast_passphrase'],
-            'payfast_mode' => $validatedData['payfast_mode'] ?? 'sandbox',
-            'tap_secret_key' => $validatedData['tap_secret_key'],
-            'xendit_api_key' => $validatedData['xendit_api_key'],
-            'paytr_merchant_id' => $validatedData['paytr_merchant_id'],
-            'paytr_merchant_key' => $validatedData['paytr_merchant_key'],
-            'paytr_merchant_salt' => $validatedData['paytr_merchant_salt'],
-            'mollie_api_key' => $validatedData['mollie_api_key'],
-            'toyyibpay_category_code' => $validatedData['toyyibpay_category_code'],
-            'toyyibpay_secret_key' => $validatedData['toyyibpay_secret_key'],
-            'benefit_mode' => $validatedData['benefit_mode'] ?? 'sandbox',
-            'benefit_secret_key' => $validatedData['benefit_secret_key'],
-            'benefit_public_key' => $validatedData['benefit_public_key'],
-            'iyzipay_mode' => $validatedData['iyzipay_mode'] ?? 'sandbox',
-            'iyzipay_secret_key' => $validatedData['iyzipay_secret_key'],
-            'iyzipay_public_key' => $validatedData['iyzipay_public_key'],
-            'aamarpay_store_id' => $validatedData['aamarpay_store_id'],
-            'aamarpay_signature' => $validatedData['aamarpay_signature'],
-            'aamarpay_mode' => $validatedData['aamarpay_mode'] ?? 'sandbox',
-            'midtrans_mode' => $validatedData['midtrans_mode'] ?? 'sandbox',
-            'midtrans_secret_key' => $validatedData['midtrans_secret_key'],
-            'yookassa_shop_id' => $validatedData['yookassa_shop_id'],
-            'yookassa_secret_key' => $validatedData['yookassa_secret_key'],
-            'nepalste_mode' => $validatedData['nepalste_mode'] ?? 'sandbox',
-            'nepalste_secret_key' => $validatedData['nepalste_secret_key'],
-            'nepalste_public_key' => $validatedData['nepalste_public_key'],
-            'paiement_merchant_id' => $validatedData['paiement_merchant_id'],
-            'cinetpay_site_id' => $validatedData['cinetpay_site_id'],
-            'cinetpay_api_key' => $validatedData['cinetpay_api_key'],
-            'cinetpay_secret_key' => $validatedData['cinetpay_secret_key'],
-            'payhere_mode' => $validatedData['payhere_mode'] ?? 'sandbox',
-            'payhere_merchant_id' => $validatedData['payhere_merchant_id'],
-            'payhere_merchant_secret' => $validatedData['payhere_merchant_secret'],
-            'payhere_app_id' => $validatedData['payhere_app_id'],
-            'payhere_app_secret' => $validatedData['payhere_app_secret'],
-            'fedapay_mode' => $validatedData['fedapay_mode'] ?? 'sandbox',
-            'fedapay_secret_key' => $validatedData['fedapay_secret_key'],
-            'fedapay_public_key' => $validatedData['fedapay_public_key'],
-            'authorizenet_mode' => $validatedData['authorizenet_mode'] ?? 'sandbox',
-            'authorizenet_merchant_id' => $validatedData['authorizenet_merchant_id'],
-            'authorizenet_transaction_key' => $validatedData['authorizenet_transaction_key'],
-            'khalti_secret_key' => $validatedData['khalti_secret_key'],
-            'khalti_public_key' => $validatedData['khalti_public_key'],
-            'easebuzz_merchant_key' => $validatedData['easebuzz_merchant_key'],
-            'easebuzz_salt_key' => $validatedData['easebuzz_salt_key'],
-            'easebuzz_environment' => $validatedData['easebuzz_environment'],
-            'ozow_mode' => $validatedData['ozow_mode'] ?? 'sandbox',
-            'ozow_site_key' => $validatedData['ozow_site_key'],
-            'ozow_private_key' => $validatedData['ozow_private_key'],
-            'ozow_api_key' => $validatedData['ozow_api_key'],
-            'cashfree_mode' => $validatedData['cashfree_mode'] ?? 'sandbox',
-            'cashfree_secret_key' => $validatedData['cashfree_secret_key'],
-            'cashfree_public_key' => $validatedData['cashfree_public_key'],
+            'paypal_mode' => $value('paypal_mode', 'sandbox'),
+            'mercadopago_mode' => $value('mercadopago_mode', 'sandbox'),
+            'bank_detail' => $value('bank_detail'),
+            'sepay_bank_code' => $value('sepay_bank_code'),
+            'sepay_account_number' => $value('sepay_account_number'),
+            'sepay_account_name' => $value('sepay_account_name'),
+            'sepay_payment_prefix' => $value('sepay_payment_prefix', 'SEPAY'),
+            'sepay_bank_account_id' => $value('sepay_bank_account_id'),
+            'sepay_gateway_name' => $value('sepay_gateway_name', 'SePay'),
+            'sepay_payment_note' => $value('sepay_payment_note'),
+            'stripe_key' => $value('stripe_key'),
+            'stripe_secret' => $value('stripe_secret'),
+            'paypal_client_id' => $value('paypal_client_id'),
+            'paypal_secret_key' => $value('paypal_secret_key'),
+            'razorpay_key' => $value('razorpay_key'),
+            'razorpay_secret' => $value('razorpay_secret'),
+            'mercadopago_access_token' => $value('mercadopago_access_token'),
+            'paystack_public_key' => $value('paystack_public_key'),
+            'paystack_secret_key' => $value('paystack_secret_key'),
+            'flutterwave_public_key' => $value('flutterwave_public_key'),
+            'flutterwave_secret_key' => $value('flutterwave_secret_key'),
+            'paytabs_profile_id' => $value('paytabs_profile_id'),
+            'paytabs_server_key' => $value('paytabs_server_key'),
+            'paytabs_region' => $value('paytabs_region'),
+            'paytabs_mode' => $value('paytabs_mode', 'sandbox'),
+            'skrill_merchant_id' => $value('skrill_merchant_id'),
+            'skrill_secret_word' => $value('skrill_secret_word'),
+            'coingate_api_token' => $value('coingate_api_token'),
+            'coingate_mode' => $value('coingate_mode', 'sandbox'),
+            'payfast_merchant_id' => $value('payfast_merchant_id'),
+            'payfast_merchant_key' => $value('payfast_merchant_key'),
+            'payfast_passphrase' => $value('payfast_passphrase'),
+            'payfast_mode' => $value('payfast_mode', 'sandbox'),
+            'tap_secret_key' => $value('tap_secret_key'),
+            'xendit_api_key' => $value('xendit_api_key'),
+            'paytr_merchant_id' => $value('paytr_merchant_id'),
+            'paytr_merchant_key' => $value('paytr_merchant_key'),
+            'paytr_merchant_salt' => $value('paytr_merchant_salt'),
+            'mollie_api_key' => $value('mollie_api_key'),
+            'toyyibpay_category_code' => $value('toyyibpay_category_code'),
+            'toyyibpay_secret_key' => $value('toyyibpay_secret_key'),
+            'benefit_mode' => $value('benefit_mode', 'sandbox'),
+            'benefit_secret_key' => $value('benefit_secret_key'),
+            'benefit_public_key' => $value('benefit_public_key'),
+            'iyzipay_mode' => $value('iyzipay_mode', 'sandbox'),
+            'iyzipay_secret_key' => $value('iyzipay_secret_key'),
+            'iyzipay_public_key' => $value('iyzipay_public_key'),
+            'aamarpay_store_id' => $value('aamarpay_store_id'),
+            'aamarpay_signature' => $value('aamarpay_signature'),
+            'aamarpay_mode' => $value('aamarpay_mode', 'sandbox'),
+            'midtrans_mode' => $value('midtrans_mode', 'sandbox'),
+            'midtrans_secret_key' => $value('midtrans_secret_key'),
+            'yookassa_shop_id' => $value('yookassa_shop_id'),
+            'yookassa_secret_key' => $value('yookassa_secret_key'),
+            'nepalste_mode' => $value('nepalste_mode', 'sandbox'),
+            'nepalste_secret_key' => $value('nepalste_secret_key'),
+            'nepalste_public_key' => $value('nepalste_public_key'),
+            'paiement_merchant_id' => $value('paiement_merchant_id'),
+            'cinetpay_site_id' => $value('cinetpay_site_id'),
+            'cinetpay_api_key' => $value('cinetpay_api_key'),
+            'cinetpay_secret_key' => $value('cinetpay_secret_key'),
+            'payhere_mode' => $value('payhere_mode', 'sandbox'),
+            'payhere_merchant_id' => $value('payhere_merchant_id'),
+            'payhere_merchant_secret' => $value('payhere_merchant_secret'),
+            'payhere_app_id' => $value('payhere_app_id'),
+            'payhere_app_secret' => $value('payhere_app_secret'),
+            'fedapay_mode' => $value('fedapay_mode', 'sandbox'),
+            'fedapay_secret_key' => $value('fedapay_secret_key'),
+            'fedapay_public_key' => $value('fedapay_public_key'),
+            'authorizenet_mode' => $value('authorizenet_mode', 'sandbox'),
+            'authorizenet_merchant_id' => $value('authorizenet_merchant_id'),
+            'authorizenet_transaction_key' => $value('authorizenet_transaction_key'),
+            'khalti_secret_key' => $value('khalti_secret_key'),
+            'khalti_public_key' => $value('khalti_public_key'),
+            'easebuzz_merchant_key' => $value('easebuzz_merchant_key'),
+            'easebuzz_salt_key' => $value('easebuzz_salt_key'),
+            'easebuzz_environment' => $value('easebuzz_environment'),
+            'ozow_mode' => $value('ozow_mode', 'sandbox'),
+            'ozow_site_key' => $value('ozow_site_key'),
+            'ozow_private_key' => $value('ozow_private_key'),
+            'ozow_api_key' => $value('ozow_api_key'),
+            'cashfree_mode' => $value('cashfree_mode', 'sandbox'),
+            'cashfree_secret_key' => $value('cashfree_secret_key'),
+            'cashfree_public_key' => $value('cashfree_public_key'),
         ];
     }
 
     private function validateEnabledPaymentMethods(Request $request, array $validatedData): void
     {
         $errors = [];
+        $value = fn (string $key, ?string $default = ''): ?string => $validatedData[$key] ?? $default;
 
         if ($request->boolean('is_stripe_enabled')) {
-            $config = ['key' => $validatedData['stripe_key'], 'secret' => $validatedData['stripe_secret']];
+            $config = ['key' => $value('stripe_key'), 'secret' => $value('stripe_secret')];
             $validation = validatePaymentMethodConfig('stripe', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -282,7 +285,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_paypal_enabled')) {
-            $config = ['client_id' => $validatedData['paypal_client_id'], 'secret' => $validatedData['paypal_secret_key']];
+            $config = ['client_id' => $value('paypal_client_id'), 'secret' => $value('paypal_secret_key')];
             $validation = validatePaymentMethodConfig('paypal', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -290,7 +293,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_razorpay_enabled')) {
-            $config = ['key' => $validatedData['razorpay_key'], 'secret' => $validatedData['razorpay_secret']];
+            $config = ['key' => $value('razorpay_key'), 'secret' => $value('razorpay_secret')];
             $validation = validatePaymentMethodConfig('razorpay', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -298,7 +301,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_mercadopago_enabled')) {
-            $config = ['access_token' => $validatedData['mercadopago_access_token']];
+            $config = ['access_token' => $value('mercadopago_access_token')];
             $validation = validatePaymentMethodConfig('mercadopago', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -306,7 +309,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_paystack_enabled')) {
-            $config = ['public_key' => $validatedData['paystack_public_key'], 'secret_key' => $validatedData['paystack_secret_key']];
+            $config = ['public_key' => $value('paystack_public_key'), 'secret_key' => $value('paystack_secret_key')];
             $validation = validatePaymentMethodConfig('paystack', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -314,7 +317,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_flutterwave_enabled')) {
-            $config = ['public_key' => $validatedData['flutterwave_public_key'], 'secret_key' => $validatedData['flutterwave_secret_key']];
+            $config = ['public_key' => $value('flutterwave_public_key'), 'secret_key' => $value('flutterwave_secret_key')];
             $validation = validatePaymentMethodConfig('flutterwave', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -322,7 +325,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_bank_enabled')) {
-            $config = ['details' => $validatedData['bank_detail']];
+            $config = ['details' => $value('bank_detail')];
             $validation = validatePaymentMethodConfig('bank', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -330,11 +333,11 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_sepay_enabled')) {
-            if (empty($validatedData['sepay_bank_account_id'])) {
+            if (empty($value('sepay_bank_account_id'))) {
                 $config = [
-                    'bank_code' => $validatedData['sepay_bank_code'] ?? null,
-                    'account_number' => $validatedData['sepay_account_number'] ?? null,
-                    'account_name' => $validatedData['sepay_account_name'] ?? null,
+                    'bank_code' => $value('sepay_bank_code', null),
+                    'account_number' => $value('sepay_account_number', null),
+                    'account_name' => $value('sepay_account_name', null),
                 ];
                 $validation = validatePaymentMethodConfig('sepay', $config);
                 if (!$validation['valid']) {
@@ -344,7 +347,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_paytabs_enabled')) {
-            $config = ['server_key' => $validatedData['paytabs_server_key'], 'profile_id' => $validatedData['paytabs_profile_id'], 'region' => $validatedData['paytabs_region']];
+            $config = ['server_key' => $value('paytabs_server_key'), 'profile_id' => $value('paytabs_profile_id'), 'region' => $value('paytabs_region')];
             $validation = validatePaymentMethodConfig('paytabs', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -352,7 +355,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_skrill_enabled')) {
-            $config = ['merchant_id' => $validatedData['skrill_merchant_id'], 'secret_word' => $validatedData['skrill_secret_word']];
+            $config = ['merchant_id' => $value('skrill_merchant_id'), 'secret_word' => $value('skrill_secret_word')];
             $validation = validatePaymentMethodConfig('skrill', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -360,7 +363,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_coingate_enabled')) {
-            $config = ['api_token' => $validatedData['coingate_api_token']];
+            $config = ['api_token' => $value('coingate_api_token')];
             $validation = validatePaymentMethodConfig('coingate', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -368,7 +371,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_payfast_enabled')) {
-            $config = ['merchant_id' => $validatedData['payfast_merchant_id'], 'merchant_key' => $validatedData['payfast_merchant_key']];
+            $config = ['merchant_id' => $value('payfast_merchant_id'), 'merchant_key' => $value('payfast_merchant_key')];
             $validation = validatePaymentMethodConfig('payfast', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -376,7 +379,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_tap_enabled')) {
-            $config = ['secret_key' => $validatedData['tap_secret_key']];
+            $config = ['secret_key' => $value('tap_secret_key')];
             $validation = validatePaymentMethodConfig('tap', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -384,7 +387,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_xendit_enabled')) {
-            $config = ['api_key' => $validatedData['xendit_api_key']];
+            $config = ['api_key' => $value('xendit_api_key')];
             $validation = validatePaymentMethodConfig('xendit', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -392,7 +395,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_paytr_enabled')) {
-            $config = ['merchant_id' => $validatedData['paytr_merchant_id'], 'merchant_key' => $validatedData['paytr_merchant_key'], 'merchant_salt' => $validatedData['paytr_merchant_salt']];
+            $config = ['merchant_id' => $value('paytr_merchant_id'), 'merchant_key' => $value('paytr_merchant_key'), 'merchant_salt' => $value('paytr_merchant_salt')];
             $validation = validatePaymentMethodConfig('paytr', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -400,7 +403,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_mollie_enabled')) {
-            $config = ['api_key' => $validatedData['mollie_api_key']];
+            $config = ['api_key' => $value('mollie_api_key')];
             $validation = validatePaymentMethodConfig('mollie', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -408,7 +411,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_toyyibpay_enabled')) {
-            $config = ['category_code' => $validatedData['toyyibpay_category_code'], 'secret_key' => $validatedData['toyyibpay_secret_key']];
+            $config = ['category_code' => $value('toyyibpay_category_code'), 'secret_key' => $value('toyyibpay_secret_key')];
             $validation = validatePaymentMethodConfig('toyyibpay', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -416,7 +419,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_cashfree_enabled')) {
-            $config = ['public_key' => $validatedData['cashfree_public_key'], 'secret_key' => $validatedData['cashfree_secret_key']];
+            $config = ['public_key' => $value('cashfree_public_key'), 'secret_key' => $value('cashfree_secret_key')];
             $validation = validatePaymentMethodConfig('cashfree', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -424,7 +427,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_ozow_enabled')) {
-            $config = ['site_key' => $validatedData['ozow_site_key'], 'private_key' => $validatedData['ozow_private_key']];
+            $config = ['site_key' => $value('ozow_site_key'), 'private_key' => $value('ozow_private_key')];
             $validation = validatePaymentMethodConfig('ozow', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -432,7 +435,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_easebuzz_enabled')) {
-            $config = ['merchant_key' => $validatedData['easebuzz_merchant_key'], 'salt_key' => $validatedData['easebuzz_salt_key']];
+            $config = ['merchant_key' => $value('easebuzz_merchant_key'), 'salt_key' => $value('easebuzz_salt_key')];
             $validation = validatePaymentMethodConfig('easebuzz', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -440,7 +443,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_khalti_enabled')) {
-            $config = ['public_key' => $validatedData['khalti_public_key'], 'secret_key' => $validatedData['khalti_secret_key']];
+            $config = ['public_key' => $value('khalti_public_key'), 'secret_key' => $value('khalti_secret_key')];
             $validation = validatePaymentMethodConfig('khalti', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -448,7 +451,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_authorizenet_enabled')) {
-            $config = ['merchant_id' => $validatedData['authorizenet_merchant_id'], 'transaction_key' => $validatedData['authorizenet_transaction_key']];
+            $config = ['merchant_id' => $value('authorizenet_merchant_id'), 'transaction_key' => $value('authorizenet_transaction_key')];
             $validation = validatePaymentMethodConfig('authorizenet', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -456,7 +459,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_fedapay_enabled')) {
-            $config = ['public_key' => $validatedData['fedapay_public_key'], 'secret_key' => $validatedData['fedapay_secret_key']];
+            $config = ['public_key' => $value('fedapay_public_key'), 'secret_key' => $value('fedapay_secret_key')];
             $validation = validatePaymentMethodConfig('fedapay', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -464,7 +467,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_payhere_enabled')) {
-            $config = ['merchant_id' => $validatedData['payhere_merchant_id'], 'merchant_secret' => $validatedData['payhere_merchant_secret']];
+            $config = ['merchant_id' => $value('payhere_merchant_id'), 'merchant_secret' => $value('payhere_merchant_secret')];
             $validation = validatePaymentMethodConfig('payhere', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -472,7 +475,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_cinetpay_enabled')) {
-            $config = ['site_id' => $validatedData['cinetpay_site_id'], 'api_key' => $validatedData['cinetpay_api_key']];
+            $config = ['site_id' => $value('cinetpay_site_id'), 'api_key' => $value('cinetpay_api_key')];
             $validation = validatePaymentMethodConfig('cinetpay', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -480,7 +483,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_paiement_enabled')) {
-            $config = ['merchant_id' => $validatedData['paiement_merchant_id']];
+            $config = ['merchant_id' => $value('paiement_merchant_id')];
             $validation = validatePaymentMethodConfig('paiement', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -488,7 +491,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_nepalste_enabled')) {
-            $config = ['public_key' => $validatedData['nepalste_public_key'], 'secret_key' => $validatedData['nepalste_secret_key']];
+            $config = ['public_key' => $value('nepalste_public_key'), 'secret_key' => $value('nepalste_secret_key')];
             $validation = validatePaymentMethodConfig('nepalste', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -496,7 +499,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_yookassa_enabled')) {
-            $config = ['shop_id' => $validatedData['yookassa_shop_id'], 'secret_key' => $validatedData['yookassa_secret_key']];
+            $config = ['shop_id' => $value('yookassa_shop_id'), 'secret_key' => $value('yookassa_secret_key')];
             $validation = validatePaymentMethodConfig('yookassa', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -504,7 +507,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_midtrans_enabled')) {
-            $config = ['secret_key' => $validatedData['midtrans_secret_key']];
+            $config = ['secret_key' => $value('midtrans_secret_key')];
             $validation = validatePaymentMethodConfig('midtrans', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -513,9 +516,9 @@ class PaymentSettingController extends Controller
 
         if ($request->boolean('is_aamarpay_enabled')) {
             $config = [
-                'store_id' => $validatedData['aamarpay_store_id'],
-                'signature' => $validatedData['aamarpay_signature'],
-                'mode' => $validatedData['aamarpay_mode'] ?? 'sandbox'
+                'store_id' => $value('aamarpay_store_id'),
+                'signature' => $value('aamarpay_signature'),
+                'mode' => $value('aamarpay_mode', 'sandbox')
             ];
             $validation = validatePaymentMethodConfig('aamarpay', $config);
             if (!$validation['valid']) {
@@ -524,7 +527,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_iyzipay_enabled')) {
-            $config = ['public_key' => $validatedData['iyzipay_public_key'], 'secret_key' => $validatedData['iyzipay_secret_key']];
+            $config = ['public_key' => $value('iyzipay_public_key'), 'secret_key' => $value('iyzipay_secret_key')];
             $validation = validatePaymentMethodConfig('iyzipay', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -532,7 +535,7 @@ class PaymentSettingController extends Controller
         }
 
         if ($request->boolean('is_benefit_enabled')) {
-            $config = ['public_key' => $validatedData['benefit_public_key'], 'secret_key' => $validatedData['benefit_secret_key']];
+            $config = ['public_key' => $value('benefit_public_key'), 'secret_key' => $value('benefit_secret_key')];
             $validation = validatePaymentMethodConfig('benefit', $config);
             if (!$validation['valid']) {
                 $errors = array_merge($errors, $validation['errors']);
@@ -576,12 +579,30 @@ class PaymentSettingController extends Controller
         }
 
         $client = new SepayClient($settingsUserId);
-        $bankAccount = $client->bankAccount($request->string('sepay_bank_account_id')->toString());
+        $bankAccountId = $request->string('sepay_bank_account_id')->toString();
+
+        try {
+            $bankAccount = $client->bankAccount($bankAccountId);
+        } catch (\Throwable $e) {
+            Log::warning('SePay bank account lookup failed while saving payment settings', [
+                'settings_user_id' => $settingsUserId,
+                'bank_account_id' => $bankAccountId,
+                'message' => $e->getMessage(),
+            ]);
+
+            $bankAccount = $this->findStoredSepayBankAccount($settings, $bankAccountId);
+        }
 
         $bank = $bankAccount['bank'] ?? [];
         $bankCode = $bankAccount['bank_code'] ?? $bankAccount['bankCode'] ?? $bankAccount['bank_short_name'] ?? $bankAccount['bankShortName'] ?? $bank['code'] ?? $bank['short_name'] ?? '';
         $accountNumber = $bankAccount['account_number'] ?? $bankAccount['accountNumber'] ?? $bankAccount['bank_account_number'] ?? $bankAccount['bankAccountNumber'] ?? $bankAccount['number'] ?? '';
         $accountName = $bankAccount['account_name'] ?? $bankAccount['accountName'] ?? $bankAccount['account_holder_name'] ?? $bankAccount['accountHolderName'] ?? $bankAccount['account_holder'] ?? $bankAccount['accountHolder'] ?? $bankAccount['name'] ?? '';
+
+        if ($bankCode === '' || $accountNumber === '' || $accountName === '') {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'sepay_bank_account_id' => [__('Could not read selected SePay bank account information. Please reconnect SePay and try again.')],
+            ]);
+        }
 
         updatePaymentSetting('sepay_bank_code', $bankCode, $settingsUserId);
         updatePaymentSetting('sepay_bank_name', $bankAccount['bank_name'] ?? $bankAccount['bankName'] ?? $bankAccount['bank_full_name'] ?? $bankAccount['bankFullName'] ?? $bank['name'] ?? '', $settingsUserId);
@@ -624,10 +645,21 @@ class PaymentSettingController extends Controller
                 'message' => $e->getMessage(),
             ]);
 
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'sepay' => [__('Could not create SePay webhook automatically. Please try again.')],
-            ]);
+            return;
         }
+    }
+
+    private function findStoredSepayBankAccount(array $settings, string $bankAccountId): array
+    {
+        $accounts = json_decode((string) ($settings['sepay_bank_accounts'] ?? '[]'), true);
+
+        if (!is_array($accounts)) {
+            return [];
+        }
+
+        return collect($accounts)->first(function ($account) use ($bankAccountId) {
+            return (string) ($account['id'] ?? '') === $bankAccountId;
+        }) ?? [];
     }
 
     public function getEnabledMethods()

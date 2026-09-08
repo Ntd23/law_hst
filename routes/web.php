@@ -71,9 +71,6 @@ Route::get('/directory', [DirectoryController::class, 'index'])->name('directory
 Route::post('webhooks/sepay', [SepayPaymentController::class, 'webhook'])
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
     ->name('sepay.webhook');
-Route::post('api/sepay/webhook', [SepayPaymentController::class, 'webhook'])
-    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
-    ->name('sepay.webhook.api');
 Route::get('api/orders/{order_code}/check-status', [SepayPaymentController::class, 'checkStatus'])
     ->name('sepay.order-status');
 Route::match(['GET', 'POST'], 'sepay/oauth/callback', [SepayOAuthController::class, 'callback'])

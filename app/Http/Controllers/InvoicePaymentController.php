@@ -102,6 +102,9 @@ class InvoicePaymentController extends Controller
         $paymentSettings = PaymentSetting::where('user_id', $settingsUserId)
             ->pluck('value', 'key')
             ->toArray();
+        $sepayBankCode = trim((string) ($paymentSettings['sepay_bank_code'] ?? ''));
+        $sepayAccountNumber = trim((string) ($paymentSettings['sepay_account_number'] ?? ''));
+        $sepayAccountName = trim((string) ($paymentSettings['sepay_account_name'] ?? ''));
 
         // Get company currency setting
         $companyCurrency = \App\Models\Setting::where('user_id', $settingsUserId)
@@ -135,9 +138,13 @@ class InvoicePaymentController extends Controller
             'tapPublicKey' => $paymentSettings['tap_secret_key'] ?? null,
             'paystackPublicKey' => $paymentSettings['paystack_public_key'] ?? null,
             'sepaySettings' => [
-                'bank_code' => ($paymentSettings['sepay_bank_code'] ?? '') ?: config('services.sepay.bank_name', ''),
-                'account_number' => ($paymentSettings['sepay_account_number'] ?? '') ?: config('services.sepay.account_number', ''),
-                'account_name' => ($paymentSettings['sepay_account_name'] ?? '') ?: config('services.sepay.account_holder', ''),
+                'enabled' => ($paymentSettings['is_sepay_enabled'] ?? '0') === '1'
+                    && $sepayBankCode !== ''
+                    && $sepayAccountNumber !== ''
+                    && $sepayAccountName !== '',
+                'bank_code' => $sepayBankCode,
+                'account_number' => $sepayAccountNumber,
+                'account_name' => $sepayAccountName,
                 'payment_prefix' => ($paymentSettings['sepay_payment_prefix'] ?? '') ?: config('services.sepay.order_prefix', 'SEPAY'),
             ],
             'company' => $company,
@@ -241,7 +248,8 @@ class InvoicePaymentController extends Controller
         }
 
         // Get company-specific payment settings only
-        $settings = PaymentSetting::where('user_id', getCompanyId($invoiceCreatorId))->pluck('value', 'key')->toArray();
+        $settingsUserId = getCompanyId($invoiceCreatorId) ?: $invoiceCreatorId;
+        $settings = PaymentSetting::where('user_id', $settingsUserId)->pluck('value', 'key')->toArray();
 
         $gateways = [];
         $paymentGateways = [
@@ -282,6 +290,16 @@ class InvoicePaymentController extends Controller
         foreach ($paymentGateways as $key => $config) {
             $enabledKey = "is_{$key}_enabled";
             if (($settings[$enabledKey] ?? '0') === '1') {
+                if ($key === 'sepay') {
+                    $hasSepayAccount = trim((string) ($settings['sepay_bank_code'] ?? '')) !== ''
+                        && trim((string) ($settings['sepay_account_number'] ?? '')) !== ''
+                        && trim((string) ($settings['sepay_account_name'] ?? '')) !== '';
+
+                    if (!$hasSepayAccount) {
+                        continue;
+                    }
+                }
+
                 $gateways[] = [
                     'id' => $key,
                     'name' => $config['name'],

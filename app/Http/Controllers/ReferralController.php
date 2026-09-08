@@ -44,24 +44,14 @@ class ReferralController extends Controller
             $monthlyPayouts = PayoutRequest::where('status', 'approved')
                 ->sum('amount') ?: 0;
         } else {
-            // For normal mode, get monthly data and sum it
-            $monthlyReferralsData = User::whereNotNull('used_referral_code')
-                ->selectRaw('MONTH(created_at) as month, COUNT(*) as count')
+            // For normal mode, get yearly totals
+            $monthlyReferrals = User::whereNotNull('used_referral_code')
                 ->whereYear('created_at', date('Y'))
-                ->groupBy('month')
-                ->pluck('count', 'month')
-                ->toArray();
+                ->count();
 
-            $monthlyReferrals = array_sum($monthlyReferralsData);
-
-            $monthlyPayoutsData = PayoutRequest::where('status', 'approved')
-                ->selectRaw('MONTH(created_at) as month, SUM(amount) as total')
+            $monthlyPayouts = PayoutRequest::where('status', 'approved')
                 ->whereYear('created_at', date('Y'))
-                ->groupBy('month')
-                ->pluck('total', 'month')
-                ->toArray();
-
-            $monthlyPayouts = array_sum($monthlyPayoutsData);
+                ->sum('amount') ?: 0;
         }
 
         $topCompanies = User::select('users.id', 'users.name', 'users.email', 'users.avatar', 'users.referral_code')

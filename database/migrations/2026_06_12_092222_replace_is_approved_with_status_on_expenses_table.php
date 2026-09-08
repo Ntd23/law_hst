@@ -17,7 +17,9 @@ return new class extends Migration
         DB::statement("UPDATE expenses SET status = CASE WHEN is_approved = 1 THEN 'approved' ELSE 'pending' END");
 
         Schema::table('expenses', function (Blueprint $table) {
+            $table->dropIndex(['is_billable', 'is_approved', 'invoice_id']);
             $table->dropColumn('is_approved');
+            $table->index(['is_billable', 'status', 'invoice_id']);
         });
     }
 
@@ -30,7 +32,9 @@ return new class extends Migration
         DB::statement("UPDATE expenses SET is_approved = CASE WHEN status = 'approved' THEN 1 ELSE 0 END");
 
         Schema::table('expenses', function (Blueprint $table) {
+            $table->dropIndex(['is_billable', 'status', 'invoice_id']);
             $table->dropColumn('status');
+            $table->index(['is_billable', 'is_approved', 'invoice_id']);
         });
     }
 };

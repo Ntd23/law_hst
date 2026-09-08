@@ -121,7 +121,17 @@ class SepayPaymentController extends Controller
 
         if (!is_array($payload)) {
             Log::warning('SePay webhook received invalid payload');
-            return response()->json(['success' => true]);
+            return response()->json(['success' => false, 'message' => 'Invalid payload'], 422);
+        }
+
+        $payloadError = $this->validateWebhookPayload($payload);
+        if ($payloadError !== null) {
+            Log::warning('SePay webhook received incomplete payload', [
+                'message' => $payloadError,
+                'payload' => $payload,
+            ]);
+
+            return response()->json(['success' => false, 'message' => $payloadError], 422);
         }
 
         try {
@@ -132,10 +142,25 @@ class SepayPaymentController extends Controller
                 'payload' => $payload,
             ]);
 
-            return response()->json(['success' => true, 'message' => 'Webhook accepted, processing error logged']);
+            return response()->json(['success' => false, 'message' => 'Webhook processing failed'], 500);
         }
 
         return response()->json(['success' => true, 'message' => $result]);
+    }
+
+    private function validateWebhookPayload(array $payload): ?string
+    {
+        $transferType = strtolower((string) ($payload['transferType'] ?? $payload['transfer_type'] ?? ''));
+
+        if ($transferType === '') {
+            return 'Missing transfer type';
+        }
+
+        if (!array_key_exists('transferAmount', $payload) && !array_key_exists('transfer_amount', $payload)) {
+            return 'Missing transfer amount';
+        }
+
+        return null;
     }
 
     public function callbackPayment(Request $request)
@@ -179,6 +204,17 @@ class SepayPaymentController extends Controller
             return response()->json([
                 'is_paid' => $isPaid,
                 'status' => $isPaid ? 'paid' : $payment->status,
+                'type' => 'invoice',
+            ]);
+        }
+
+        $invoice = $this->findInvoiceFromReferences([$orderCode]);
+        if ($invoice) {
+            $isPaid = $invoice->status === 'paid' || $invoice->remaining_amount <= 0;
+
+            return response()->json([
+                'is_paid' => $isPaid,
+                'status' => $isPaid ? 'paid' : $invoice->status,
                 'type' => 'invoice',
             ]);
         }
@@ -246,12 +282,6 @@ class SepayPaymentController extends Controller
                     return (int) $setting->user_id;
                 }
             }
-        }
-
-        if (app()->environment(['local', 'testing'])) {
-            return PaymentSetting::where('key', 'is_sepay_enabled')
-                ->where('value', '1')
-                ->value('user_id');
         }
 
         return null;
@@ -358,25 +388,14 @@ class SepayPaymentController extends Controller
             'notes' => trim(($payment->notes ? $payment->notes . "\n" : '') . 'Verified by SePay webhook. Bank reference: ' . ($payload['referenceCode'] ?? '')),
         ]);
 
+        $payment->invoice?->updatePaymentStatus();
+
         return true;
     }
 
     private function createInvoicePaymentFromReference(array $references, string $transactionId, string $sepayTransactionId, float $amount, array $payload): bool
     {
-        $invoiceId = null;
-
-        foreach ($references as $reference) {
-            if (preg_match('/INV[-_]?(\d+)/i', $reference, $matches)) {
-                $invoiceId = (int) $matches[1];
-                break;
-            }
-        }
-
-        if (!$invoiceId) {
-            return false;
-        }
-
-        $invoice = Invoice::find($invoiceId);
+        $invoice = $this->findInvoiceFromReferences($references);
         if (!$invoice) {
             return false;
         }
@@ -404,7 +423,46 @@ class SepayPaymentController extends Controller
             'notes' => 'Verified by SePay webhook. Bank reference: ' . ($payload['referenceCode'] ?? ''),
         ]);
 
+        $invoice->updatePaymentStatus();
+
         return true;
+    }
+
+    private function findInvoiceFromReferences(array $references): ?Invoice
+    {
+        foreach ($references as $reference) {
+            if (preg_match('/INV[-_]?(\d+)/i', $reference, $matches)) {
+                $invoice = Invoice::find((int) $matches[1]);
+
+                if ($invoice) {
+                    return $invoice;
+                }
+            }
+        }
+
+        $normalizedReferences = collect($references)
+            ->map(fn (string $reference): string => $this->normalizeReference($reference))
+            ->filter()
+            ->values();
+
+        if ($normalizedReferences->isEmpty()) {
+            return null;
+        }
+
+        return Invoice::query()
+            ->whereNotIn('status', ['cancelled'])
+            ->get(['id', 'invoice_number', 'status', 'total_amount'])
+            ->first(function (Invoice $invoice) use ($normalizedReferences) {
+                $normalizedInvoiceNumber = $this->normalizeReference((string) $invoice->invoice_number);
+
+                return $normalizedInvoiceNumber !== ''
+                    && $normalizedReferences->contains(fn (string $reference): bool => Str::endsWith($reference, $normalizedInvoiceNumber));
+            });
+    }
+
+    private function normalizeReference(string $reference): string
+    {
+        return strtoupper((string) preg_replace('/[^A-Z0-9]/i', '', $reference));
     }
 
     private function approvePendingPlanOrder(array $references, string $content, string $sepayTransactionId, float $amount, array $payload): bool
@@ -459,7 +517,7 @@ class SepayPaymentController extends Controller
             return [];
         }
 
-        preg_match_all('/\b(?:SEPAY[-_])?(?:PLAN|INV)[-_]?\d+(?:[-_][A-Z0-9]+)?\b/i', $content, $matches);
+        preg_match_all('/\b[A-Z0-9]*?(?:PLAN|INV)[-_]?\d+(?:[-_][A-Z0-9]+)?\b/i', $content, $matches);
 
         if (empty($matches[0])) {
             return [];

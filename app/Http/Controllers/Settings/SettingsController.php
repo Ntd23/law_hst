@@ -28,7 +28,7 @@ class SettingsController extends Controller
         // Get system settings using helper function
         $systemSettings = settings();
         $currencies = Currency::whereIn('code', ['VND', 'USD'])
-            ->orderByRaw("FIELD(code, 'VND', 'USD')")
+            ->orderByRaw("CASE WHEN code = 'VND' THEN 1 WHEN code = 'USD' THEN 2 ELSE 3 END")
             ->get();
         $paymentSettings = PaymentSetting::getUserSettings(auth()->id());
         $sepayBankAccounts = json_decode((string) ($paymentSettings['sepay_bank_accounts'] ?? '[]'), true);

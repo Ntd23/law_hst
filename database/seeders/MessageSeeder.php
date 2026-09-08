@@ -116,7 +116,11 @@ class MessageSeeder extends Seeder
             
             for ($i = 1; $i <= $messageCount; $i++) {
                 $sender = $allUsers->random();
-                $recipient = $allUsers->where('id', '!=', $sender->id)->random();
+                $otherUsers = $allUsers->where('id', '!=', $sender->id)->values();
+                if ($otherUsers->isEmpty()) {
+                    continue;
+                }
+                $recipient = $otherUsers->random();
                 
                 // Create direct conversation
                 $conversation = null;

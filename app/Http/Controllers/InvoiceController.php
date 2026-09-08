@@ -9,6 +9,7 @@ use App\Models\Client;
 use App\Models\Expense;
 use App\Models\TimeEntry;
 use App\Models\ClientBillingInfo;
+use App\Models\PaymentSetting;
 use App\Services\EmailTemplateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -78,6 +79,9 @@ class InvoiceController extends BaseController
         }
 
         $invoices = $query->paginate($perPage)->withQueryString();
+        $invoices->getCollection()->each->append('remaining_amount');
+        $sepaySettingsByInvoice = $this->buildSepaySettingsByInvoice($invoices->getCollection());
+
         $clients = Client::select('id', 'name')
             ->where(function ($q) {
                 if (Auth::user()->can('manage-any-clients')) {
@@ -96,8 +100,58 @@ class InvoiceController extends BaseController
         return Inertia::render('billing/invoices/index', [
             'invoices' => $invoices,
             'clients' => $clients,
+            'sepaySettingsByInvoice' => $sepaySettingsByInvoice,
             'filters' => $request->only(['search', 'status', 'client_id', 'sort_field', 'sort_direction', 'per_page', 'page']),
         ]);
+    }
+
+    private function buildSepaySettingsByInvoice($invoices): array
+    {
+        $settingsUserIdsByInvoice = $invoices
+            ->mapWithKeys(fn (Invoice $invoice) => [
+                $invoice->id => getCompanyId($invoice->created_by) ?: $invoice->created_by,
+            ])
+            ->filter();
+
+        if ($settingsUserIdsByInvoice->isEmpty()) {
+            return [];
+        }
+
+        $settingsByUser = PaymentSetting::whereIn('user_id', $settingsUserIdsByInvoice->values()->unique()->all())
+            ->whereIn('key', [
+                'is_sepay_enabled',
+                'sepay_bank_code',
+                'sepay_account_number',
+                'sepay_account_name',
+                'sepay_payment_prefix',
+            ])
+            ->get()
+            ->groupBy('user_id')
+            ->map(fn ($settings) => $settings
+                ->mapWithKeys(fn (PaymentSetting $setting) => [$setting->key => $setting->value])
+                ->toArray()
+            );
+
+        return $settingsUserIdsByInvoice
+            ->mapWithKeys(function ($settingsUserId, $invoiceId) use ($settingsByUser) {
+                $settings = $settingsByUser->get($settingsUserId, []);
+                $isEnabled = in_array($settings['is_sepay_enabled'] ?? false, [true, 1, '1'], true);
+                $bankCode = trim((string) ($settings['sepay_bank_code'] ?? ''));
+                $accountNumber = trim((string) ($settings['sepay_account_number'] ?? ''));
+                $accountName = trim((string) ($settings['sepay_account_name'] ?? ''));
+                $isReady = $isEnabled && $bankCode !== '' && $accountNumber !== '' && $accountName !== '';
+
+                return [
+                    $invoiceId => [
+                        'enabled' => $isReady,
+                        'bank_code' => $bankCode,
+                        'account_number' => $accountNumber,
+                        'account_name' => $accountName,
+                        'payment_prefix' => ($settings['sepay_payment_prefix'] ?? '') ?: config('services.sepay.order_prefix', 'SEPAY'),
+                    ],
+                ];
+            })
+            ->toArray();
     }
 
     public function create()

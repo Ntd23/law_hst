@@ -631,9 +631,9 @@ if (! function_exists('getPaymentMethodConfig')) {
             case 'sepay':
                 return [
                     'enabled' => isPaymentMethodEnabled('sepay', $userId),
-                    'bank_code' => ($settings['sepay_bank_code'] ?? '') ?: config('services.sepay.bank_name'),
-                    'account_number' => ($settings['sepay_account_number'] ?? '') ?: config('services.sepay.account_number'),
-                    'account_name' => ($settings['sepay_account_name'] ?? '') ?: config('services.sepay.account_holder'),
+                    'bank_code' => $settings['sepay_bank_code'] ?? '',
+                    'account_number' => $settings['sepay_account_number'] ?? '',
+                    'account_name' => $settings['sepay_account_name'] ?? '',
                     'payment_prefix' => ($settings['sepay_payment_prefix'] ?? '') ?: config('services.sepay.order_prefix', 'SEPAY'),
                 ];
 
