@@ -109,7 +109,7 @@ class SepayPaymentController extends Controller
     public function webhook(Request $request)
     {
         $rawBody = $request->getContent();
-        $settingsUserId = $this->authenticateWebhook($request, $rawBody);
+        $settingsUserId = $this->authenticateWebhook($request);
 
         if (!$settingsUserId) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
@@ -225,66 +225,44 @@ class SepayPaymentController extends Controller
         ]);
     }
 
-    private function authenticateWebhook(Request $request, string $rawBody): ?int
+    private function authenticateWebhook(Request $request): ?int
     {
-        $signature = (string) $request->header('X-SePay-Signature', '');
-        $timestamp = (int) $request->header('X-SePay-Timestamp', 0);
+        $apiKey = $this->webhookApiKeyFromRequest($request);
 
-        if ($signature !== '' && $timestamp > 0) {
-            if (abs(time() - $timestamp) > 300) {
-                return null;
-            }
+        if ($apiKey === '') {
+            Log::warning('SePay webhook rejected: missing API key authorization header');
 
-            foreach (PaymentSetting::where('key', 'sepay_webhook_secret')->get() as $setting) {
-                $secret = (string) $setting->value;
-
-                if ($secret === '') {
-                    continue;
-                }
-
-                $expected = 'sha256=' . hash_hmac('sha256', $timestamp . '.' . $rawBody, $secret);
-
-                if (hash_equals($expected, $signature)) {
-                    return (int) $setting->user_id;
-                }
-            }
+            return null;
         }
 
-        $authorization = (string) $request->header('Authorization', '');
-        if (preg_match('/^\s*(apikey|bearer)\s+(.+?)\s*$/i', $authorization, $matches)) {
-            $apiKey = trim($matches[2]);
+        $matchedUserIds = PaymentSetting::userIdsForDecryptedValue('sepay_webhook_api_key', $apiKey);
 
-            $envApiKey = (string) config('services.sepay.api_key', '');
-            if ($envApiKey !== '' && hash_equals($envApiKey, $apiKey)) {
-                $accountNumber = (string) config('services.sepay.account_number', '');
-
-                if ($accountNumber !== '') {
-                    $matchedUserId = PaymentSetting::where('key', 'sepay_account_number')
-                        ->where('value', $accountNumber)
-                        ->value('user_id');
-
-                    if ($matchedUserId) {
-                        return (int) $matchedUserId;
-                    }
-                }
-
-                $enabledUserId = PaymentSetting::where('key', 'is_sepay_enabled')
-                    ->where('value', '1')
-                    ->value('user_id');
-
-                return $enabledUserId ? (int) $enabledUserId : -1;
-            }
-
-            foreach (PaymentSetting::where('key', 'sepay_api_key')->get() as $setting) {
-                $expectedApiKey = (string) $setting->value;
-
-                if ($expectedApiKey !== '' && hash_equals($expectedApiKey, $apiKey)) {
-                    return (int) $setting->user_id;
-                }
-            }
+        if (count($matchedUserIds) === 1) {
+            return $matchedUserIds[0];
         }
+
+        if (count($matchedUserIds) > 1) {
+            Log::warning('SePay webhook rejected because API key is connected to multiple user accounts', [
+                'settings_user_ids' => $matchedUserIds,
+            ]);
+
+            return null;
+        }
+
+        Log::warning('SePay webhook rejected: API key does not match any account');
 
         return null;
+    }
+
+    private function webhookApiKeyFromRequest(Request $request): string
+    {
+        $authorization = (string) $request->header('Authorization', '');
+
+        if (preg_match('/^\s*apikey\s+(.+?)\s*$/i', $authorization, $matches)) {
+            return trim($matches[1]);
+        }
+
+        return '';
     }
 
     private function handleWebhookPayload(array $payload, int $settingsUserId): string
@@ -332,9 +310,9 @@ class SepayPaymentController extends Controller
             ...$this->extractInternalReferences($content),
         ])));
 
-        $processed = DB::transaction(function () use ($references, $transactionId, $sepayTransactionId, $content, $amount, $payload) {
-            return $this->completePendingInvoicePayment($references, $transactionId, $sepayTransactionId, $amount, $payload)
-                || $this->createInvoicePaymentFromReference($references, $transactionId, $sepayTransactionId, $amount, $payload)
+        $processed = DB::transaction(function () use ($references, $transactionId, $sepayTransactionId, $settingsUserId, $content, $amount, $payload) {
+            return $this->completePendingInvoicePayment($references, $transactionId, $sepayTransactionId, $settingsUserId, $amount, $payload)
+                || $this->createInvoicePaymentFromReference($references, $transactionId, $sepayTransactionId, $settingsUserId, $amount, $payload)
                 || $this->approvePendingPlanOrder($references, $content, $sepayTransactionId, $amount, $payload);
         });
 
@@ -351,19 +329,21 @@ class SepayPaymentController extends Controller
         return 'No matching order found';
     }
 
-    private function completePendingInvoicePayment(array $references, string $transactionId, string $sepayTransactionId, float $amount, array $payload): bool
+    private function completePendingInvoicePayment(array $references, string $transactionId, string $sepayTransactionId, int $settingsUserId, float $amount, array $payload): bool
     {
         if (empty($references)) {
             return false;
         }
 
-        $payment = Payment::where('payment_method', 'sepay')
+        $payment = Payment::with('invoice')
+            ->where('payment_method', 'sepay')
             ->where('status', 'pending')
             ->where(function ($query) use ($references) {
                 $query->whereIn('transaction_id', $references)
                     ->orWhereIn('sepay_order_code', $references);
             })
-            ->first();
+            ->get()
+            ->first(fn (Payment $payment): bool => $this->invoiceBelongsToSettingsUser($payment->invoice, $settingsUserId));
 
         if (!$payment) {
             return false;
@@ -393,9 +373,9 @@ class SepayPaymentController extends Controller
         return true;
     }
 
-    private function createInvoicePaymentFromReference(array $references, string $transactionId, string $sepayTransactionId, float $amount, array $payload): bool
+    private function createInvoicePaymentFromReference(array $references, string $transactionId, string $sepayTransactionId, int $settingsUserId, float $amount, array $payload): bool
     {
-        $invoice = $this->findInvoiceFromReferences($references);
+        $invoice = $this->findInvoiceFromReferences($references, $settingsUserId);
         if (!$invoice) {
             return false;
         }
@@ -428,13 +408,13 @@ class SepayPaymentController extends Controller
         return true;
     }
 
-    private function findInvoiceFromReferences(array $references): ?Invoice
+    private function findInvoiceFromReferences(array $references, ?int $settingsUserId = null): ?Invoice
     {
         foreach ($references as $reference) {
             if (preg_match('/INV[-_]?(\d+)/i', $reference, $matches)) {
                 $invoice = Invoice::find((int) $matches[1]);
 
-                if ($invoice) {
+                if ($invoice && $this->invoiceBelongsToSettingsUser($invoice, $settingsUserId)) {
                     return $invoice;
                 }
             }
@@ -452,12 +432,22 @@ class SepayPaymentController extends Controller
         return Invoice::query()
             ->whereNotIn('status', ['cancelled'])
             ->get(['id', 'invoice_number', 'status', 'total_amount'])
-            ->first(function (Invoice $invoice) use ($normalizedReferences) {
+            ->first(function (Invoice $invoice) use ($normalizedReferences, $settingsUserId) {
                 $normalizedInvoiceNumber = $this->normalizeReference((string) $invoice->invoice_number);
 
-                return $normalizedInvoiceNumber !== ''
+                return $this->invoiceBelongsToSettingsUser($invoice, $settingsUserId)
+                    && $normalizedInvoiceNumber !== ''
                     && $normalizedReferences->contains(fn (string $reference): bool => Str::endsWith($reference, $normalizedInvoiceNumber));
             });
+    }
+
+    private function invoiceBelongsToSettingsUser(?Invoice $invoice, ?int $settingsUserId): bool
+    {
+        if (!$invoice || !$settingsUserId || $settingsUserId < 1) {
+            return $settingsUserId === null && $invoice !== null;
+        }
+
+        return (int) $invoice->created_by === $settingsUserId;
     }
 
     private function normalizeReference(string $reference): string

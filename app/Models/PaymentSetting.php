@@ -22,6 +22,8 @@ class PaymentSetting extends Model
     public function setValueAttribute($value)
     {
         $encryptedKeys = [
+            'sepay_api_key',
+            'sepay_webhook_api_key',
             'sepay_access_token',
             'sepay_refresh_token',
         ];
@@ -53,6 +55,7 @@ class PaymentSetting extends Model
             'payfast_merchant_key',
             'payfast_passphrase',
             'sepay_api_key',
+            'sepay_webhook_api_key',
             'sepay_webhook_secret',
             'sepay_access_token',
             'sepay_refresh_token',
@@ -98,6 +101,8 @@ class PaymentSetting extends Model
     public function getValueAttribute($value)
     {
         $encryptedKeys = [
+            'sepay_api_key',
+            'sepay_webhook_api_key',
             'sepay_access_token',
             'sepay_refresh_token',
         ];
@@ -132,6 +137,7 @@ class PaymentSetting extends Model
             'payfast_merchant_key',
             'payfast_passphrase',
             'sepay_api_key',
+            'sepay_webhook_api_key',
             'sepay_webhook_secret',
             'sepay_access_token',
             'sepay_refresh_token'
@@ -207,5 +213,21 @@ class PaymentSetting extends Model
             ->get()
             ->mapWithKeys(fn (self $setting) => [$setting->key => $setting->value])
             ->toArray();
+    }
+
+    public static function userIdsForDecryptedValue(string $key, string $value): array
+    {
+        if ($value === '') {
+            return [];
+        }
+
+        return self::where('key', $key)
+            ->get()
+            ->filter(fn (self $setting) => hash_equals((string) $setting->value, $value))
+            ->pluck('user_id')
+            ->map(fn ($userId) => (int) $userId)
+            ->unique()
+            ->values()
+            ->all();
     }
 }

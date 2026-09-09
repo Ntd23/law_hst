@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 
-import { Save, CreditCard, AlertCircle, Banknote, IndianRupee, Wallet, Coins, Search, X, QrCode, Link2, ExternalLink, CheckCircle } from 'lucide-react';
+import { Save, CreditCard, AlertCircle, Banknote, IndianRupee, Wallet, Coins, Search, X, QrCode, KeyRound, CheckCircle, Copy } from 'lucide-react';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, PAYMENT_METHOD_HELP_URLS } from '@/utils/payment';
 import { SettingsSection } from '@/components/settings-section';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -28,6 +28,9 @@ interface PaymentSettings {
   sepay_bank_code: string;
   sepay_account_number: string;
   sepay_account_name: string;
+  sepay_api_key: string;
+  sepay_api_key_configured: boolean;
+  sepay_webhook_api_key: string;
   sepay_payment_prefix: string;
   sepay_bank_account_id: string;
   sepay_gateway_name: string;
@@ -170,6 +173,9 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
     sepay_bank_code: settings.sepay_bank_code || '',
     sepay_account_number: settings.sepay_account_number || '',
     sepay_account_name: settings.sepay_account_name || '',
+    sepay_api_key: '',
+    sepay_api_key_configured: settings.sepay_api_key_configured === true || settings.sepay_api_key_configured === '1',
+    sepay_webhook_api_key: settings.sepay_webhook_api_key || '',
     sepay_payment_prefix: settings.sepay_payment_prefix || 'SEPAY',
     sepay_bank_account_id: settings.sepay_bank_account_id || '',
     sepay_gateway_name: settings.sepay_gateway_name || 'SePay',
@@ -363,6 +369,7 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
     data.sepay_is_connected
     && data.sepay_connection_status === 'connected'
     && data.sepay_connected_at
+    && data.sepay_api_key_configured
     && sepayBankAccounts.length > 0
   );
 
@@ -375,9 +382,10 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
           action: t('Đồng bộ tài khoản SePay'),
         };
       case 'reconnect_required':
+      case 'invalid_api_key':
         return {
-          title: t('Phiên kết nối SePay đã hết hạn'),
-          description: t('Refresh token không còn hợp lệ. Hãy kết nối lại SePay để cấp quyền mới.'),
+          title: t('API key SePay không hợp lệ'),
+          description: t('API key đã nhập không hợp lệ, đã bị tắt hoặc bạn chưa sao chép đầy đủ token từ SePay API Access. Hãy nhập API key mới để kết nối lại.'),
           action: t('Kết nối lại SePay'),
         };
       case 'sync_failed':
@@ -424,6 +432,7 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
       ...current,
       sepay_oauth_connected: toBool(next.sepay_oauth_connected ?? next.connected ?? current.sepay_oauth_connected),
       sepay_is_connected: toBool(next.sepay_is_connected ?? next.connected ?? current.sepay_is_connected),
+      sepay_api_key_configured: toBool(next.sepay_api_key_configured ?? current.sepay_api_key_configured),
       sepay_has_bank_accounts: toBool(next.sepay_has_bank_accounts ?? next.has_bank_accounts ?? current.sepay_has_bank_accounts),
       sepay_connection_status: next.sepay_connection_status ?? next.status ?? current.sepay_connection_status,
       sepay_connected_at: next.sepay_connected_at ?? next.connected_at ?? current.sepay_connected_at,
@@ -436,7 +445,24 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
       sepay_bank_code: next.sepay_bank_code ?? current.sepay_bank_code,
       sepay_account_number: next.sepay_account_number ?? current.sepay_account_number,
       sepay_account_name: next.sepay_account_name ?? current.sepay_account_name,
+      sepay_webhook_api_key: next.sepay_webhook_api_key ?? current.sepay_webhook_api_key,
+      sepay_api_key: '',
     }));
+  };
+
+  const sepayWebhookUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/api/sepay/webhook`
+    : '/api/sepay/webhook';
+
+  const copyToClipboard = async (text: string) => {
+    if (!text) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(t('Đã sao chép'));
+    } catch {
+      toast.error(t('Không thể sao chép'));
+    }
   };
 
   const csrfToken = () => {
@@ -484,6 +510,7 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
     settings.sepay_account_email,
     settings.sepay_account_display_name,
     settings.sepay_account_avatar,
+    settings.sepay_api_key_configured,
     settings.sepay_bank_accounts,
     settings.sepay_bank_account_id,
     settings.sepay_bank_code,
@@ -491,90 +518,40 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
     settings.sepay_account_name,
   ]);
 
-  const openSepayOAuth = () => {
-    const w = 600;
-    const h = 700;
-    const top = Math.max((window.innerHeight - h) / 2, 0);
-    const left = Math.max((window.innerWidth - w) / 2, 0);
-
+  const handleConnectSepayAccount = async () => {
+    if (!data.sepay_api_key.trim()) {
+      toast.error(t('Vui lòng nhập API key SePay.'));
+      return;
+    }
     setTestingSepay(true);
 
-    const popup = window.open(
-      route('sepay.oauth.connect'),
-      'sepayOAuthWindow',
-      `width=${w},height=${h},top=${top},left=${left},scrollbars=yes`
-    );
+    try {
+      const token = csrfToken();
+      const response = await fetch(route('sepay.connect'), {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(token ? { 'X-CSRF-TOKEN': token, 'X-XSRF-TOKEN': token } : {}),
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ sepay_api_key: data.sepay_api_key.trim() }),
+      });
 
-    let attempts = 0;
-    const terminalStatuses = ['connected', 'missing_bank_accounts', 'sync_failed', 'failed', 'reconnect_required'];
-    const handleOAuthMessage = async (event: MessageEvent) => {
-      if (event.data?.type !== 'sepay-oauth-complete') {
-        return;
+      const result = await response.json().catch(() => ({}));
+      applySepaySnapshot(result);
+
+      if (response.ok && result.success !== false) {
+        toast.success(result.message || t('SePay connected successfully.'));
+      } else {
+        toast.error(result.message || t('Could not connect SePay. Please check your API key and try again.'));
       }
-
-      try {
-        const status = await refreshSepaySnapshot();
-
-        if (status.connected === true) {
-          toast.success(t('SePay connected successfully.'));
-        } else if (status.status === 'missing_bank_accounts') {
-          toast.error(t('SePay đã xác thực nhưng chưa đồng bộ được tài khoản ngân hàng.'));
-        } else {
-          toast.error(event.data?.message || t('Could not connect SePay. Please try again.'));
-        }
-      } catch {
-        toast.error(t('Could not update SePay connection status.'));
-      } finally {
-        window.clearInterval(poll);
-        window.removeEventListener('message', handleOAuthMessage);
-        setTestingSepay(false);
-
-        try {
-          popup?.close();
-        } catch {
-          // Ignore cross-origin popup close errors.
-        }
-      }
-    };
-
-    window.addEventListener('message', handleOAuthMessage);
-
-    const poll = window.setInterval(async () => {
-      attempts += 1;
-
-      try {
-        const status = await refreshSepaySnapshot();
-
-        if (status.connected === true || terminalStatuses.includes(status.status)) {
-          window.clearInterval(poll);
-          window.removeEventListener('message', handleOAuthMessage);
-          setTestingSepay(false);
-
-          try {
-            popup?.close();
-          } catch {
-            // Ignore cross-origin popup close errors.
-          }
-
-          if (status.connected === true) {
-            toast.success(t('SePay connected successfully.'));
-          } else if (status.status === 'missing_bank_accounts') {
-            toast.error(t('SePay đã xác thực nhưng chưa đồng bộ được tài khoản ngân hàng.'));
-          } else {
-            toast.error(t('Could not connect SePay. Please try again.'));
-          }
-        }
-      } catch {
-        // Keep polling while the OAuth popup is active.
-      }
-
-      if (attempts >= 80 || popup?.closed) {
-        window.clearInterval(poll);
-        window.removeEventListener('message', handleOAuthMessage);
-        setTestingSepay(false);
-        refreshSepaySnapshot().catch(() => undefined);
-      }
-    }, 3000);
+    } catch {
+      toast.error(t('Could not connect SePay. Please check your API key and try again.'));
+    } finally {
+      setTestingSepay(false);
+    }
   };
 
   // Check if method should be shown
@@ -649,7 +626,7 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
     setTestingSepay(true);
 
     try {
-      const response = await fetch(route('sepay.oauth.disconnect'), {
+      const response = await fetch(route('sepay.disconnect'), {
         headers: {
           Accept: 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
@@ -851,8 +828,50 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
                             <Badge variant="secondary" className="bg-green-100 text-green-700">{t("Đã kết nối")}</Badge>
                           </div>
                           <p className="mt-3 max-w-2xl text-lg leading-8 text-muted-foreground">
-                            {t("Chọn tài khoản ngân hàng nhận tiền rồi bấm Lưu thay đổi. Hệ thống sẽ tự đồng bộ thông tin ngân hàng và đăng ký webhook SePay.")}
+                            {t("Chọn tài khoản ngân hàng nhận tiền rồi bấm Lưu thay đổi. Sao chép Webhook URL và API key webhook bên dưới để cấu hình trong SePay.")}
                           </p>
+                        </div>
+
+                        <div className="grid gap-4 rounded-lg border bg-muted/30 p-4 md:grid-cols-[1fr_auto] md:items-end">
+                          <PaymentInputField
+                            id="sepay_api_key"
+                            label={t("API key SePay")}
+                            value={data.sepay_api_key}
+                            onChange={(value) => setData('sepay_api_key', value)}
+                            placeholder={t("Nhập API key mới nếu muốn thay đổi")}
+                            isSecret
+                            error={errors.sepay_api_key}
+                          />
+                          <Button type="button" onClick={handleConnectSepayAccount} disabled={testingSepay || !data.sepay_api_key.trim()}>
+                            <KeyRound className="mr-2 h-4 w-4" />
+                            {testingSepay ? t("Đang kết nối...") : t("Cập nhật API key")}
+                          </Button>
+                        </div>
+
+                        <div className="space-y-4 rounded-lg border bg-muted/30 p-4 text-left">
+                          <div>
+                            <Label>{t("Webhook URL SePay")}</Label>
+                            <div className="mt-2 flex gap-2">
+                              <Input value={sepayWebhookUrl} readOnly className="font-mono text-sm" />
+                              <Button type="button" variant="outline" onClick={() => copyToClipboard(sepayWebhookUrl)}>
+                                <Copy className="mr-2 h-4 w-4" />
+                                {t("Sao chép")}
+                              </Button>
+                            </div>
+                          </div>
+                          <div>
+                            <Label>{t("API key webhook")}</Label>
+                            <div className="mt-2 flex gap-2">
+                              <Input value={data.sepay_webhook_api_key || ''} readOnly className="font-mono text-sm" />
+                              <Button type="button" variant="outline" onClick={() => copyToClipboard(data.sepay_webhook_api_key)} disabled={!data.sepay_webhook_api_key}>
+                                <Copy className="mr-2 h-4 w-4" />
+                                {t("Sao chép")}
+                              </Button>
+                            </div>
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              {t("Trong SePay Webhooks, chọn Security là API Key và dán key này. Hệ thống chỉ nhận header Authorization: Apikey ...")}
+                            </p>
+                          </div>
                         </div>
 
                         <div className="grid gap-4 rounded-lg border bg-muted/30 p-4 md:grid-cols-2">
@@ -945,15 +964,26 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
                         <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
                           {sepayStatusMessage.description}
                         </p>
+                        <div className="mt-8 w-full max-w-xl">
+                          <PaymentInputField
+                            id="sepay_api_key_retry"
+                            label={t("API key SePay")}
+                            value={data.sepay_api_key}
+                            onChange={(value) => setData('sepay_api_key', value)}
+                            placeholder={t("Nhập API key SePay")}
+                            isSecret
+                            error={errors.sepay_api_key}
+                          />
+                        </div>
                         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                           <Button
                             type="button"
                             size="lg"
                             className="px-8 py-6 text-lg font-semibold"
-                            onClick={data.sepay_connection_status === 'reconnect_required' || data.sepay_connection_status === 'failed' ? openSepayOAuth : handleSyncSepayAccount}
-                            disabled={testingSepay}
+                            onClick={['reconnect_required', 'invalid_api_key', 'failed'].includes(data.sepay_connection_status) ? handleConnectSepayAccount : handleSyncSepayAccount}
+                            disabled={testingSepay || (['reconnect_required', 'invalid_api_key', 'failed'].includes(data.sepay_connection_status) && !data.sepay_api_key.trim())}
                           >
-                            <ExternalLink className="mr-2 h-5 w-5" />
+                            <KeyRound className="mr-2 h-5 w-5" />
                             {testingSepay ? t("Đang xử lý...") : sepayStatusMessage.action}
                           </Button>
                           <Button type="button" size="lg" variant="outline" className="px-8 py-6 text-lg font-semibold" onClick={handleDisconnectSepayAccount} disabled={testingSepay}>
@@ -964,16 +994,27 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
                     ) : (
                       <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
                         <div className="mb-5 text-primary">
-                          <Link2 className="h-16 w-16" />
+                          <KeyRound className="h-16 w-16" />
                         </div>
                         <h3 className="text-4xl font-bold text-primary">{t("Kết nối với SePay")}</h3>
                         <p className="mt-5 max-w-2xl text-xl leading-9 text-muted-foreground">
-                          {t("Kết nối tài khoản SePay của bạn qua OAuth2 để tự động đồng bộ tài khoản ngân hàng và kích hoạt tính năng tự động xác nhận giao dịch chuyển khoản.")}
+                          {t("Nhập API key SePay để đồng bộ tài khoản ngân hàng và kích hoạt tự động xác nhận giao dịch chuyển khoản.")}
                         </p>
-                        <Button type="button" size="lg" className="mt-8 px-10 py-6 text-lg font-semibold" onClick={openSepayOAuth}>
-                          <ExternalLink className="mr-2 h-5 w-5" />
-                          {t("Kết nối tài khoản SePay ngay")}
-                        </Button>
+                        <div className="mt-8 w-full max-w-xl space-y-4">
+                          <PaymentInputField
+                            id="sepay_api_key_initial"
+                            label={t("API key SePay")}
+                            value={data.sepay_api_key}
+                            onChange={(value) => setData('sepay_api_key', value)}
+                            placeholder="API token từ SePay API Access"
+                            isSecret
+                            error={errors.sepay_api_key}
+                          />
+                          <Button type="button" size="lg" className="w-full px-10 py-6 text-lg font-semibold" onClick={handleConnectSepayAccount} disabled={testingSepay || !data.sepay_api_key.trim()}>
+                            <KeyRound className="mr-2 h-5 w-5" />
+                            {testingSepay ? t("Đang kết nối...") : t("Kết nối SePay")}
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>

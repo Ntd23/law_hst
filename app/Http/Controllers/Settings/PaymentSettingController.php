@@ -52,6 +52,7 @@ class PaymentSettingController extends Controller
                 'sepay_bank_code' => 'nullable|string',
                 'sepay_account_number' => 'nullable|string',
                 'sepay_account_name' => 'nullable|string',
+                'sepay_api_key' => 'nullable|string|max:500',
                 'sepay_payment_prefix' => 'nullable|string|max:30',
                 'sepay_bank_account_id' => 'nullable|string|max:100',
                 'sepay_gateway_name' => 'nullable|string|max:100',
@@ -129,9 +130,43 @@ class PaymentSettingController extends Controller
                 'cashfree_public_key' => 'nullable|string',
             ]);
 
+            $settingsUserId = getPaymentSettingsUserId() ?: auth()->id();
+            $currentSettings = PaymentSetting::getUserSettings((int) $settingsUserId);
             $settings = $this->preparePaymentSettings($request, $validatedData);
+            if (!$request->filled('sepay_api_key')) {
+                unset($settings['sepay_api_key']);
+            }
+
             $this->validateEnabledPaymentMethods($request, $validatedData);
-            $this->savePaymentSettings($settings);
+            if ($request->boolean('is_sepay_enabled') && empty($validatedData['sepay_api_key'] ?? '') && empty($currentSettings['sepay_api_key'] ?? '')) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'sepay_api_key' => [__('Please enter a SePay API key before enabling this payment method.')],
+                ]);
+            }
+            if (
+                $request->boolean('is_sepay_enabled')
+                && (
+                    empty($currentSettings['sepay_api_key'] ?? '')
+                    || empty($currentSettings['sepay_connected_at'] ?? '')
+                    || ($currentSettings['sepay_connection_status'] ?? '') !== 'connected'
+                )
+            ) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'sepay' => [__('Please connect SePay successfully before enabling this payment method.')],
+                ]);
+            }
+            if ($request->boolean('is_sepay_enabled') && empty($validatedData['sepay_bank_account_id'] ?? '') && empty($currentSettings['sepay_bank_account_id'] ?? '')) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'sepay_bank_account_id' => [__('Please select a SePay receiving bank account before enabling this payment method.')],
+                ]);
+            }
+            if ($request->filled('sepay_api_key') && $this->apiKeyBelongsToAnotherSettingsUser(trim((string) $validatedData['sepay_api_key']), (int) $settingsUserId)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'sepay_api_key' => [__('This SePay API key is already connected to another account. Please use a separate SePay API key for this account.')],
+                ]);
+            }
+
+            $this->savePaymentSettings($settings, (int) $settingsUserId);
             $this->configureSepayAutomation($request);
 
             if (auth()?->user()?->type == 'superadmin') {
@@ -190,6 +225,7 @@ class PaymentSettingController extends Controller
             'sepay_bank_code' => $value('sepay_bank_code'),
             'sepay_account_number' => $value('sepay_account_number'),
             'sepay_account_name' => $value('sepay_account_name'),
+            'sepay_api_key' => $value('sepay_api_key'),
             'sepay_payment_prefix' => $value('sepay_payment_prefix', 'SEPAY'),
             'sepay_bank_account_id' => $value('sepay_bank_account_id'),
             'sepay_gateway_name' => $value('sepay_gateway_name', 'SePay'),
@@ -549,10 +585,10 @@ class PaymentSettingController extends Controller
         }
     }
 
-    private function savePaymentSettings(array $settings): void
+    private function savePaymentSettings(array $settings, int $settingsUserId): void
     {
         foreach ($settings as $key => $value) {
-            updatePaymentSetting($key, $value);
+            updatePaymentSetting($key, $value, $settingsUserId);
         }
         if (auth()?->user()?->type == 'superadmin') {
             \Cache::forget('admin_settings');
@@ -569,12 +605,12 @@ class PaymentSettingController extends Controller
         $settings = PaymentSetting::getUserSettings($settingsUserId);
 
         if (
-            empty($settings['sepay_access_token'])
+            empty($settings['sepay_api_key'])
             || empty($settings['sepay_connected_at'])
             || ($settings['sepay_connection_status'] ?? '') !== 'connected'
         ) {
             throw \Illuminate\Validation\ValidationException::withMessages([
-                'sepay' => [__('Please connect SePay before selecting a receiving bank account.')],
+                'sepay' => [__('Please connect SePay with an API key before selecting a receiving bank account.')],
             ]);
         }
 
@@ -611,10 +647,10 @@ class PaymentSettingController extends Controller
         updatePaymentSetting('sepay_account_name', $accountName, $settingsUserId);
         updatePaymentSetting('sepay_bank_logo', $bankAccount['logo'] ?? $bankAccount['bank_logo'] ?? $bank['logo'] ?? '', $settingsUserId);
 
-        $apiKey = (string) ($settings['sepay_api_key'] ?? '');
+        $apiKey = (string) ($settings['sepay_webhook_api_key'] ?? '');
         if ($apiKey === '') {
-            $apiKey = bin2hex(random_bytes(16));
-            updatePaymentSetting('sepay_api_key', $apiKey, $settingsUserId);
+            $apiKey = bin2hex(random_bytes(24));
+            updatePaymentSetting('sepay_webhook_api_key', $apiKey, $settingsUserId);
         }
 
         $payload = [
@@ -660,6 +696,12 @@ class PaymentSettingController extends Controller
         return collect($accounts)->first(function ($account) use ($bankAccountId) {
             return (string) ($account['id'] ?? '') === $bankAccountId;
         }) ?? [];
+    }
+
+    private function apiKeyBelongsToAnotherSettingsUser(string $apiKey, int $settingsUserId): bool
+    {
+        return collect(PaymentSetting::userIdsForDecryptedValue('sepay_api_key', $apiKey))
+            ->contains(fn (int $userId) => $userId !== $settingsUserId);
     }
 
     public function getEnabledMethods()

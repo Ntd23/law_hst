@@ -57,7 +57,7 @@ class InvoicePaymentController extends Controller
             ->with(['client', 'case', 'creator'])
             ->firstOrFail();
 
-        $settingsUserId = getCompanyId($invoice->created_by) ?: $invoice->created_by;
+        $settingsUserId = $invoice->created_by;
 
         // Get company information
         $company = \App\Models\User::where('id', $settingsUserId)
@@ -247,8 +247,8 @@ class InvoicePaymentController extends Controller
             return [];
         }
 
-        // Get company-specific payment settings only
-        $settingsUserId = getCompanyId($invoiceCreatorId) ?: $invoiceCreatorId;
+        // Get the payment settings of the account that created the invoice.
+        $settingsUserId = $invoiceCreatorId;
         $settings = PaymentSetting::where('user_id', $settingsUserId)->pluck('value', 'key')->toArray();
 
         $gateways = [];

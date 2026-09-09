@@ -3,11 +3,11 @@
 namespace App\Services;
 
 use App\Models\PaymentSetting;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use RuntimeException;
 
 class SepayClient
 {
@@ -20,13 +20,19 @@ class SepayClient
 
     public function isConnected(): bool
     {
-        return !empty($this->settings['sepay_access_token'])
+        return !empty($this->settings['sepay_api_key'])
             && !empty($this->settings['sepay_connected_at'])
             && ($this->settings['sepay_connection_status'] ?? '') === 'connected';
     }
 
     public function profile(): array
     {
+        $endpoint = trim((string) config('services.sepay.profile_endpoint', ''));
+
+        if ($endpoint === '') {
+            return [];
+        }
+
         $data = Cache::remember($this->cacheKey('profile'), now()->addMinute(), function () {
             return $this->request('GET', (string) config('services.sepay.profile_endpoint', '/user/profile'))->json() ?? [];
         });
@@ -85,10 +91,6 @@ class SepayClient
             $profile = $this->normalizeProfile($this->profile());
             $accounts = $this->normalizeBankAccounts($this->bankAccounts());
 
-            if (($profile['display_name'] ?? '') === '' && ($profile['email'] ?? '') === '') {
-                throw new RuntimeException('SePay profile response was empty.');
-            }
-
             $this->save('sepay_account_email', $profile['email']);
             $this->save('sepay_account_display_name', $profile['display_name']);
             $this->save('sepay_account_avatar', $profile['avatar']);
@@ -99,24 +101,31 @@ class SepayClient
                 $this->save('sepay_oauth_connected', false);
                 $this->save('sepay_connected_at', '');
                 $this->save('sepay_connection_status', 'missing_bank_accounts');
+                $this->clearSelectedBankAccount();
 
                 return false;
             }
 
+            $this->syncSelectedBankAccount($accounts);
             $this->save('sepay_oauth_connected', true);
             $this->save('sepay_connected_at', now()->toDateTimeString());
             $this->save('sepay_connection_status', 'connected');
 
             return true;
         } catch (\Throwable $e) {
+            $statusCode = $e instanceof RequestException ? $e->response?->status() : null;
+
             Log::warning('SePay sync profile/accounts failed', [
                 'settings_user_id' => $this->settingsUserId,
+                'status_code' => $statusCode,
                 'message' => $e->getMessage(),
             ]);
 
             $this->save('sepay_oauth_connected', false);
             $this->save('sepay_connected_at', '');
-            $this->save('sepay_connection_status', 'sync_failed');
+            $this->save('sepay_connection_status', $statusCode === 401 ? 'invalid_api_key' : 'sync_failed');
+            $this->save('sepay_bank_accounts', '[]');
+            $this->clearSelectedBankAccount();
 
             return false;
         }
@@ -124,13 +133,7 @@ class SepayClient
 
     public function request(string $method, string $path, array $data = []): Response
     {
-        $response = $this->send($method, $path, $data);
-
-        if ($response->status() === 401 && $this->refreshToken()) {
-            $response = $this->send($method, $path, $data);
-        }
-
-        return $response->throw();
+        return $this->send($method, $path, $data)->throw();
     }
 
     private function send(string $method, string $path, array $data = []): Response
@@ -140,55 +143,10 @@ class SepayClient
             $options['json'] = $data;
         }
 
-        return Http::withToken((string) ($this->settings['sepay_access_token'] ?? ''))
+        return Http::withToken((string) ($this->settings['sepay_api_key'] ?? ''))
             ->acceptJson()
             ->timeout(15)
             ->send(strtoupper($method), $this->apiUrl($path), $options);
-    }
-
-    private function refreshToken(): bool
-    {
-        $refreshToken = (string) ($this->settings['sepay_refresh_token'] ?? '');
-
-        if ($refreshToken === '') {
-            return false;
-        }
-
-        try {
-            $response = Http::asForm()
-                ->acceptJson()
-                ->timeout(15)
-                ->post((string) config('services.sepay.refresh_token_url'), [
-                    'refresh_token' => $refreshToken,
-                ])
-                ->throw()
-                ->json();
-
-            if (empty($response['access_token'])) {
-                return false;
-            }
-
-            $this->save('sepay_access_token', $response['access_token']);
-            $this->save('sepay_refresh_token', $response['refresh_token'] ?? $refreshToken);
-            $this->save('sepay_expired_at', isset($response['expires_in']) ? now()->addSeconds((int) $response['expires_in'])->toDateTimeString() : '');
-            $this->save('sepay_connection_status', 'syncing');
-
-            $this->settings = PaymentSetting::getUserSettings($this->settingsUserId);
-            $this->forgetCache();
-
-            return true;
-        } catch (\Throwable $e) {
-            Log::warning('SePay refresh token failed', [
-                'settings_user_id' => $this->settingsUserId,
-                'message' => $e->getMessage(),
-            ]);
-
-            $this->save('sepay_oauth_connected', false);
-            $this->save('sepay_connected_at', '');
-            $this->save('sepay_connection_status', 'reconnect_required');
-
-            return false;
-        }
     }
 
     private function normalizeProfile(array $profile): array
@@ -223,6 +181,46 @@ class SepayClient
                 'logo' => $account['logo'] ?? $account['bank_logo'] ?? $bank['logo'] ?? '',
             ];
         })->filter(fn ($account) => $account['id'] !== '')->values()->all();
+    }
+
+    private function syncSelectedBankAccount(array $accounts): void
+    {
+        $selectedId = (string) ($this->settings['sepay_bank_account_id'] ?? '');
+
+        if ($selectedId === '' && count($accounts) === 1) {
+            $selectedId = (string) ($accounts[0]['id'] ?? '');
+        }
+
+        if ($selectedId === '') {
+            $this->clearSelectedBankAccount();
+            return;
+        }
+
+        $selectedAccount = collect($accounts)->firstWhere('id', $selectedId);
+
+        if (!$selectedAccount) {
+            $this->clearSelectedBankAccount();
+            return;
+        }
+
+        $this->save('sepay_bank_account_id', $selectedAccount['id']);
+        $this->save('sepay_bank_code', $selectedAccount['bank_code']);
+        $this->save('sepay_bank_name', $selectedAccount['bank_name']);
+        $this->save('sepay_bank_brand_name', $selectedAccount['brand_name']);
+        $this->save('sepay_account_number', $selectedAccount['account_number']);
+        $this->save('sepay_account_name', $selectedAccount['account_name']);
+        $this->save('sepay_bank_logo', $selectedAccount['logo']);
+    }
+
+    private function clearSelectedBankAccount(): void
+    {
+        $this->save('sepay_bank_account_id', '');
+        $this->save('sepay_bank_code', '');
+        $this->save('sepay_bank_name', '');
+        $this->save('sepay_bank_brand_name', '');
+        $this->save('sepay_account_number', '');
+        $this->save('sepay_account_name', '');
+        $this->save('sepay_bank_logo', '');
     }
 
     private function apiUrl(string $path): string

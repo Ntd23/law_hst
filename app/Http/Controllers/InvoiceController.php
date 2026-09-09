@@ -109,7 +109,7 @@ class InvoiceController extends BaseController
     {
         $settingsUserIdsByInvoice = $invoices
             ->mapWithKeys(fn (Invoice $invoice) => [
-                $invoice->id => getCompanyId($invoice->created_by) ?: $invoice->created_by,
+                $invoice->id => $invoice->created_by,
             ])
             ->filter();
 

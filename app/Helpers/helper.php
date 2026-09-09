@@ -510,14 +510,8 @@ if (! function_exists('getPaymentSettings')) {
      */
     function getPaymentSettings($userId = null)
     {
-
         if (is_null($userId)) {
-            if (auth()->check() && in_array(auth()->user()->type, ['superadmin', 'company'])) {
-                $userId = auth()->id();
-            } else {
-                $user = User::where('type', 'superadmin')->first();
-                $userId = $user ? $user->id : null;
-            }
+            $userId = auth()->check() ? auth()->id() : User::where('type', 'superadmin')->first()?->id;
         }
 
         return PaymentSetting::getUserSettings($userId);
@@ -1295,17 +1289,14 @@ if (! function_exists('getPaymentSettingsUserId')) {
      */
     function getPaymentSettingsUserId($invoiceCreatorId = null)
     {
-        // If invoice creator ID is provided, use it
         if ($invoiceCreatorId) {
-            return $invoiceCreatorId;
+            return (int) $invoiceCreatorId;
         }
 
-        // If authenticated user is company or superadmin, use their ID
-        if (auth()->check() && in_array(auth()->user()->type, ['superadmin', 'company'])) {
+        if (auth()->check()) {
             return auth()->id();
         }
 
-        // Return null instead of falling back to superadmin
         return null;
     }
 }

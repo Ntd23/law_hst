@@ -9,7 +9,7 @@ class SepayInvoiceQrService
 {
     public function buildVariables(Invoice $invoice): array
     {
-        $settingsUserId = getCompanyId($invoice->created_by) ?: $invoice->created_by;
+        $settingsUserId = $invoice->created_by;
 
         if (!$settingsUserId) {
             return [];

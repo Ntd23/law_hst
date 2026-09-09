@@ -31,14 +31,21 @@ class SettingsController extends Controller
             ->orderByRaw("CASE WHEN code = 'VND' THEN 1 WHEN code = 'USD' THEN 2 ELSE 3 END")
             ->get();
         $paymentSettings = PaymentSetting::getUserSettings(auth()->id());
+
+        if (!empty($paymentSettings['sepay_api_key']) && empty($paymentSettings['sepay_webhook_api_key'])) {
+            PaymentSetting::updateOrCreateSetting(auth()->id(), 'sepay_webhook_api_key', bin2hex(random_bytes(24)));
+            $paymentSettings = PaymentSetting::getUserSettings(auth()->id());
+        }
+
         $sepayBankAccounts = json_decode((string) ($paymentSettings['sepay_bank_accounts'] ?? '[]'), true);
         $sepayHasBankAccounts = is_array($sepayBankAccounts) && count($sepayBankAccounts) > 0;
         $paymentSettings['sepay_has_bank_accounts'] = $sepayHasBankAccounts;
-        $paymentSettings['sepay_is_connected'] = !empty($paymentSettings['sepay_access_token'])
+        $paymentSettings['sepay_api_key_configured'] = !empty($paymentSettings['sepay_api_key']);
+        $paymentSettings['sepay_is_connected'] = !empty($paymentSettings['sepay_api_key'])
             && !empty($paymentSettings['sepay_connected_at'])
             && ($paymentSettings['sepay_connection_status'] ?? '') === 'connected'
             && $sepayHasBankAccounts;
-        unset($paymentSettings['sepay_access_token'], $paymentSettings['sepay_refresh_token']);
+        unset($paymentSettings['sepay_api_key'], $paymentSettings['sepay_access_token'], $paymentSettings['sepay_refresh_token']);
         $webhooks = Webhook::where('user_id', auth()->id())->get();
         $companySettings = CompanySetting::where('created_by', createdBy())->get();
 

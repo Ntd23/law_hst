@@ -49,7 +49,6 @@ use App\Http\Controllers\YooKassaPaymentController;
 use App\Http\Controllers\AamarpayPaymentController;
 use App\Http\Controllers\MidtransPaymentController;
 use App\Http\Controllers\SepayPaymentController;
-use App\Http\Controllers\SepayOAuthController;
 use App\Http\Controllers\PublicFormController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskTypeController;
@@ -73,9 +72,6 @@ Route::post('webhooks/sepay', [SepayPaymentController::class, 'webhook'])
     ->name('sepay.webhook');
 Route::get('api/orders/{order_code}/check-status', [SepayPaymentController::class, 'checkStatus'])
     ->name('sepay.order-status');
-Route::match(['GET', 'POST'], 'sepay/oauth/callback', [SepayOAuthController::class, 'callback'])
-    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
-    ->name('sepay.oauth.callback');
 
 // Redirect misspelled 'referal' to correct 'referral'
 Route::redirect('referal/{path?}', 'referral/{path?}')->where('path', '.*');

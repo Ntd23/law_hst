@@ -38,8 +38,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
     // Payment Settings (admin only)
     Route::post('/payment-settings', [PaymentSettingController::class, 'store'])->middleware('permission:manage-payment-settings')->name('payment.settings');
-    Route::get('/sepay/oauth/connect', [SepayOAuthController::class, 'connect'])->middleware('permission:manage-payment-settings')->name('sepay.oauth.connect');
-    Route::get('/sepay/oauth/disconnect', [SepayOAuthController::class, 'disconnect'])->middleware('permission:manage-payment-settings')->name('sepay.oauth.disconnect');
+    Route::post('/sepay/connect', [SepayOAuthController::class, 'connect'])->middleware('permission:manage-payment-settings')->name('sepay.connect');
+    Route::get('/sepay/disconnect', [SepayOAuthController::class, 'disconnect'])->middleware('permission:manage-payment-settings')->name('sepay.disconnect');
     Route::post('/sepay/sync', [SepayOAuthController::class, 'sync'])->middleware('permission:manage-payment-settings')->name('sepay.sync');
     Route::get('/sepay/status', [SepayOAuthController::class, 'status'])->middleware('permission:manage-payment-settings')->name('sepay.status');
     // Profile settings page with profile and password sections
