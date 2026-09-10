@@ -16,6 +16,7 @@ use App\Http\Controllers\StripePaymentController;
 use App\Http\Controllers\PayPalPaymentController;
 use App\Http\Controllers\BankPaymentController;
 use App\Http\Controllers\SepayOAuthController;
+use App\Http\Controllers\SepayPaymentController;
 use Inertia\Inertia;
 
 /*
@@ -33,15 +34,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/enabled-payment-methods', [PaymentSettingController::class, 'getEnabledMethods'])->name('payment.enabled-methods');
     Route::post('/plan-orders', [PlanOrderController::class, 'create'])->name('plan-orders.create');
     Route::post('/stripe-payment', [StripePaymentController::class, 'processPayment'])->name('settings.stripe.payment');
+    Route::get('/sepay/plan-transfer-preview', [SepayPaymentController::class, 'planTransferPreview'])->name('sepay.plan-transfer-preview');
 });
 
 Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
     // Payment Settings (admin only)
     Route::post('/payment-settings', [PaymentSettingController::class, 'store'])->middleware('permission:manage-payment-settings')->name('payment.settings');
     Route::post('/sepay/connect', [SepayOAuthController::class, 'connect'])->middleware('permission:manage-payment-settings')->name('sepay.connect');
+    Route::get('/sepay/oauth/connect', [SepayOAuthController::class, 'connectHelp'])->middleware('permission:manage-payment-settings')->name('sepay.oauth.connect');
     Route::get('/sepay/disconnect', [SepayOAuthController::class, 'disconnect'])->middleware('permission:manage-payment-settings')->name('sepay.disconnect');
+    Route::get('/sepay/oauth/disconnect', [SepayOAuthController::class, 'disconnect'])->middleware('permission:manage-payment-settings')->name('sepay.oauth.disconnect');
     Route::post('/sepay/sync', [SepayOAuthController::class, 'sync'])->middleware('permission:manage-payment-settings')->name('sepay.sync');
     Route::get('/sepay/status', [SepayOAuthController::class, 'status'])->middleware('permission:manage-payment-settings')->name('sepay.status');
+    Route::get('/sepay/transfer-preview', [SepayOAuthController::class, 'transferPreview'])->middleware('permission:manage-payment-settings')->name('sepay.transfer-preview');
     // Profile settings page with profile and password sections
     Route::get('ho-so-ca-nhan', function () {
         return Inertia::render('settings/profile-settings');

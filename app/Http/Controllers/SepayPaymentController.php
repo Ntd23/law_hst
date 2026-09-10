@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\PaymentSetting;
 use App\Models\Plan;
 use App\Models\PlanOrder;
+use App\Services\SepayTransferContentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -23,7 +24,7 @@ class SepayPaymentController extends Controller
 
         try {
             $plan = Plan::findOrFail($validated['plan_id']);
-            $referenceCode = strtoupper($validated['reference_code'] ?: $this->makeReferenceCode('PLAN', auth()->id()));
+            $referenceCode = strtoupper($validated['reference_code'] ?: app(SepayTransferContentService::class)->buildOrderCode('PLAN', auth()->id(), null));
 
             $existingOrder = PlanOrder::where('payment_method', 'sepay')
                 ->where(function ($query) use ($referenceCode) {
@@ -58,6 +59,33 @@ class SepayPaymentController extends Controller
         }
     }
 
+    public function planTransferPreview(Request $request, SepayTransferContentService $transferContent)
+    {
+        $validated = $request->validate([
+            'plan_id' => 'required|integer|exists:plans,id',
+        ]);
+
+        $settingsUserId = \App\Models\User::where('type', 'superadmin')->first()?->id;
+        if (!$settingsUserId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'SePay settings owner was not found.',
+            ], 404);
+        }
+
+        $settings = PaymentSetting::getUserSettings((int) $settingsUserId);
+        $orderCode = $transferContent->buildOrderCode(
+            'PLAN',
+            auth()->id() . (string) $validated['plan_id'],
+            $settings['sepay_payment_prefix'] ?? null
+        );
+
+        return response()->json([
+            'success' => true,
+            'preview' => $transferContent->instruction($settings, $orderCode),
+        ]);
+    }
+
     public function processInvoicePayment(Request $request)
     {
         try {
@@ -68,7 +96,7 @@ class SepayPaymentController extends Controller
             ]);
 
             $invoice = Invoice::where('payment_token', $request->invoice_token)->firstOrFail();
-            $referenceCode = strtoupper($request->reference_code ?: $this->makeReferenceCode('INV', $invoice->id));
+            $referenceCode = strtoupper($request->reference_code ?: app(SepayTransferContentService::class)->buildOrderCode('invoice', $invoice->id, null));
 
             $existingPayment = Payment::where('payment_method', 'sepay')
                 ->where('invoice_id', $invoice->id)
@@ -273,15 +301,23 @@ class SepayPaymentController extends Controller
             return 'Non-incoming transfer skipped';
         }
 
-        $configuredAccount = PaymentSetting::where('user_id', $settingsUserId)
-            ->where('key', 'sepay_account_number')
-            ->value('value') ?: config('services.sepay.account_number');
+        $settings = PaymentSetting::getUserSettings($settingsUserId);
+        $instruction = app(SepayTransferContentService::class)->instruction($settings, '');
+        $configuredAccount = (string) ($instruction['receiving_account'] ?: ($settings['sepay_account_number'] ?? ''));
+        $mainAccount = (string) ($settings['sepay_account_number'] ?? '');
         $payloadAccount = $payload['accountNumber'] ?? $payload['account_number'] ?? null;
+        $payloadVa = $payload['va'] ?? $payload['va_number'] ?? $payload['virtualAccount'] ?? $payload['virtual_account'] ?? null;
 
-        if ($configuredAccount && $payloadAccount && (string) $configuredAccount !== (string) $payloadAccount) {
+        $acceptedAccounts = array_values(array_filter(array_unique([$configuredAccount, $mainAccount])));
+        if (
+            $payloadAccount
+            && !in_array((string) $payloadAccount, $acceptedAccounts, true)
+            && (!$payloadVa || !in_array((string) $payloadVa, $acceptedAccounts, true))
+        ) {
             Log::warning('SePay webhook skipped account mismatch', [
-                'configured_account' => $configuredAccount,
+                'configured_accounts' => $acceptedAccounts,
                 'payload_account' => $payloadAccount,
+                'payload_va' => $payloadVa,
             ]);
             return 'Account mismatch skipped';
         }
@@ -305,8 +341,10 @@ class SepayPaymentController extends Controller
 
         $content = trim((string) ($payload['content'] ?? $payload['description'] ?? ''));
         $code = trim((string) ($payload['code'] ?? ''));
+        $configuredPrefix = (string) ($settings['sepay_payment_prefix'] ?? config('sepay.default_order_prefix', 'HD'));
         $references = array_values(array_unique(array_filter([
             $code ? strtoupper($code) : null,
+            ...app(SepayTransferContentService::class)->extractOrderCodes($code . ' ' . $content, [$configuredPrefix]),
             ...$this->extractInternalReferences($content),
         ])));
 
@@ -416,6 +454,19 @@ class SepayPaymentController extends Controller
 
                 if ($invoice && $this->invoiceBelongsToSettingsUser($invoice, $settingsUserId)) {
                     return $invoice;
+                }
+            }
+
+            if ($settingsUserId) {
+                $settings = PaymentSetting::getUserSettings($settingsUserId);
+                $prefix = app(SepayTransferContentService::class)->normalizeOrderPrefix($settings['sepay_payment_prefix'] ?? null);
+
+                if (preg_match('/^' . preg_quote($prefix, '/') . '(\d+)$/i', $this->normalizeReference($reference), $matches)) {
+                    $invoice = Invoice::find((int) $matches[1]);
+
+                    if ($invoice && $this->invoiceBelongsToSettingsUser($invoice, $settingsUserId)) {
+                        return $invoice;
+                    }
                 }
             }
         }

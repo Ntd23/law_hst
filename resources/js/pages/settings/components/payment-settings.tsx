@@ -26,6 +26,9 @@ interface PaymentSettings {
   bank_detail: string;
   is_sepay_enabled: boolean;
   sepay_bank_code: string;
+  sepay_bank_name: string;
+  sepay_bank_bin: string;
+  sepay_account_type: string;
   sepay_account_number: string;
   sepay_account_name: string;
   sepay_api_key: string;
@@ -33,6 +36,13 @@ interface PaymentSettings {
   sepay_webhook_api_key: string;
   sepay_payment_prefix: string;
   sepay_bank_account_id: string;
+  sepay_sub_accounts: string;
+  sepay_sub_account_id: string;
+  sepay_sub_account_number: string;
+  sepay_sub_account_name: string;
+  sepay_sub_account_code: string;
+  sepay_sub_account_type: string;
+  sepay_transfer_preview: SepayTransferPreview | null;
   sepay_gateway_name: string;
   sepay_payment_note: string;
   sepay_oauth_connected: boolean;
@@ -152,6 +162,23 @@ interface PaymentSettings {
   payfast_mode: 'sandbox' | 'live';
 }
 
+interface SepayTransferPreview {
+  bank_code?: string;
+  bank_name?: string;
+  account_name?: string;
+  receiving_account?: string;
+  requires_sevqr?: boolean;
+  requires_tkp?: boolean;
+  tkp_code?: string;
+  uses_official_va?: boolean;
+  sub_account_type?: string;
+  transfer_content?: string;
+  order_code?: string;
+  rule_name?: string;
+  configuration_valid?: boolean;
+  errors?: string[];
+}
+
 interface PaymentSettingsProps {
   settings?: any;
 }
@@ -171,13 +198,23 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
     bank_detail: settings.bank_detail || '',
     is_sepay_enabled: settings.is_sepay_enabled === true || settings.is_sepay_enabled === '1',
     sepay_bank_code: settings.sepay_bank_code || '',
+    sepay_bank_name: settings.sepay_bank_name || '',
+    sepay_bank_bin: settings.sepay_bank_bin || '',
+    sepay_account_type: settings.sepay_account_type || '',
     sepay_account_number: settings.sepay_account_number || '',
     sepay_account_name: settings.sepay_account_name || '',
     sepay_api_key: '',
     sepay_api_key_configured: settings.sepay_api_key_configured === true || settings.sepay_api_key_configured === '1',
     sepay_webhook_api_key: settings.sepay_webhook_api_key || '',
-    sepay_payment_prefix: settings.sepay_payment_prefix || 'SEPAY',
+    sepay_payment_prefix: settings.sepay_payment_prefix || 'HD',
     sepay_bank_account_id: settings.sepay_bank_account_id || '',
+    sepay_sub_accounts: settings.sepay_sub_accounts || '[]',
+    sepay_sub_account_id: settings.sepay_sub_account_id || '',
+    sepay_sub_account_number: settings.sepay_sub_account_number || '',
+    sepay_sub_account_name: settings.sepay_sub_account_name || '',
+    sepay_sub_account_code: settings.sepay_sub_account_code || '',
+    sepay_sub_account_type: settings.sepay_sub_account_type || '',
+    sepay_transfer_preview: settings.sepay_transfer_preview || null,
     sepay_gateway_name: settings.sepay_gateway_name || 'SePay',
     sepay_payment_note: settings.sepay_payment_note || '',
     sepay_oauth_connected: settings.sepay_oauth_connected === true || settings.sepay_oauth_connected === '1',
@@ -365,6 +402,15 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
     }
   }, [data.sepay_bank_accounts]);
 
+  const sepaySubAccounts = useMemo(() => {
+    try {
+      const parsed = JSON.parse(data.sepay_sub_accounts || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }, [data.sepay_sub_accounts]);
+
   const isSepayConnected = Boolean(
     data.sepay_is_connected
     && data.sepay_connection_status === 'connected'
@@ -408,7 +454,7 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
 
   const toBool = (value: unknown) => value === true || value === '1' || value === 1 || value === 'true';
 
-  const normalizeBankAccounts = (value: unknown) => {
+  const normalizeAccountList = (value: unknown) => {
     if (Array.isArray(value)) {
       return JSON.stringify(value);
     }
@@ -425,6 +471,8 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
     return '[]';
   };
 
+  const normalizeSepayOrderPrefix = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20);
+
   const applySepaySnapshot = (snapshot: any = {}) => {
     const next = snapshot.sepay || snapshot;
 
@@ -440,11 +488,21 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
       sepay_account_email: next.sepay_account_email ?? current.sepay_account_email,
       sepay_account_display_name: next.sepay_account_display_name ?? current.sepay_account_display_name,
       sepay_account_avatar: next.sepay_account_avatar ?? current.sepay_account_avatar,
-      sepay_bank_accounts: normalizeBankAccounts(next.sepay_bank_accounts ?? current.sepay_bank_accounts),
+      sepay_bank_accounts: normalizeAccountList(next.sepay_bank_accounts ?? current.sepay_bank_accounts),
       sepay_bank_account_id: next.sepay_bank_account_id ?? current.sepay_bank_account_id,
       sepay_bank_code: next.sepay_bank_code ?? current.sepay_bank_code,
+      sepay_bank_name: next.sepay_bank_name ?? current.sepay_bank_name,
+      sepay_bank_bin: next.sepay_bank_bin ?? current.sepay_bank_bin,
+      sepay_account_type: next.sepay_account_type ?? current.sepay_account_type,
       sepay_account_number: next.sepay_account_number ?? current.sepay_account_number,
       sepay_account_name: next.sepay_account_name ?? current.sepay_account_name,
+      sepay_sub_accounts: normalizeAccountList(next.sepay_sub_accounts ?? current.sepay_sub_accounts),
+      sepay_sub_account_id: next.sepay_sub_account_id ?? current.sepay_sub_account_id,
+      sepay_sub_account_number: next.sepay_sub_account_number ?? current.sepay_sub_account_number,
+      sepay_sub_account_name: next.sepay_sub_account_name ?? current.sepay_sub_account_name,
+      sepay_sub_account_code: next.sepay_sub_account_code ?? current.sepay_sub_account_code,
+      sepay_sub_account_type: next.sepay_sub_account_type ?? current.sepay_sub_account_type,
+      sepay_transfer_preview: next.sepay_transfer_preview ?? current.sepay_transfer_preview,
       sepay_webhook_api_key: next.sepay_webhook_api_key ?? current.sepay_webhook_api_key,
       sepay_api_key: '',
     }));
@@ -514,9 +572,103 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
     settings.sepay_bank_accounts,
     settings.sepay_bank_account_id,
     settings.sepay_bank_code,
+    settings.sepay_bank_name,
+    settings.sepay_bank_bin,
+    settings.sepay_account_type,
     settings.sepay_account_number,
     settings.sepay_account_name,
+    settings.sepay_sub_accounts,
+    settings.sepay_sub_account_id,
+    settings.sepay_sub_account_number,
+    settings.sepay_sub_account_name,
+    settings.sepay_sub_account_code,
+    settings.sepay_sub_account_type,
+    settings.sepay_transfer_preview,
   ]);
+
+  useEffect(() => {
+    if (!isSepayConnected || !data.sepay_bank_account_id) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({
+          sepay_bank_account_id: data.sepay_bank_account_id,
+          sepay_payment_prefix: data.sepay_payment_prefix || 'HD',
+        });
+
+        if (data.sepay_sub_account_id) {
+          params.set('sepay_sub_account_id', data.sepay_sub_account_id);
+        }
+
+        const response = await fetch(`${route('sepay.transfer-preview')}?${params.toString()}`, {
+          headers: {
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          credentials: 'same-origin',
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const result = await response.json();
+        if (result.preview) {
+          setData('sepay_transfer_preview', result.preview);
+        }
+      } catch (error: any) {
+        if (error?.name !== 'AbortError') {
+          setData('sepay_transfer_preview', null);
+        }
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [isSepayConnected, data.sepay_bank_account_id, data.sepay_sub_account_id, data.sepay_payment_prefix]);
+
+  const handleSepayBankAccountChange = (value: string) => {
+    const account = sepayBankAccounts.find((item: any) => String(item.id) === String(value));
+
+    setData((current) => ({
+      ...current,
+      sepay_bank_account_id: value,
+      sepay_bank_code: account?.bank_code || '',
+      sepay_bank_name: account?.bank_name || account?.bank_short_name || '',
+      sepay_bank_bin: account?.bank_bin || '',
+      sepay_account_type: account?.account_type || '',
+      sepay_account_number: account?.account_number || '',
+      sepay_account_name: account?.account_name || '',
+      sepay_sub_accounts: '[]',
+      sepay_sub_account_id: '',
+      sepay_sub_account_number: '',
+      sepay_sub_account_name: '',
+      sepay_sub_account_code: '',
+      sepay_sub_account_type: '',
+      sepay_transfer_preview: null,
+    }));
+  };
+
+  const handleSepaySubAccountChange = (value: string) => {
+    const subAccountId = value === '_none_' ? '' : value;
+    const account = sepaySubAccounts.find((item: any) => String(item.id) === String(subAccountId));
+
+    setData((current) => ({
+      ...current,
+      sepay_sub_account_id: subAccountId,
+      sepay_sub_account_number: account?.account_number || '',
+      sepay_sub_account_name: account?.account_holder_name || '',
+      sepay_sub_account_code: account?.code || '',
+      sepay_sub_account_type: account?.type || '',
+      sepay_transfer_preview: null,
+    }));
+  };
 
   const handleConnectSepayAccount = async () => {
     if (!data.sepay_api_key.trim()) {
@@ -889,7 +1041,7 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
                           <Label>{t("Chọn tài khoản ngân hàng nhận tiền")}</Label>
                           <Select
                             value={data.sepay_bank_account_id || undefined}
-                            onValueChange={(value) => setData('sepay_bank_account_id', value)}
+                            onValueChange={handleSepayBankAccountChange}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder={t("Chọn tài khoản ngân hàng từ SePay")} />
@@ -911,6 +1063,74 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
                           )}
                         </div>
 
+                        <div className="space-y-2">
+                          <Label>{t("Tài khoản phụ / Virtual Account")}</Label>
+                          <Select
+                            value={data.sepay_sub_account_id || '_none_'}
+                            onValueChange={handleSepaySubAccountChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("Không sử dụng tài khoản phụ")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="_none_">{t("Không sử dụng tài khoản phụ")}</SelectItem>
+                              {sepaySubAccounts.map((account: any) => (
+                                <SelectItem key={account.id} value={account.id}>
+                                  {(account.type === 'content_va' ? 'TKP' : 'VA')}
+                                  {account.code ? ` ${account.code}` : ''}
+                                  {account.account_number ? ` - ${account.account_number}` : ''}
+                                  {account.account_holder_name ? ` (${account.account_holder_name})` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {data.sepay_bank_account_id && sepaySubAccounts.length === 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              {t("SePay chưa trả về tài khoản phụ/VA cho tài khoản ngân hàng này.")}
+                            </p>
+                          )}
+                          {errors.sepay_sub_account_id && (
+                            <p className="text-sm text-destructive">{errors.sepay_sub_account_id}</p>
+                          )}
+                        </div>
+
+                        <div className="rounded-lg border bg-muted/30 p-4">
+                          <div className="grid gap-4 text-sm md:grid-cols-2">
+                            <div>
+                              <p className="text-muted-foreground">{t("Ngân hàng")}</p>
+                              <p className="font-semibold">
+                                {data.sepay_bank_code || data.sepay_transfer_preview?.bank_code || t("Chưa chọn")}
+                                {(data.sepay_bank_name || data.sepay_transfer_preview?.bank_name) ? ` - ${data.sepay_bank_name || data.sepay_transfer_preview?.bank_name}` : ''}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">{t("Tài khoản nhận tiền")}</p>
+                              <p className="break-all font-semibold">
+                                {data.sepay_transfer_preview?.receiving_account || data.sepay_account_number || t("Chưa cập nhật")}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">{t("Tên chủ tài khoản")}</p>
+                              <p className="font-semibold">{data.sepay_transfer_preview?.account_name || data.sepay_account_name || t("Chưa cập nhật")}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">{t("Quy tắc nội dung")}</p>
+                              <p className="font-semibold">{data.sepay_transfer_preview?.rule_name || t("Mã hóa đơn")}</p>
+                            </div>
+                            <div className="md:col-span-2">
+                              <p className="text-muted-foreground">{t("Nội dung chuyển khoản mẫu")}</p>
+                              <p className="break-all font-mono text-base font-semibold">
+                                {data.sepay_transfer_preview?.transfer_content || t("Chọn tài khoản ngân hàng để xem mẫu")}
+                              </p>
+                            </div>
+                          </div>
+                          {data.sepay_transfer_preview?.configuration_valid === false && (
+                            <p className="mt-3 text-sm text-destructive">
+                              {(data.sepay_transfer_preview.errors || []).join(', ') || t("Cấu hình SePay chưa đầy đủ.")}
+                            </p>
+                          )}
+                        </div>
+
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           <PaymentInputField
                             id="sepay_gateway_name"
@@ -924,8 +1144,8 @@ export default function PaymentSettings({ settings = {} }: PaymentSettingsProps)
                             id="sepay_payment_prefix"
                             label={t("Tiền tố mã đơn hàng")}
                             value={data.sepay_payment_prefix}
-                            onChange={(value) => setData('sepay_payment_prefix', value)}
-                            placeholder="DH_"
+                            onChange={(value) => setData('sepay_payment_prefix', normalizeSepayOrderPrefix(value))}
+                            placeholder="HD"
                             error={errors.sepay_payment_prefix}
                           />
                         </div>

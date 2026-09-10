@@ -16,6 +16,9 @@ interface SepayPaymentFormProps {
   accountNumber: string;
   accountName: string;
   paymentPrefix?: string;
+  orderCode?: string;
+  transferContent?: string;
+  ruleName?: string;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -28,34 +31,85 @@ export function SepayPaymentForm({
   bankCode,
   accountNumber,
   accountName,
-  paymentPrefix = 'SEPAY',
+  paymentPrefix = 'HD',
+  orderCode,
+  transferContent: configuredTransferContent,
+  ruleName,
   onSuccess,
 }: SepayPaymentFormProps) {
   const { t } = useTranslation();
   const [processing, setProcessing] = useState(false);
+  const [previewChecked, setPreviewChecked] = useState(Boolean(orderCode || configuredTransferContent));
+  const [preview, setPreview] = useState<any>(null);
   const [paymentReady, setPaymentReady] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const startedRef = useRef(false);
-  const vietQrBankCode = normalizeVietQrBankCode(bankCode);
 
-  const referenceCode = useMemo(() => {
-    const safePrefix = (paymentPrefix || 'SEPAY').replace(/[^a-zA-Z0-9_]/g, '').toUpperCase() || 'SEPAY';
+  const fallbackReferenceCode = useMemo(() => {
+    const safePrefix = (paymentPrefix || 'HD').replace(/[^a-zA-Z0-9]/g, '').toUpperCase() || 'HD';
     return `${safePrefix}PLAN${planId}${Date.now().toString(36).toUpperCase()}`;
   }, [paymentPrefix, planId]);
 
+  useEffect(() => {
+    if (orderCode || configuredTransferContent) {
+      setPreviewChecked(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadPreview = async () => {
+      try {
+        const params = new URLSearchParams({ plan_id: String(planId) });
+        const response = await fetch(`${route('sepay.plan-transfer-preview')}?${params.toString()}`, {
+          headers: {
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          credentials: 'same-origin',
+        });
+
+        if (!cancelled && response.ok) {
+          const result = await response.json();
+          setPreview(result.preview || null);
+        }
+      } catch {
+        // Fallback content still lets the user pay if preview is temporarily unavailable.
+      } finally {
+        if (!cancelled) {
+          setPreviewChecked(true);
+        }
+      }
+    };
+
+    loadPreview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [configuredTransferContent, orderCode, planId]);
+
+  const referenceCode = preview?.order_code || orderCode || fallbackReferenceCode;
+  const transferContent = preview?.transfer_content || configuredTransferContent || referenceCode;
+  const effectiveBankCode = preview?.bank_code || bankCode;
+  const effectiveAccountNumber = preview?.receiving_account || accountNumber;
+  const effectiveAccountName = preview?.account_name || accountName;
+  const effectiveRuleName = preview?.rule_name || ruleName;
+  const vietQrBankCode = normalizeVietQrBankCode(effectiveBankCode);
+
   const qrUrl = useMemo(() => {
-    if (!vietQrBankCode || !accountNumber) return '';
+    if (!previewChecked || !vietQrBankCode || !effectiveAccountNumber) return '';
 
     const params = new URLSearchParams({
       bank: vietQrBankCode,
-      acc: accountNumber,
+      acc: effectiveAccountNumber,
       template: 'compact',
       amount: Math.round(Number(planPrice)).toString(),
-      des: referenceCode,
+      des: transferContent,
     });
 
     return `https://qr.sepay.vn/img?${params.toString()}`;
-  }, [vietQrBankCode, accountNumber, planPrice, referenceCode]);
+  }, [previewChecked, vietQrBankCode, effectiveAccountNumber, planPrice, transferContent]);
 
   const formatAmount = (amount: number) => {
     if (typeof window !== 'undefined' && window.appSettings?.formatCurrency) {
@@ -75,7 +129,7 @@ export function SepayPaymentForm({
   };
 
   useEffect(() => {
-    if (!qrUrl || startedRef.current) return;
+    if (!previewChecked || !qrUrl || startedRef.current) return;
 
     startedRef.current = true;
     setProcessing(true);
@@ -98,7 +152,7 @@ export function SepayPaymentForm({
       },
       onFinish: () => setProcessing(false),
     });
-  }, [billingCycle, couponCode, planId, planPrice, qrUrl, referenceCode, t]);
+  }, [billingCycle, couponCode, planId, planPrice, previewChecked, qrUrl, referenceCode, t]);
 
   useEffect(() => {
     if (!paymentReady || isPaid) return;
@@ -143,11 +197,12 @@ export function SepayPaymentForm({
 
               <div className="w-full space-y-2 text-sm">
                 <PaymentInfoRow label={t('Bank Code')} value={vietQrBankCode} copyLabel={t('Copy')} onCopy={copyToClipboard} />
-                <PaymentInfoRow label={t('Bank Name')} value={bankCode} copyLabel={t('Copy')} onCopy={copyToClipboard} />
-                <PaymentInfoRow label={t('Account Number')} value={accountNumber} copyLabel={t('Copy')} onCopy={copyToClipboard} />
-                <PaymentInfoRow label={t('Account Name')} value={accountName} copyLabel={t('Copy')} onCopy={copyToClipboard} />
+                <PaymentInfoRow label={t('Bank Name')} value={effectiveBankCode} copyLabel={t('Copy')} onCopy={copyToClipboard} />
+                <PaymentInfoRow label={t('Account Number')} value={effectiveAccountNumber} copyLabel={t('Copy')} onCopy={copyToClipboard} />
+                <PaymentInfoRow label={t('Account Name')} value={effectiveAccountName} copyLabel={t('Copy')} onCopy={copyToClipboard} />
                 <PaymentInfoRow label={t('Amount')} value={formatAmount(planPrice)} copyValue={String(Math.round(Number(planPrice)))} copyLabel={t('Copy')} onCopy={copyToClipboard} />
-                <PaymentInfoRow label={t('Transfer Content')} value={referenceCode} copyLabel={t('Copy')} onCopy={copyToClipboard} />
+                {effectiveRuleName ? <PaymentInfoRow label={t('Content Rule')} value={effectiveRuleName} copyLabel={t('Copy')} onCopy={copyToClipboard} /> : null}
+                <PaymentInfoRow label={t('Transfer Content')} value={transferContent} copyLabel={t('Copy')} onCopy={copyToClipboard} />
               </div>
             </div>
           ) : (

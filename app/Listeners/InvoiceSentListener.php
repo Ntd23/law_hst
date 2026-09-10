@@ -45,7 +45,7 @@ class InvoiceSentListener
                 '{app_name}' => config('app.name', 'Legal Management System'),
             ];
 
-            $variables = array_merge($variables, (new SepayInvoiceQrService())->buildVariables($invoice));
+            $variables = array_merge($variables, app(SepayInvoiceQrService::class)->buildVariables($invoice));
 
             // Get language from currently logged-in user
             $userLanguage = auth()->user()->lang ?? 'en';

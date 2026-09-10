@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PaymentSetting;
 use App\Services\SepayClient;
+use App\Services\SepayTransferContentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +18,7 @@ class SepayOAuthController extends Controller
             'sepay_api_key' => 'required|string|min:10|max:500',
         ]);
         $apiKey = trim($validated['sepay_api_key']);
+        $currentSettings = PaymentSetting::getUserSettings((int) $settingsUserId);
 
         if ($this->apiKeyBelongsToAnotherSettingsUser($apiKey, (int) $settingsUserId)) {
             return response()->json([
@@ -24,6 +26,10 @@ class SepayOAuthController extends Controller
                 'message' => __('This SePay API key is already connected to another account. Please use a separate SePay API key for this account.'),
                 'sepay' => $this->statusPayload((int) $settingsUserId),
             ], 422);
+        }
+
+        if (!empty($currentSettings['sepay_api_key']) && !hash_equals((string) $currentSettings['sepay_api_key'], $apiKey)) {
+            $this->clearAccountSnapshot((int) $settingsUserId);
         }
 
         $this->save((int) $settingsUserId, 'sepay_api_key', $apiKey);
@@ -48,6 +54,11 @@ class SepayOAuthController extends Controller
             'message' => __('SePay connected successfully.'),
             'sepay' => $this->statusPayload((int) $settingsUserId),
         ]);
+    }
+
+    public function connectHelp()
+    {
+        return redirect()->route('settings')->with('error', __('Please enter the SePay API key on the payment settings page to connect this account.'));
     }
 
     public function sync(Request $request)
@@ -104,6 +115,34 @@ class SepayOAuthController extends Controller
         return response()->json($this->statusPayload((int) $settingsUserId));
     }
 
+    public function transferPreview(Request $request, SepayTransferContentService $transferContent)
+    {
+        $settingsUserId = getPaymentSettingsUserId() ?: auth()->id();
+        $settings = PaymentSetting::getUserSettings((int) $settingsUserId);
+
+        foreach ([
+            'sepay_bank_account_id',
+            'sepay_sub_account_id',
+            'sepay_payment_prefix',
+        ] as $key) {
+            if ($request->filled($key)) {
+                $settings[$key] = $request->string($key)->toString();
+            }
+        }
+
+        if ($request->filled('sepay_bank_account_id')) {
+            $settings = array_merge($settings, $this->bankAccountSnapshot($settings, $request->string('sepay_bank_account_id')->toString()));
+        }
+
+        return response()->json([
+            'success' => true,
+            'preview' => $transferContent->instruction(
+                $settings,
+                $transferContent->buildOrderCode('invoice', '123456', $settings['sepay_payment_prefix'] ?? null)
+            ),
+        ]);
+    }
+
     public function disconnect(Request $request)
     {
         $settingsUserId = getPaymentSettingsUserId() ?: auth()->id();
@@ -124,6 +163,16 @@ class SepayOAuthController extends Controller
             'sepay_account_avatar',
             'sepay_bank_accounts',
             'sepay_bank_account_id',
+            'sepay_bank_bin',
+            'sepay_account_type',
+            'sepay_bank_account_metadata',
+            'sepay_sub_accounts',
+            'sepay_sub_account_id',
+            'sepay_sub_account_number',
+            'sepay_sub_account_name',
+            'sepay_sub_account_code',
+            'sepay_sub_account_type',
+            'sepay_sub_account_metadata',
             'sepay_webhook_id',
             'sepay_last_synced_at',
         ] as $key) {
@@ -149,12 +198,21 @@ class SepayOAuthController extends Controller
         $this->ensureWebhookApiKey($settingsUserId);
         $settings = PaymentSetting::getUserSettings($settingsUserId);
         $bankAccounts = json_decode((string) ($settings['sepay_bank_accounts'] ?? '[]'), true);
+        $subAccounts = json_decode((string) ($settings['sepay_sub_accounts'] ?? '[]'), true);
 
         if (!is_array($bankAccounts)) {
             $bankAccounts = [];
         }
+        if (!is_array($subAccounts)) {
+            $subAccounts = [];
+        }
 
         $hasBankAccounts = count($bankAccounts) > 0;
+        $transferContent = app(SepayTransferContentService::class);
+        $preview = $transferContent->instruction(
+            $settings,
+            $transferContent->buildOrderCode('invoice', '123456', $settings['sepay_payment_prefix'] ?? null)
+        );
         $status = (string) ($settings['sepay_connection_status'] ?? 'disconnected');
         $connected = !empty($settings['sepay_api_key'])
             && !empty($settings['sepay_connected_at'])
@@ -179,9 +237,43 @@ class SepayOAuthController extends Controller
             'sepay_account_avatar' => $settings['sepay_account_avatar'] ?? '',
             'sepay_bank_accounts' => json_encode($bankAccounts, JSON_UNESCAPED_UNICODE),
             'sepay_bank_account_id' => $settings['sepay_bank_account_id'] ?? '',
+            'sepay_sub_accounts' => json_encode($subAccounts, JSON_UNESCAPED_UNICODE),
+            'sepay_sub_account_id' => $settings['sepay_sub_account_id'] ?? '',
+            'sepay_sub_account_number' => $settings['sepay_sub_account_number'] ?? '',
+            'sepay_sub_account_name' => $settings['sepay_sub_account_name'] ?? '',
+            'sepay_sub_account_code' => $settings['sepay_sub_account_code'] ?? '',
+            'sepay_sub_account_type' => $settings['sepay_sub_account_type'] ?? '',
             'sepay_bank_code' => $settings['sepay_bank_code'] ?? '',
+            'sepay_bank_name' => $settings['sepay_bank_name'] ?? '',
+            'sepay_bank_bin' => $settings['sepay_bank_bin'] ?? '',
             'sepay_account_number' => $settings['sepay_account_number'] ?? '',
             'sepay_account_name' => $settings['sepay_account_name'] ?? '',
+            'sepay_account_type' => $settings['sepay_account_type'] ?? '',
+            'sepay_transfer_preview' => $preview,
+        ];
+    }
+
+    private function bankAccountSnapshot(array $settings, string $bankAccountId): array
+    {
+        $accounts = json_decode((string) ($settings['sepay_bank_accounts'] ?? '[]'), true);
+
+        if (!is_array($accounts)) {
+            return [];
+        }
+
+        $account = collect($accounts)->first(fn ($item) => (string) ($item['id'] ?? '') === $bankAccountId);
+        if (!$account) {
+            return [];
+        }
+
+        return [
+            'sepay_bank_code' => $account['bank_code'] ?? '',
+            'sepay_bank_name' => $account['bank_name'] ?? '',
+            'sepay_bank_brand_name' => $account['brand_name'] ?? '',
+            'sepay_bank_bin' => $account['bank_bin'] ?? '',
+            'sepay_account_number' => $account['account_number'] ?? '',
+            'sepay_account_name' => $account['account_name'] ?? '',
+            'sepay_account_type' => $account['account_type'] ?? '',
         ];
     }
 
@@ -197,6 +289,44 @@ class SepayOAuthController extends Controller
         if (!empty($settings['sepay_api_key']) && empty($settings['sepay_webhook_api_key'])) {
             $this->save($settingsUserId, 'sepay_webhook_api_key', bin2hex(random_bytes(24)));
         }
+    }
+
+    private function clearAccountSnapshot(int $settingsUserId): void
+    {
+        foreach ([
+            'sepay_oauth_connected',
+            'sepay_connected_at',
+            'sepay_connection_status',
+            'sepay_webhook_api_key',
+            'sepay_account_email',
+            'sepay_account_display_name',
+            'sepay_account_avatar',
+            'sepay_bank_accounts',
+            'sepay_bank_account_id',
+            'sepay_bank_code',
+            'sepay_bank_name',
+            'sepay_bank_brand_name',
+            'sepay_bank_bin',
+            'sepay_account_number',
+            'sepay_account_name',
+            'sepay_account_type',
+            'sepay_bank_account_metadata',
+            'sepay_bank_logo',
+            'sepay_sub_accounts',
+            'sepay_sub_account_id',
+            'sepay_sub_account_number',
+            'sepay_sub_account_name',
+            'sepay_sub_account_code',
+            'sepay_sub_account_type',
+            'sepay_sub_account_metadata',
+            'sepay_webhook_id',
+            'sepay_last_synced_at',
+        ] as $key) {
+            $this->save($settingsUserId, $key, '');
+        }
+
+        Cache::forget("sepay:{$settingsUserId}:profile");
+        Cache::forget("sepay:{$settingsUserId}:bank_accounts");
     }
 
     private function failureMessage(string $status): string

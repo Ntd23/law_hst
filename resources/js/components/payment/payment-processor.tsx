@@ -180,7 +180,10 @@ export function PaymentProcessor({
             bankCode={plan.paymentMethods?.sepay_bank_code || ''}
             accountNumber={plan.paymentMethods?.sepay_account_number || ''}
             accountName={plan.paymentMethods?.sepay_account_name || ''}
-            paymentPrefix={plan.paymentMethods?.sepay_payment_prefix || 'SEPAY'}
+            paymentPrefix={plan.paymentMethods?.sepay_payment_prefix || 'HD'}
+            orderCode={plan.paymentMethods?.sepay_order_code || ''}
+            transferContent={plan.paymentMethods?.sepay_transfer_content || ''}
+            ruleName={plan.paymentMethods?.sepay_rule_name || ''}
           />
         );
       case 'razorpay':

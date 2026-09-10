@@ -11,6 +11,7 @@ use App\Models\TimeEntry;
 use App\Models\ClientBillingInfo;
 use App\Models\PaymentSetting;
 use App\Services\EmailTemplateService;
+use App\Services\SepayTransferContentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -107,6 +108,7 @@ class InvoiceController extends BaseController
 
     private function buildSepaySettingsByInvoice($invoices): array
     {
+        $transferContent = app(SepayTransferContentService::class);
         $settingsUserIdsByInvoice = $invoices
             ->mapWithKeys(fn (Invoice $invoice) => [
                 $invoice->id => $invoice->created_by,
@@ -124,6 +126,14 @@ class InvoiceController extends BaseController
                 'sepay_account_number',
                 'sepay_account_name',
                 'sepay_payment_prefix',
+                'sepay_bank_name',
+                'sepay_bank_bin',
+                'sepay_sub_accounts',
+                'sepay_sub_account_id',
+                'sepay_sub_account_number',
+                'sepay_sub_account_name',
+                'sepay_sub_account_code',
+                'sepay_sub_account_type',
             ])
             ->get()
             ->groupBy('user_id')
@@ -133,21 +143,25 @@ class InvoiceController extends BaseController
             );
 
         return $settingsUserIdsByInvoice
-            ->mapWithKeys(function ($settingsUserId, $invoiceId) use ($settingsByUser) {
+            ->mapWithKeys(function ($settingsUserId, $invoiceId) use ($settingsByUser, $transferContent) {
                 $settings = $settingsByUser->get($settingsUserId, []);
                 $isEnabled = in_array($settings['is_sepay_enabled'] ?? false, [true, 1, '1'], true);
-                $bankCode = trim((string) ($settings['sepay_bank_code'] ?? ''));
-                $accountNumber = trim((string) ($settings['sepay_account_number'] ?? ''));
-                $accountName = trim((string) ($settings['sepay_account_name'] ?? ''));
-                $isReady = $isEnabled && $bankCode !== '' && $accountNumber !== '' && $accountName !== '';
+                $orderCode = $transferContent->buildOrderCode('invoice', $invoiceId, $settings['sepay_payment_prefix'] ?? null);
+                $instruction = $transferContent->instruction($settings, $orderCode);
+                $isReady = $isEnabled && $instruction['configuration_valid'];
 
                 return [
                     $invoiceId => [
                         'enabled' => $isReady,
-                        'bank_code' => $bankCode,
-                        'account_number' => $accountNumber,
-                        'account_name' => $accountName,
-                        'payment_prefix' => ($settings['sepay_payment_prefix'] ?? '') ?: config('services.sepay.order_prefix', 'SEPAY'),
+                        'bank_code' => $instruction['bank_code'],
+                        'bank_name' => $instruction['bank_name'],
+                        'account_number' => $instruction['receiving_account'],
+                        'account_name' => $instruction['account_name'],
+                        'payment_prefix' => $transferContent->normalizeOrderPrefix($settings['sepay_payment_prefix'] ?? null),
+                        'order_code' => $instruction['order_code'],
+                        'transfer_content' => $instruction['transfer_content'],
+                        'rule_name' => $instruction['rule_name'],
+                        'configuration_valid' => $instruction['configuration_valid'],
                     ],
                 ];
             })

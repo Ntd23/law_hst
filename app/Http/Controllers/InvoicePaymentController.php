@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\PaymentSetting;
+use App\Services\SepayTransferContentService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -102,9 +103,11 @@ class InvoicePaymentController extends Controller
         $paymentSettings = PaymentSetting::where('user_id', $settingsUserId)
             ->pluck('value', 'key')
             ->toArray();
-        $sepayBankCode = trim((string) ($paymentSettings['sepay_bank_code'] ?? ''));
-        $sepayAccountNumber = trim((string) ($paymentSettings['sepay_account_number'] ?? ''));
-        $sepayAccountName = trim((string) ($paymentSettings['sepay_account_name'] ?? ''));
+        $transferContent = app(SepayTransferContentService::class);
+        $sepayInstruction = $transferContent->instruction(
+            $paymentSettings,
+            $transferContent->buildOrderCode('invoice', $invoice->id, $paymentSettings['sepay_payment_prefix'] ?? null)
+        );
 
         // Get company currency setting
         $companyCurrency = \App\Models\Setting::where('user_id', $settingsUserId)
@@ -139,13 +142,16 @@ class InvoicePaymentController extends Controller
             'paystackPublicKey' => $paymentSettings['paystack_public_key'] ?? null,
             'sepaySettings' => [
                 'enabled' => ($paymentSettings['is_sepay_enabled'] ?? '0') === '1'
-                    && $sepayBankCode !== ''
-                    && $sepayAccountNumber !== ''
-                    && $sepayAccountName !== '',
-                'bank_code' => $sepayBankCode,
-                'account_number' => $sepayAccountNumber,
-                'account_name' => $sepayAccountName,
-                'payment_prefix' => ($paymentSettings['sepay_payment_prefix'] ?? '') ?: config('services.sepay.order_prefix', 'SEPAY'),
+                    && $sepayInstruction['configuration_valid'],
+                'bank_code' => $sepayInstruction['bank_code'],
+                'bank_name' => $sepayInstruction['bank_name'],
+                'account_number' => $sepayInstruction['receiving_account'],
+                'account_name' => $sepayInstruction['account_name'],
+                'payment_prefix' => $transferContent->normalizeOrderPrefix($paymentSettings['sepay_payment_prefix'] ?? null),
+                'order_code' => $sepayInstruction['order_code'],
+                'transfer_content' => $sepayInstruction['transfer_content'],
+                'rule_name' => $sepayInstruction['rule_name'],
+                'configuration_valid' => $sepayInstruction['configuration_valid'],
             ],
             'company' => $company,
             'favicon' => $favicon,
@@ -291,9 +297,12 @@ class InvoicePaymentController extends Controller
             $enabledKey = "is_{$key}_enabled";
             if (($settings[$enabledKey] ?? '0') === '1') {
                 if ($key === 'sepay') {
-                    $hasSepayAccount = trim((string) ($settings['sepay_bank_code'] ?? '')) !== ''
-                        && trim((string) ($settings['sepay_account_number'] ?? '')) !== ''
-                        && trim((string) ($settings['sepay_account_name'] ?? '')) !== '';
+                    $transferContent = app(SepayTransferContentService::class);
+                    $instruction = $transferContent->instruction(
+                        $settings,
+                        $transferContent->buildOrderCode('invoice', '123456', $settings['sepay_payment_prefix'] ?? null)
+                    );
+                    $hasSepayAccount = $instruction['configuration_valid'];
 
                     if (!$hasSepayAccount) {
                         continue;

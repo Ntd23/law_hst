@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Models\PaymentSetting;
 use App\Services\SepayClient;
+use App\Services\SepayTransferContentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -55,6 +56,7 @@ class PaymentSettingController extends Controller
                 'sepay_api_key' => 'nullable|string|max:500',
                 'sepay_payment_prefix' => 'nullable|string|max:30',
                 'sepay_bank_account_id' => 'nullable|string|max:100',
+                'sepay_sub_account_id' => 'nullable|string|max:100',
                 'sepay_gateway_name' => 'nullable|string|max:100',
                 'sepay_payment_note' => 'nullable|string|max:500',
                 'razorpay_key' => 'nullable|string',
@@ -165,6 +167,7 @@ class PaymentSettingController extends Controller
                     'sepay_api_key' => [__('This SePay API key is already connected to another account. Please use a separate SePay API key for this account.')],
                 ]);
             }
+            $this->validateSepayOrderPrefix($validatedData['sepay_payment_prefix'] ?? null);
 
             $this->savePaymentSettings($settings, (int) $settingsUserId);
             $this->configureSepayAutomation($request);
@@ -226,8 +229,9 @@ class PaymentSettingController extends Controller
             'sepay_account_number' => $value('sepay_account_number'),
             'sepay_account_name' => $value('sepay_account_name'),
             'sepay_api_key' => $value('sepay_api_key'),
-            'sepay_payment_prefix' => $value('sepay_payment_prefix', 'SEPAY'),
+            'sepay_payment_prefix' => $value('sepay_payment_prefix', config('sepay.default_order_prefix', 'HD')),
             'sepay_bank_account_id' => $value('sepay_bank_account_id'),
+            'sepay_sub_account_id' => $value('sepay_sub_account_id'),
             'sepay_gateway_name' => $value('sepay_gateway_name', 'SePay'),
             'sepay_payment_note' => $value('sepay_payment_note'),
             'stripe_key' => $value('stripe_key'),
@@ -616,23 +620,30 @@ class PaymentSettingController extends Controller
 
         $client = new SepayClient($settingsUserId);
         $bankAccountId = $request->string('sepay_bank_account_id')->toString();
+        $bankAccount = $this->findStoredSepayBankAccount($settings, $bankAccountId);
+
+        if (empty($bankAccount)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'sepay_bank_account_id' => [__('Selected SePay bank account does not belong to this account. Please sync again.')],
+            ]);
+        }
 
         try {
-            $bankAccount = $client->bankAccount($bankAccountId);
+            $freshBankAccount = $client->bankAccount($bankAccountId);
+            if (!empty($freshBankAccount)) {
+                $bankAccount = array_merge($bankAccount, $this->normalizeBankAccountForSettings($freshBankAccount));
+            }
         } catch (\Throwable $e) {
             Log::warning('SePay bank account lookup failed while saving payment settings', [
                 'settings_user_id' => $settingsUserId,
                 'bank_account_id' => $bankAccountId,
                 'message' => $e->getMessage(),
             ]);
-
-            $bankAccount = $this->findStoredSepayBankAccount($settings, $bankAccountId);
         }
 
-        $bank = $bankAccount['bank'] ?? [];
-        $bankCode = $bankAccount['bank_code'] ?? $bankAccount['bankCode'] ?? $bankAccount['bank_short_name'] ?? $bankAccount['bankShortName'] ?? $bank['code'] ?? $bank['short_name'] ?? '';
-        $accountNumber = $bankAccount['account_number'] ?? $bankAccount['accountNumber'] ?? $bankAccount['bank_account_number'] ?? $bankAccount['bankAccountNumber'] ?? $bankAccount['number'] ?? '';
-        $accountName = $bankAccount['account_name'] ?? $bankAccount['accountName'] ?? $bankAccount['account_holder_name'] ?? $bankAccount['accountHolderName'] ?? $bankAccount['account_holder'] ?? $bankAccount['accountHolder'] ?? $bankAccount['name'] ?? '';
+        $bankCode = $bankAccount['bank_code'] ?? '';
+        $accountNumber = $bankAccount['account_number'] ?? '';
+        $accountName = $bankAccount['account_name'] ?? '';
 
         if ($bankCode === '' || $accountNumber === '' || $accountName === '') {
             throw \Illuminate\Validation\ValidationException::withMessages([
@@ -641,11 +652,60 @@ class PaymentSettingController extends Controller
         }
 
         updatePaymentSetting('sepay_bank_code', $bankCode, $settingsUserId);
-        updatePaymentSetting('sepay_bank_name', $bankAccount['bank_name'] ?? $bankAccount['bankName'] ?? $bankAccount['bank_full_name'] ?? $bankAccount['bankFullName'] ?? $bank['name'] ?? '', $settingsUserId);
-        updatePaymentSetting('sepay_bank_brand_name', $bankAccount['brand_name'] ?? $bankAccount['brandName'] ?? $bankAccount['bank_short_name'] ?? $bankAccount['bankShortName'] ?? '', $settingsUserId);
+        updatePaymentSetting('sepay_bank_name', $bankAccount['bank_name'] ?? '', $settingsUserId);
+        updatePaymentSetting('sepay_bank_brand_name', $bankAccount['brand_name'] ?? $bankAccount['bank_short_name'] ?? '', $settingsUserId);
+        updatePaymentSetting('sepay_bank_bin', $bankAccount['bank_bin'] ?? '', $settingsUserId);
         updatePaymentSetting('sepay_account_number', $accountNumber, $settingsUserId);
         updatePaymentSetting('sepay_account_name', $accountName, $settingsUserId);
-        updatePaymentSetting('sepay_bank_logo', $bankAccount['logo'] ?? $bankAccount['bank_logo'] ?? $bank['logo'] ?? '', $settingsUserId);
+        updatePaymentSetting('sepay_account_type', $bankAccount['account_type'] ?? '', $settingsUserId);
+        updatePaymentSetting('sepay_bank_account_metadata', json_encode($bankAccount['metadata'] ?? $bankAccount, JSON_UNESCAPED_UNICODE), $settingsUserId);
+        updatePaymentSetting('sepay_bank_logo', $bankAccount['logo'] ?? $bankAccount['bank_logo'] ?? '', $settingsUserId);
+
+        $subAccounts = $client->syncSelectedSubAccounts();
+        $selectedSubAccountId = $request->string('sepay_sub_account_id')->toString();
+
+        if ($selectedSubAccountId === '_none_') {
+            $selectedSubAccountId = '';
+        }
+
+        if ($selectedSubAccountId !== '') {
+            $selectedSubAccount = collect($subAccounts)->first(fn ($account) => (string) ($account['id'] ?? '') === $selectedSubAccountId);
+            if (!$selectedSubAccount) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'sepay_sub_account_id' => [__('Selected SePay VA/sub-account does not belong to this bank account. Please sync again.')],
+                ]);
+            }
+
+            updatePaymentSetting('sepay_sub_account_id', $selectedSubAccount['id'], $settingsUserId);
+            updatePaymentSetting('sepay_sub_account_number', $selectedSubAccount['account_number'], $settingsUserId);
+            updatePaymentSetting('sepay_sub_account_name', $selectedSubAccount['account_holder_name'], $settingsUserId);
+            updatePaymentSetting('sepay_sub_account_code', $selectedSubAccount['code'], $settingsUserId);
+            updatePaymentSetting('sepay_sub_account_type', $selectedSubAccount['type'], $settingsUserId);
+            updatePaymentSetting('sepay_sub_account_metadata', json_encode($selectedSubAccount['metadata'] ?? $selectedSubAccount, JSON_UNESCAPED_UNICODE), $settingsUserId);
+        } else {
+            foreach ([
+                'sepay_sub_account_id',
+                'sepay_sub_account_number',
+                'sepay_sub_account_name',
+                'sepay_sub_account_code',
+                'sepay_sub_account_type',
+                'sepay_sub_account_metadata',
+            ] as $key) {
+                updatePaymentSetting($key, '', $settingsUserId);
+            }
+        }
+
+        $settings = PaymentSetting::getUserSettings($settingsUserId);
+        $instruction = app(SepayTransferContentService::class)->instruction(
+            $settings,
+            app(SepayTransferContentService::class)->buildOrderCode('invoice', '123456', $settings['sepay_payment_prefix'] ?? null)
+        );
+
+        if (!$instruction['configuration_valid']) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'sepay' => [__('SePay receiving account configuration is incomplete. Please sync the account again.')],
+            ]);
+        }
 
         $apiKey = (string) ($settings['sepay_webhook_api_key'] ?? '');
         if ($apiKey === '') {
@@ -696,6 +756,44 @@ class PaymentSettingController extends Controller
         return collect($accounts)->first(function ($account) use ($bankAccountId) {
             return (string) ($account['id'] ?? '') === $bankAccountId;
         }) ?? [];
+    }
+
+    private function normalizeBankAccountForSettings(array $bankAccount): array
+    {
+        $bank = $bankAccount['bank'] ?? [];
+        $bankCode = $bankAccount['bank_code'] ?? $bankAccount['bankCode'] ?? $bankAccount['bank_short_name'] ?? $bankAccount['bankShortName'] ?? $bank['code'] ?? $bank['short_name'] ?? '';
+        $bankName = $bankAccount['bank_name'] ?? $bankAccount['bankName'] ?? $bankAccount['bank_full_name'] ?? $bankAccount['bankFullName'] ?? $bank['full_name'] ?? $bank['name'] ?? '';
+        $bankShortName = $bankAccount['brand_name'] ?? $bankAccount['brandName'] ?? $bankAccount['bank_short_name'] ?? $bankAccount['bankShortName'] ?? $bank['short_name'] ?? $bankCode;
+
+        return [
+            'id' => (string) ($bankAccount['id'] ?? $bankAccount['bank_account_id'] ?? $bankAccount['bankAccountId'] ?? $bankAccount['account_id'] ?? ''),
+            'bank_name' => $bankName,
+            'bank_code' => $bankCode,
+            'bank_short_name' => $bankShortName,
+            'brand_name' => $bankShortName,
+            'bank_bin' => $bankAccount['bank_bin'] ?? $bankAccount['bankBin'] ?? $bank['bin'] ?? '',
+            'account_number' => $bankAccount['account_number'] ?? $bankAccount['accountNumber'] ?? $bankAccount['bank_account_number'] ?? $bankAccount['bankAccountNumber'] ?? $bankAccount['number'] ?? '',
+            'account_name' => $bankAccount['account_name'] ?? $bankAccount['accountName'] ?? $bankAccount['account_holder_name'] ?? $bankAccount['accountHolderName'] ?? $bankAccount['account_holder'] ?? $bankAccount['accountHolder'] ?? $bankAccount['name'] ?? '',
+            'account_type' => $bankAccount['account_type'] ?? $bankAccount['accountType'] ?? $bankAccount['type'] ?? '',
+            'active' => $bankAccount['active'] ?? $bankAccount['status'] ?? '',
+            'logo' => $bankAccount['logo'] ?? $bankAccount['bank_logo'] ?? $bank['logo_url'] ?? $bank['logo'] ?? '',
+            'metadata' => $bankAccount,
+        ];
+    }
+
+    private function validateSepayOrderPrefix(?string $prefix): void
+    {
+        if ($prefix === null || $prefix === '') {
+            return;
+        }
+
+        $normalized = strtoupper((string) preg_replace('/[^A-Z0-9]/i', '', $prefix));
+
+        if ($normalized === 'SEVQR' || str_starts_with($normalized, 'TKP')) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'sepay_payment_prefix' => [__('SEVQR/TKP is a transfer rule, not an order prefix. Please use a prefix like HD.')],
+            ]);
+        }
     }
 
     private function apiKeyBelongsToAnotherSettingsUser(string $apiKey, int $settingsUserId): bool
@@ -808,10 +906,20 @@ class PaymentSettingController extends Controller
             // Bank details (non-sensitive display info)
             'bank_detail',
             'sepay_bank_code',
+            'sepay_bank_name',
+            'sepay_bank_brand_name',
+            'sepay_bank_bin',
             'sepay_account_number',
             'sepay_account_name',
+            'sepay_account_type',
             'sepay_payment_prefix',
             'sepay_bank_account_id',
+            'sepay_sub_accounts',
+            'sepay_sub_account_id',
+            'sepay_sub_account_number',
+            'sepay_sub_account_name',
+            'sepay_sub_account_code',
+            'sepay_sub_account_type',
             'sepay_gateway_name',
             'sepay_payment_note',
             'sepay_bank_accounts',
@@ -829,6 +937,20 @@ class PaymentSettingController extends Controller
             if (isset($settings[$key])) {
                 $safeSettings[$key] = $settings[$key];
             }
+        }
+
+        if (($safeSettings['is_sepay_enabled'] ?? false) === true || ($safeSettings['is_sepay_enabled'] ?? null) === '1') {
+            $transferContent = app(SepayTransferContentService::class);
+            $orderCode = $transferContent->buildOrderCode('invoice', '123456', $settings['sepay_payment_prefix'] ?? null);
+            $instruction = $transferContent->instruction($settings, $orderCode);
+
+            $safeSettings['sepay_bank_code'] = $instruction['bank_code'];
+            $safeSettings['sepay_bank_name'] = $instruction['bank_name'];
+            $safeSettings['sepay_account_number'] = $instruction['receiving_account'];
+            $safeSettings['sepay_account_name'] = $instruction['account_name'];
+            $safeSettings['sepay_payment_prefix'] = $transferContent->normalizeOrderPrefix($settings['sepay_payment_prefix'] ?? null);
+            $safeSettings['sepay_rule_name'] = $instruction['rule_name'];
+            $safeSettings['sepay_configuration_valid'] = $instruction['configuration_valid'];
         }
 
         return $safeSettings;

@@ -7,6 +7,10 @@ use App\Models\PaymentSetting;
 
 class SepayInvoiceQrService
 {
+    public function __construct(private readonly SepayTransferContentService $transferContent)
+    {
+    }
+
     public function buildVariables(Invoice $invoice): array
     {
         $settingsUserId = $invoice->created_by;
@@ -21,34 +25,33 @@ class SepayInvoiceQrService
             return [];
         }
 
-        $bankCode = $this->normalizeBankCode((string) ($settings['sepay_bank_code'] ?? ''));
-        $accountNumber = trim((string) ($settings['sepay_account_number'] ?? ''));
-        $accountName = trim((string) ($settings['sepay_account_name'] ?? ''));
         $amount = (int) round((float) ($invoice->remaining_amount ?: $invoice->total_amount));
+        $orderCode = $this->transferContent->buildOrderCode('invoice', $invoice->id, $settings['sepay_payment_prefix'] ?? null);
+        $instruction = $this->transferContent->instruction($settings, $orderCode);
 
-        if ($bankCode === '' || $accountNumber === '' || $amount <= 0) {
+        if (!$instruction['configuration_valid'] || $amount <= 0) {
             return [];
         }
 
-        $referenceCode = $this->referenceCode($invoice, (string) (($settings['sepay_payment_prefix'] ?? '') ?: config('services.sepay.order_prefix', 'SEPAY')));
-        $qrUrl = 'https://qr.sepay.vn/img?' . http_build_query([
-            'bank' => $bankCode,
-            'acc' => $accountNumber,
+        $qrUrl = rtrim((string) config('sepay.qr_base_url', 'https://qr.sepay.vn/img'), '?') . '?' . http_build_query([
+            'bank' => $instruction['bank_code'],
+            'acc' => $instruction['receiving_account'],
             'template' => 'compact',
             'amount' => $amount,
-            'des' => $referenceCode,
+            'des' => $instruction['transfer_content'],
         ]);
 
         $amountText = number_format($amount, 0, ',', '.') . ' VNĐ';
 
         return [
-            '{sepay_qr_block}' => $this->qrBlock($qrUrl, $bankCode, $accountNumber, $accountName, $amountText, $referenceCode),
+            '{sepay_qr_block}' => $this->qrBlock($qrUrl, $instruction['bank_code'], $instruction['receiving_account'], $instruction['account_name'], $amountText, $instruction['transfer_content']),
             '{sepay_qr_url}' => $qrUrl,
-            '{sepay_bank_name}' => $bankCode,
-            '{sepay_account_number}' => $accountNumber,
-            '{sepay_account_name}' => $accountName,
+            '{sepay_bank_name}' => $instruction['bank_code'],
+            '{sepay_account_number}' => $instruction['receiving_account'],
+            '{sepay_account_name}' => $instruction['account_name'],
             '{sepay_amount}' => $amountText,
-            '{sepay_reference_code}' => $referenceCode,
+            '{sepay_reference_code}' => $instruction['order_code'],
+            '{sepay_transfer_content}' => $instruction['transfer_content'],
         ];
     }
 
@@ -57,42 +60,6 @@ class SepayInvoiceQrService
         return ($settings['is_sepay_enabled'] ?? false) === true
             || ($settings['is_sepay_enabled'] ?? null) === '1'
             || ($settings['is_sepay_enabled'] ?? null) === 1;
-    }
-
-    private function referenceCode(Invoice $invoice, string $prefix): string
-    {
-        $safePrefix = strtoupper(trim((string) preg_replace('/[^A-Z0-9_-]/i', '', $prefix), '-_')) ?: 'SEPAY';
-
-        return $safePrefix . '-INV-' . $invoice->id;
-    }
-
-    private function normalizeBankCode(string $bankCode): string
-    {
-        $bankCode = trim($bankCode);
-
-        if ($bankCode === '') {
-            return '';
-        }
-
-        $aliases = [
-            'mb bank' => 'MBBank',
-            'mbbank' => 'MBBank',
-            'mb' => 'MB',
-            'vietcom bank' => 'VCB',
-            'vietcombank' => 'VCB',
-            'vcb' => 'VCB',
-            'techcom bank' => 'TCB',
-            'techcombank' => 'TCB',
-            'tcb' => 'TCB',
-            'vp bank' => 'VPBank',
-            'vpbank' => 'VPBank',
-            'acb' => 'ACB',
-            'bidv' => 'BIDV',
-            'vietinbank' => 'VietinBank',
-            'agribank' => 'Agribank',
-        ];
-
-        return $aliases[strtolower($bankCode)] ?? preg_replace('/\s+/', '', $bankCode);
     }
 
     private function qrBlock(

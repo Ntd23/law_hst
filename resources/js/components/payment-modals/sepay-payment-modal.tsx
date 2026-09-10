@@ -14,9 +14,13 @@ interface SepayPaymentModalProps {
   amount: number;
   sepaySettings?: {
     bank_code?: string;
+    bank_name?: string;
     account_number?: string;
     account_name?: string;
     payment_prefix?: string;
+    order_code?: string;
+    transfer_content?: string;
+    rule_name?: string;
   };
 }
 
@@ -35,13 +39,19 @@ export function SepayPaymentModal({
   const paymentPrefix = sepaySettings.payment_prefix || 'SEPAY';
 
   const referenceCode = useMemo(() => {
+    if (sepaySettings.order_code) {
+      return sepaySettings.order_code;
+    }
+
     const safePrefix = paymentPrefix
       .replace(/[^a-zA-Z0-9_-]/g, '')
       .replace(/[-_]+$/g, '')
       .toUpperCase() || 'SEPAY';
 
     return `${safePrefix}-INV-${invoice.id}`;
-  }, [paymentPrefix, invoice.id]);
+  }, [paymentPrefix, invoice.id, sepaySettings.order_code]);
+
+  const transferContent = sepaySettings.transfer_content || referenceCode;
 
   const qrUrl = useMemo(() => {
     if (!vietQrBankCode || !accountNumber) return '';
@@ -51,11 +61,11 @@ export function SepayPaymentModal({
       acc: accountNumber,
       template: 'compact',
       amount: Math.round(Number(amount)).toString(),
-      des: referenceCode,
+      des: transferContent,
     });
 
     return `https://qr.sepay.vn/img?${params.toString()}`;
-  }, [vietQrBankCode, accountNumber, amount, referenceCode]);
+  }, [vietQrBankCode, accountNumber, amount, transferContent]);
 
   useEffect(() => {
     if (!isOpen || !referenceCode) return;
@@ -118,7 +128,8 @@ export function SepayPaymentModal({
             <PaymentInfoRow label={t('Account Number')} value={accountNumber || '-'} />
             <PaymentInfoRow label={t('Account Name')} value={accountName || '-'} />
             <PaymentInfoRow label={t('Amount')} value={String(formatCurrencyForCompany(amount.toFixed(2)))} />
-            <PaymentInfoRow label={t('Transfer Content')} value={referenceCode} />
+            <PaymentInfoRow label={t('Content Rule')} value={sepaySettings.rule_name || '-'} />
+            <PaymentInfoRow label={t('Transfer Content')} value={transferContent} />
 
             <Button variant="outline" onClick={onClose} className="mt-2 w-full">
               {t('Close')}

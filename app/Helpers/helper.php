@@ -623,12 +623,21 @@ if (! function_exists('getPaymentMethodConfig')) {
                 ];
 
             case 'sepay':
+                $sepayTransferContent = app(\App\Services\SepayTransferContentService::class);
+                $sepayOrderCode = $sepayTransferContent->buildOrderCode('invoice', '123456', $settings['sepay_payment_prefix'] ?? null);
+                $sepayInstruction = $sepayTransferContent->instruction($settings, $sepayOrderCode);
+
                 return [
                     'enabled' => isPaymentMethodEnabled('sepay', $userId),
-                    'bank_code' => $settings['sepay_bank_code'] ?? '',
-                    'account_number' => $settings['sepay_account_number'] ?? '',
-                    'account_name' => $settings['sepay_account_name'] ?? '',
-                    'payment_prefix' => ($settings['sepay_payment_prefix'] ?? '') ?: config('services.sepay.order_prefix', 'SEPAY'),
+                    'bank_code' => $sepayInstruction['bank_code'],
+                    'bank_name' => $sepayInstruction['bank_name'],
+                    'account_number' => $sepayInstruction['receiving_account'],
+                    'account_name' => $sepayInstruction['account_name'],
+                    'payment_prefix' => $sepayTransferContent->normalizeOrderPrefix($settings['sepay_payment_prefix'] ?? null),
+                    'order_code' => $sepayInstruction['order_code'],
+                    'transfer_content' => $sepayInstruction['transfer_content'],
+                    'rule_name' => $sepayInstruction['rule_name'],
+                    'configuration_valid' => $sepayInstruction['configuration_valid'],
                 ];
 
             case 'paytabs':

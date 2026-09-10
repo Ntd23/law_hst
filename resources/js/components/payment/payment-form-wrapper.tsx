@@ -119,7 +119,10 @@ export function PaymentFormWrapper({
             bank_code: data.sepay_bank_code,
             account_number: data.sepay_account_number,
             account_name: data.sepay_account_name,
-            payment_prefix: data.sepay_payment_prefix
+            payment_prefix: data.sepay_payment_prefix,
+            order_code: data.sepay_order_code,
+            transfer_content: data.sepay_transfer_content,
+            rule_name: data.sepay_rule_name
           }
         });
       }
@@ -196,6 +199,9 @@ export function PaymentFormWrapper({
             accountNumber={method.config.account_number}
             accountName={method.config.account_name}
             paymentPrefix={method.config.payment_prefix}
+            orderCode={method.config.order_code}
+            transferContent={method.config.transfer_content}
+            ruleName={method.config.rule_name}
           />
         );
 
