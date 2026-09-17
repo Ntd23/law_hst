@@ -59,7 +59,7 @@ class ReferralController extends Controller
             ->leftJoin('referrals', 'users.id', '=', 'referrals.company_id')
             ->where('users.type', 'company')
             ->whereNotNull('users.referral_code')
-            ->groupBy('users.id', 'users.name', 'users.email', 'users.referral_code')
+            ->groupBy('users.id', 'users.name', 'users.email', 'users.avatar', 'users.referral_code')
             ->orderByDesc('referral_count')
             ->limit(10)
             ->get();

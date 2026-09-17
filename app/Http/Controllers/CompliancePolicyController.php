@@ -87,7 +87,7 @@ class CompliancePolicyController extends Controller
         if (!Auth::user()->can('create-compliance-policies')) {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
-        return Inertia::render('CompliancePolicies/Create');
+        return redirect()->route('compliance.policies.index');
     }
 
     public function store(Request $request)
@@ -120,9 +120,7 @@ class CompliancePolicyController extends Controller
             abort(403);
         }
 
-        return Inertia::render('CompliancePolicies/Show', [
-            'compliancePolicy' => $policy
-        ]);
+        return redirect()->route('compliance.policies.index');
     }
 
     public function edit(CompliancePolicy $policy)
@@ -134,9 +132,7 @@ class CompliancePolicyController extends Controller
             abort(403);
         }
 
-        return Inertia::render('CompliancePolicies/Edit', [
-            'compliancePolicy' => $policy
-        ]);
+        return redirect()->route('compliance.policies.index');
     }
 
     public function update(Request $request, CompliancePolicy $policy)

@@ -247,9 +247,7 @@ class CourtController extends Controller
             return redirect()->route('courts.index')->with('error', 'Court not found.');
         }
 
-        return Inertia::render('courts/show', [
-            'court' => $court,
-        ]);
+        return redirect()->route('courts.index');
     }
 
     public function destroy($courtId)

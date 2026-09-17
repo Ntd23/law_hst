@@ -11,6 +11,7 @@ use App\Http\Controllers\PlanOrderController;
 use App\Http\Controllers\Settings\PaymentSettingController;
 use App\Http\Controllers\Settings\WebhookController;
 use App\Http\Controllers\Settings\EmailNotificationController;
+use App\Http\Controllers\CompanyEmailNotificationController;
 use App\Http\Controllers\NotificationTemplateController;
 use App\Http\Controllers\StripePaymentController;
 use App\Http\Controllers\PayPalPaymentController;
@@ -80,6 +81,14 @@ Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
         return redirect()->route('settings');
     });
     Route::get('api/settings', [SettingsController::class, 'getSettings'])->name('settings.api');
+    Route::post('api/check-domain', function (\Illuminate\Http\Request $request) {
+        $domain = trim((string) $request->input('domain'));
+        $isValid = $domain === '' || (bool) preg_match('/^(?!-)(?:[a-z0-9-]{1,63}\.)+[a-z]{2,63}$/i', $domain);
+
+        return response()->json([
+            'available' => $isValid,
+        ]);
+    })->name('api.check-domain');
     Route::post('settings/layout-direction', [SettingsController::class, 'updateLayoutDirection'])->name('settings.layout-direction.update');
 
     // System Settings routes
@@ -111,6 +120,8 @@ Route::middleware(['auth', 'verified', 'plan.access'])->group(function () {
     // Email Notification Settings routes
     Route::get('settings/email-notifications/get', [EmailNotificationController::class, 'getNotificationSettings'])->middleware('permission:manage-email-notifications')->name('settings.email-notifications.get');
     Route::post('settings/email-notifications/update', [EmailNotificationController::class, 'updateNotificationSettings'])->middleware('permission:manage-email-notifications')->name('settings.email-notifications.update');
+    Route::get('company/email-notifications', [CompanyEmailNotificationController::class, 'index'])->middleware('permission:manage-email-notifications')->name('company.email-notifications.index');
+    Route::put('company/email-notifications', [CompanyEmailNotificationController::class, 'update'])->middleware('permission:manage-email-notifications')->name('company.email-notifications.update');
 
     // Slack Settings routes
     // Route::get('settings/slack/get', [SlackSettingController::class, 'getSlackSettings'])->name('slack.settings.get');

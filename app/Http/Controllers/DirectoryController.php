@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-
 class DirectoryController extends Controller
 {
     /**
@@ -14,6 +11,6 @@ class DirectoryController extends Controller
      */
     public function index()
     {
-        return Inertia::render('directory/index');
+        return redirect()->route('vi.cong-ty-tu-van');
     }
 }
