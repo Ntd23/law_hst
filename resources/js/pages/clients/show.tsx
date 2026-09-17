@@ -193,7 +193,7 @@ export default function ClientShow() {
                                                         </span>
                                                     )}
                                                     <button
-                                                        onClick={() => router.get(route('advocate.cases.show', cas.id))}
+                                                        onClick={() => router.get(route('cases.show', cas.id))}
                                                         className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors cursor-pointer"
                                                         title={t('Xem chi tiết vụ án')}
                                                     >

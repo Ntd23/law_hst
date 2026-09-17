@@ -765,12 +765,7 @@ class CaseController extends BaseController
                     }
                 })->get(['id', 'name']);
 
-            return Inertia::render('cases/create', [
-                'clients' => $clients,
-                'caseTypes' => $caseTypes,
-                'caseStatuses' => $caseStatuses,
-                'courts' => $courts,
-            ]);
+            return redirect()->route('cases.index');
         } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }

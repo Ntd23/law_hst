@@ -46,6 +46,7 @@ use App\Http\Controllers\PayHerePaymentController;
 use App\Http\Controllers\CinetPayPaymentController;
 use App\Http\Controllers\PaiementPaymentController;
 use App\Http\Controllers\YooKassaPaymentController;
+use App\Http\Controllers\NepalstePaymentController;
 use App\Http\Controllers\AamarpayPaymentController;
 use App\Http\Controllers\MidtransPaymentController;
 use App\Http\Controllers\SepayPaymentController;
@@ -393,6 +394,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('payments/payhere', [PayHerePaymentController::class, 'processPayment'])->name('payhere.payment');
     Route::post('payments/cinetpay', [CinetPayPaymentController::class, 'processPayment'])->name('cinetpay.payment');
     Route::post('payments/paiement', [PaiementPaymentController::class, 'processPayment'])->name('paiement.payment');
+    Route::post('payments/nepalste', [NepalstePaymentController::class, 'processPayment'])->name('nepalste.payment');
 
     Route::post('payments/yookassa', [YooKassaPaymentController::class, 'processPayment'])->name('yookassa.payment');
     Route::post('payments/aamarpay', [AamarpayPaymentController::class, 'processPayment'])->name('aamarpay.payment');
@@ -427,6 +429,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('fedapay/create-payment', [FedaPayPaymentController::class, 'createPayment'])->name('fedapay.create-payment');
     Route::post('payhere/create-payment', [PayHerePaymentController::class, 'createPayment'])->name('payhere.create-payment');
     Route::post('cinetpay/create-payment', [CinetPayPaymentController::class, 'createPayment'])->name('cinetpay.create-payment');
+    Route::post('nepalste/create-payment', [NepalstePaymentController::class, 'createPayment'])->name('nepalste.create-payment');
 
     Route::post('yookassa/create-payment', [YooKassaPaymentController::class, 'createPayment'])->name('yookassa.create-payment');
 
@@ -447,6 +450,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('payments/payhere/callback', [PayHerePaymentController::class, 'callback'])->name('payhere.callback');
     Route::get('payments/cinetpay/success', [CinetPayPaymentController::class, 'success'])->name('cinetpay.success');
     Route::post('payments/cinetpay/callback', [CinetPayPaymentController::class, 'callback'])->name('cinetpay.callback');
+    Route::match(['GET', 'POST'], 'payments/nepalste/success', [NepalstePaymentController::class, 'success'])->name('nepalste.success');
+    Route::post('payments/nepalste/callback', [NepalstePaymentController::class, 'callback'])->name('nepalste.callback');
     Route::post('paiement/create-payment', [PaiementPaymentController::class, 'createPayment'])->name('paiement.create-payment');
     Route::get('payments/paiement/success', [PaiementPaymentController::class, 'success'])
         ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
@@ -999,14 +1004,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('plan-orders/{planOrder}/reject', [PlanOrderController::class, 'reject'])->middleware('permission:reject-plan-orders')->name('plan-orders.reject');
         });
 
-        // Plan Requests routes (placeholder)
-        Route::get('yeu-cau-goi-dich-vu', function () {
-            return Inertia::render('plans/plan-requests');
-        })->name('plan-requests.index');
-        Route::get('plan-requests', function () {
-            return redirect()->route('plan-requests.index');
-        });
-
         // Companies routes
         Route::middleware('permission:manage-companies')->group(function () {
             Route::get('cong-ty-thanh-vien', [CompanyController::class, 'index'])->middleware('permission:manage-companies')->name('companies.index');
@@ -1039,7 +1036,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Plan Requests routes
         Route::middleware('permission:manage-plan-requests')->group(function () {
-            Route::get('plan-requests/all', [PlanRequestController::class, 'index'])->middleware('permission:manage-plan-requests')->name('plan-requests.all');
+            Route::get('yeu-cau-goi-dich-vu', [PlanRequestController::class, 'index'])->name('plan-requests.index');
+            Route::get('plan-requests', function () {
+                return redirect()->route('plan-requests.index');
+            });
+            Route::get('plan-requests/all', function () {
+                return redirect()->route('plan-requests.index');
+            })->name('plan-requests.all');
             Route::post('plan-requests/{planRequest}/approve', [PlanRequestController::class, 'approve'])->middleware('permission:approve-plan-requests')->name('plan-requests.approve');
             Route::post('plan-requests/{planRequest}/reject', [PlanRequestController::class, 'reject'])->middleware('permission:reject-plan-requests')->name('plan-requests.reject');
         });
@@ -1068,6 +1071,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('contact-us', function () {
                 return redirect()->route('contact-us.index');
             });
+            Route::get('contacts', function () {
+                return redirect()->route('contact-us.index');
+            })->name('contacts.index');
             Route::get('contact-us/{contact}', [\App\Http\Controllers\ContactUsController::class, 'show'])->name('contact-us.show');
             Route::put('contact-us/{contact}/status', [\App\Http\Controllers\ContactUsController::class, 'updateStatus'])->name('contact-us.update-status');
             Route::delete('contact-us/{contact}', [\App\Http\Controllers\ContactUsController::class, 'destroy'])->name('contact-us.destroy');
