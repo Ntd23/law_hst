@@ -106,7 +106,7 @@ export default function LoginHistory() {
         setSearchTerm('');
         setShowFilters(false);
 
-        router.get(route('login-history.index'), {
+        router.get(route('user-logs.index'), {
             page: 1,
             per_page: pageFilters.per_page
         }, { preserveState: true, preserveScroll: true });
@@ -222,7 +222,7 @@ export default function LoginHistory() {
                     onApplyFilters={applyFilters}
                     currentPerPage={pageFilters.per_page?.toString() || "10"}
                     onPerPageChange={(value) => {
-                        router.get(route('login-history.index'), {
+                        router.get(route('user-logs.index'), {
                             page: 1,
                             per_page: parseInt(value),
                             search: searchTerm || undefined

@@ -112,7 +112,7 @@ export default function SlackSettings() {
         setTestMessageResult(null);
 
         try {
-            await router.post(route('slack.test-webhook'), {
+            await router.post(route('settings.slack.test'), {
                 webhook_url: webhookUrl,
                 debug: false
             }, {
