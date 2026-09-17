@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CaseModel;
+use App\Models\Client;
 use App\Models\Plan;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class PlanController extends Controller
 {
@@ -328,13 +332,63 @@ class PlanController extends Controller
             ->get()
             ->keyBy('plan_id');
 
+        $currentPlan = $user->getCurrentPlan();
+
         return Inertia::render('plans/index', [
             'plans' => $plans,
             'billingCycle' => $billingCycle,
-            'currentPlan' => $user->plan,
+            'currentPlan' => $currentPlan ? [
+                'id' => $currentPlan->id,
+                'name' => $currentPlan->name,
+                'description' => $currentPlan->description,
+                'price' => $currentPlan->price,
+                'yearly_price' => $currentPlan->yearly_price,
+                'max_users' => $currentPlan->max_users,
+                'max_cases' => $currentPlan->max_cases,
+                'max_clients' => $currentPlan->max_clients,
+                'storage_limit' => $currentPlan->storage_limit,
+                'billing_cycle' => $currentBillingCycle,
+                'expires_at' => $user->plan_expire_date,
+                'is_trial' => (bool) $user->is_trial,
+                'trial_day' => $user->trial_day,
+                'trial_expires_at' => $user->trial_expire_date,
+                'plan_is_active' => (bool) $user->plan_is_active,
+            ] : null,
+            'planUsage' => $this->getCompanyPlanUsage($user, $currentPlan),
             'userTrialUsed' => $user->is_trial,
             'pendingRequests' => $pendingRequestsDetails
         ]);
+    }
+
+    private function getCompanyPlanUsage(User $company, ?Plan $plan): array
+    {
+        $companyUserIds = getAllCompanyUsers($company->id);
+        $companyAndUserIds = array_values(array_unique([...$companyUserIds, $company->id]));
+        $storageUsedBytes = Media::whereIn('user_id', $companyAndUserIds)->sum('size');
+        $storageLimitBytes = $plan?->storage_limit ? $plan->storage_limit * 1024 * 1024 * 1024 : 0;
+
+        return [
+            'users' => [
+                'used' => User::whereIn('created_by', $companyAndUserIds)
+                    ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'client'))
+                    ->count(),
+                'limit' => $plan?->max_users ?? 0,
+            ],
+            'cases' => [
+                'used' => CaseModel::whereIn('created_by', $companyAndUserIds)->count(),
+                'limit' => $plan?->max_cases ?? 0,
+            ],
+            'clients' => [
+                'used' => Client::whereIn('created_by', $companyAndUserIds)->count(),
+                'limit' => $plan?->max_clients ?? 0,
+            ],
+            'storage' => [
+                'used' => $storageUsedBytes,
+                'limit' => $storageLimitBytes,
+                'used_gb' => round($storageUsedBytes / 1024 / 1024 / 1024, 2),
+                'limit_gb' => (float) ($plan?->storage_limit ?? 0),
+            ],
+        ];
     }
 
     public function requestPlan(Request $request)

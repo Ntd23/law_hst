@@ -33,7 +33,8 @@ import {
   Wallet,
   Coins,
   Scale,
-  Edit
+  Edit,
+  User
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -53,10 +54,12 @@ interface Plan {
   trial_days: number;
   features: string[];
   stats: {
-    businesses: number | string;
+    businesses?: number | string;
     users: number | string;
+    cases: number | string;
+    clients: number | string;
     storage: string;
-    templates: number | string;
+    templates?: number | string;
   };
   status: boolean;
   recommended?: boolean;
@@ -67,18 +70,46 @@ interface Plan {
   has_users?: boolean;
 }
 
+interface UsageItem {
+  used: number;
+  limit: number;
+  used_gb?: number;
+  limit_gb?: number;
+}
+
+interface PlanUsage {
+  users: UsageItem;
+  cases: UsageItem;
+  clients: UsageItem;
+  storage: UsageItem;
+}
+
+interface CurrentPlan {
+  id: number;
+  name: string;
+  description?: string | null;
+  price?: number | string | null;
+  yearly_price?: number | string | null;
+  billing_cycle?: 'monthly' | 'yearly';
+  expires_at?: string | null;
+  is_trial?: boolean;
+  trial_expires_at?: string | null;
+  plan_is_active?: boolean;
+}
+
 interface Props {
   plans: Plan[];
   billingCycle: 'monthly' | 'yearly';
   hasDefaultPlan?: boolean;
   isAdmin?: boolean;
-  currentPlan?: any;
+  currentPlan?: CurrentPlan | null;
+  planUsage?: PlanUsage | null;
   userTrialUsed?: boolean;
   paymentMethods?: any[];
   pendingRequests?: any;
 }
 
-export default function Plans({ plans: initialPlans, billingCycle: initialBillingCycle = 'monthly', hasDefaultPlan, isAdmin = false, currentPlan, userTrialUsed, paymentMethods = [], pendingRequests = {} }: Props) {
+export default function Plans({ plans: initialPlans, billingCycle: initialBillingCycle = 'monthly', hasDefaultPlan, isAdmin = false, currentPlan, planUsage = null, userTrialUsed, paymentMethods = [], pendingRequests = {} }: Props) {
   const { t } = useTranslation();
   const { flash } = usePage().props as any;
   const [plans, setPlans] = useState<Plan[]>(initialPlans);
@@ -94,6 +125,99 @@ const breadcrumbs = [
     { title: t('Dashboard'), href: route('dashboard') },
     { title: t('Plans') }
   ];
+
+  const getUsagePercentage = (used: number, limit: number) => {
+    const safeUsed = Number(used) || 0;
+    const safeLimit = Number(limit) || 0;
+
+    if (safeLimit <= 0) {
+      return 0;
+    }
+
+    return Math.min(Math.round((safeUsed / safeLimit) * 100), 100);
+  };
+
+  const formatNumber = (value: number) => (Number(value) || 0).toLocaleString();
+
+  const formatLimit = (value: number) => {
+    const limit = Number(value) || 0;
+    return limit > 0 ? formatNumber(limit) : t('Unlimited');
+  };
+
+  const formatStorageSize = (gb: number) => {
+    const size = Number(gb) || 0;
+
+    if (size <= 0) {
+      return '0 MB';
+    }
+
+    if (size < 1) {
+      return `${Math.round(size * 1024)} MB`;
+    }
+
+    return `${Number(size.toFixed(size < 10 ? 2 : 1)).toLocaleString()} GB`;
+  };
+
+  const formatDate = (value?: string | null) => {
+    if (!value) {
+      return null;
+    }
+
+    return window.appSettings?.formatDate(value) ?? new Date(value).toLocaleDateString();
+  };
+
+  const usageCards = planUsage ? [
+    {
+      key: 'users',
+      label: t('Team Members'),
+      value: `${formatNumber(planUsage.users.used)} / ${formatLimit(planUsage.users.limit)}`,
+      percentage: getUsagePercentage(planUsage.users.used, planUsage.users.limit),
+      icon: <Users className="h-7 w-7" />,
+      surface: 'border-blue-100 bg-blue-50',
+      iconClass: 'bg-blue-100 text-blue-600',
+      track: 'bg-blue-100',
+      fill: 'bg-blue-500',
+      percent: 'text-blue-600',
+    },
+    {
+      key: 'cases',
+      label: t('Cases'),
+      value: `${formatNumber(planUsage.cases.used)} / ${formatLimit(planUsage.cases.limit)}`,
+      percentage: getUsagePercentage(planUsage.cases.used, planUsage.cases.limit),
+      icon: <Scale className="h-7 w-7" />,
+      surface: 'border-emerald-100 bg-emerald-50',
+      iconClass: 'bg-emerald-100 text-emerald-600',
+      track: 'bg-emerald-100',
+      fill: 'bg-emerald-500',
+      percent: 'text-emerald-600',
+    },
+    {
+      key: 'clients',
+      label: t('Clients'),
+      value: `${formatNumber(planUsage.clients.used)} / ${formatLimit(planUsage.clients.limit)}`,
+      percentage: getUsagePercentage(planUsage.clients.used, planUsage.clients.limit),
+      icon: <User className="h-7 w-7" />,
+      surface: 'border-purple-100 bg-purple-50',
+      iconClass: 'bg-purple-100 text-purple-600',
+      track: 'bg-purple-100',
+      fill: 'bg-purple-500',
+      percent: 'text-purple-600',
+    },
+    {
+      key: 'storage',
+      label: t('Storage'),
+      value: `${formatStorageSize(planUsage.storage.used_gb || 0)} / ${planUsage.storage.limit_gb ? formatStorageSize(planUsage.storage.limit_gb) : t('Unlimited')}`,
+      percentage: getUsagePercentage(planUsage.storage.used_gb || 0, planUsage.storage.limit_gb || 0),
+      icon: <HardDrive className="h-7 w-7" />,
+      surface: 'border-amber-100 bg-amber-50',
+      iconClass: 'bg-amber-100 text-amber-600',
+      track: 'bg-amber-100',
+      fill: 'bg-amber-500',
+      percent: 'text-amber-600',
+    },
+  ] : [];
+
+  const activePlanExpiresAt = currentPlan?.is_trial ? currentPlan?.trial_expires_at : currentPlan?.expires_at;
   // Update plans when initialPlans changes
   useEffect(() => {
     setPlans(initialPlans);
@@ -617,7 +741,7 @@ const breadcrumbs = [
   return (
     <PageTemplate
       title={t("Plans")}
-      description={t("Manage subscription plans for your customers")}
+      description={isAdmin ? t("Manage subscription plans for your customers") : t('Usage overview')}
       url="/plans"
       breadcrumbs={breadcrumbs}
     >
@@ -676,6 +800,77 @@ const breadcrumbs = [
             )}
           </div>
         </div>
+
+        {!isAdmin && planUsage && (
+          <div className="mx-auto w-full max-w-7xl space-y-4">
+            <div className="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Crown className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-500">{t('Plan Status')}</p>
+                  <h2 className="truncate text-xl font-semibold text-gray-900">
+                    {currentPlan?.name || t('No Plan')}
+                  </h2>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                {currentPlan?.is_trial && (
+                  <Badge className="bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-600/20 hover:bg-orange-50">
+                    {t('Trial')}
+                  </Badge>
+                )}
+                {currentPlan?.billing_cycle && (
+                  <Badge variant="outline">
+                    {t(currentPlan.billing_cycle === 'yearly' ? 'Yearly' : 'Monthly')}
+                  </Badge>
+                )}
+                {activePlanExpiresAt && (
+                  <span className="rounded-lg bg-gray-50 px-3 py-1.5 font-medium text-gray-700">
+                    {t('Expires')}: {formatDate(activePlanExpiresAt)}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {usageCards.map((item) => (
+                <div
+                  key={item.key}
+                  className={`rounded-lg border p-5 shadow-sm transition-shadow hover:shadow-md ${item.surface}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${item.iconClass}`}>
+                      {item.icon}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-base font-semibold text-gray-600">
+                        {item.label}
+                      </div>
+                      <div className="mt-1 whitespace-nowrap text-2xl font-bold text-gray-950">
+                        {item.value}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex items-center gap-4">
+                    <div className={`h-2 flex-1 overflow-hidden rounded-full ${item.track}`}>
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${item.fill}`}
+                        style={{ width: `${item.percentage}%` }}
+                      />
+                    </div>
+                    <span className={`min-w-10 text-right text-base font-bold ${item.percent}`}>
+                      {item.percentage}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Plans grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">

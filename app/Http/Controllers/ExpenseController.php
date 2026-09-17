@@ -402,11 +402,11 @@ class ExpenseController extends BaseController
         }
 
         if (!$this->hasExpenseAccess($expense)) {
-            return redirect()->back()->with('error', 'Expense not found.');
+            return redirect()->back()->with('error', __('Expense not found.'));
         }
 
         $expense->update(['status' => 'approved']);
-        return redirect()->back()->with('success', 'Expense approved successfully.');
+        return redirect()->back()->with('success', __('Expense approved successfully.'));
     }
 
     public function reject(Expense $expense)
@@ -416,11 +416,11 @@ class ExpenseController extends BaseController
         }
 
         if (!$this->hasExpenseAccess($expense)) {
-            return redirect()->back()->with('error', 'Expense not found.');
+            return redirect()->back()->with('error', __('Expense not found.'));
         }
 
         $expense->update(['status' => 'rejected']);
-        return redirect()->back()->with('success', 'Expense rejected successfully.');
+        return redirect()->back()->with('success', __('Expense rejected successfully.'));
     }
 
     private function hasExpenseAccess(Expense $expense): bool

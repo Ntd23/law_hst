@@ -939,6 +939,18 @@ class PaymentSettingController extends Controller
             }
         }
 
+        $sepayConfigured = !empty($settings['sepay_api_key'])
+            && !empty($settings['sepay_connected_at'])
+            && ($settings['sepay_connection_status'] ?? '') === 'connected'
+            && !empty($settings['sepay_bank_account_id'])
+            && !empty($settings['sepay_bank_code'])
+            && !empty($settings['sepay_account_number'])
+            && !empty($settings['sepay_account_name']);
+
+        if (!isset($safeSettings['is_sepay_enabled']) && $sepayConfigured) {
+            $safeSettings['is_sepay_enabled'] = true;
+        }
+
         if (($safeSettings['is_sepay_enabled'] ?? false) === true || ($safeSettings['is_sepay_enabled'] ?? null) === '1') {
             $transferContent = app(SepayTransferContentService::class);
             $orderCode = $transferContent->buildOrderCode('invoice', '123456', $settings['sepay_payment_prefix'] ?? null);

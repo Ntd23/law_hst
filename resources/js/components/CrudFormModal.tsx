@@ -39,6 +39,7 @@ interface CrudFormModalProps {
     title: string;
     mode: 'create' | 'edit' | 'view';
     description?: string;
+    footerActions?: React.ReactNode;
 }
 // Standalone date input that opens picker on any click
 function DateInputField({ field, dateValue, handleChange, errors, mode }: {
@@ -121,7 +122,7 @@ function TimeInputField({ field, timeValue, handleChange, errors, mode }: {
 
 
 
-export function CrudFormModal({ isOpen, onClose, onSubmit, formConfig, initialData = {}, title, mode, description }: CrudFormModalProps) {
+export function CrudFormModal({ isOpen, onClose, onSubmit, formConfig, initialData = {}, title, mode, description, footerActions }: CrudFormModalProps) {
     const { t } = useTranslation();
     const [formData, setFormData] = useState<Record<string, any>>({});
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -983,15 +984,18 @@ export function CrudFormModal({ isOpen, onClose, onSubmit, formConfig, initialDa
                         )}
                     </form>
                 </ScrollArea>
-                <DialogFooter className="sm:justify-end px-6">
-                    <Button type="button" variant="outline" onClick={onClose}>
-                        {t('Cancel')}
-                    </Button>
-                    {mode !== 'view' && (
-                        <Button type="button" onClick={handleSubmit}>
-                            {t('Save')}
+                <DialogFooter className={footerActions ? 'px-6 sm:justify-between' : 'px-6 sm:justify-end'}>
+                    {footerActions ? <div className="mr-auto">{footerActions}</div> : null}
+                    <div className="flex gap-2">
+                        <Button type="button" variant="outline" onClick={onClose}>
+                            {t('Cancel')}
                         </Button>
-                    )}
+                        {mode !== 'view' && (
+                            <Button type="button" onClick={handleSubmit}>
+                                {t('Save')}
+                            </Button>
+                        )}
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

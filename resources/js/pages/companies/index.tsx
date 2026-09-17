@@ -7,25 +7,19 @@ import { Pagination } from '@/components/ui/pagination';
 import { SearchAndFilterBar } from '@/components/ui/search-and-filter-bar';
 import { Card } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Edit, Trash2, KeyRound, Lock, Unlock, Info, ArrowUpRight, CreditCard, History } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, CreditCard, History } from 'lucide-react';
 import { toast } from '@/components/custom-toast';
-import { useInitials } from '@/hooks/use-initials';
 import { useTranslation } from 'react-i18next';
 import { CrudTable } from '@/components/CrudTable';
 import { CrudFormModal } from '@/components/CrudFormModal';
 import { CrudDeleteModal } from '@/components/CrudDeleteModal';
-import { UpgradePlanModal } from '@/components/UpgradePlanModal';
 import { formatStatusText, getImagePath } from '@/utils/helpers';
-import ViewPopup from './view';
-import { Dialog } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function Companies() {
     const { t } = useTranslation();
-    const { auth, companies, plans, filters: pageFilters = {}, globalSettings } = usePage().props as any;
+    const { auth, companies, filters: pageFilters = {}, globalSettings } = usePage().props as any;
     const permissions = auth?.permissions || [];
-    const getInitials = useInitials();
 
     // State
     const [activeView, setActiveView] = useState(
@@ -35,17 +29,12 @@ export default function Companies() {
     const [startDate, setStartDate] = useState<Date | undefined>(pageFilters.start_date ? new Date(pageFilters.start_date) : undefined);
     const [endDate, setEndDate] = useState<Date | undefined>(pageFilters.end_date ? new Date(pageFilters.end_date) : undefined);
     const [selectedStatus, setSelectedStatus] = useState(pageFilters.status || '_empty_');
-    const [showFilters, setShowFilters] = useState(false);
 
     // Modal state
-    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
-    const [isUpgradePlanModalOpen, setIsUpgradePlanModalOpen] = useState(false);
 
     const [currentCompany, setCurrentCompany] = useState<any>(null);
-    const [availablePlans, setAvailablePlans] = useState<any[]>([]);
 
 
     const [formMode, setFormMode] = useState<'create' | 'edit' | 'view'>('create');
@@ -104,21 +93,8 @@ export default function Companies() {
         setCurrentCompany(company);
 
         switch (action) {
-            case 'login-as':
-                router.visit(route("impersonate.start", company.id), { preserveState: false, preserveScroll: false });
-                break;
             case 'company-info':
-                setIsViewModalOpen(true);
-                break;
-            case 'upgrade-plan':
-                handleUpgradePlan(company);
-                break;
-
-            case 'reset-password':
-                setIsResetPasswordModalOpen(true);
-                break;
-            case 'toggle-status':
-                handleToggleStatus(company);
+                router.visit(route('companies.show', company.id));
                 break;
             case 'edit':
                 setFormMode('edit');
@@ -228,66 +204,6 @@ export default function Companies() {
         });
     };
 
-    const handleResetPasswordConfirm = (data: { password: string }) => {
-        if (!globalSettings?.is_demo) {
-            toast.loading(t('Resetting password...'));
-        }
-
-        router.put(route('companies.reset-password', currentCompany.id), data, {
-            onSuccess: (page) => {
-                setIsResetPasswordModalOpen(false);
-                if (!globalSettings?.is_demo) {
-                    toast.dismiss();
-                }
-                if (page.props.flash.success) {
-                    toast.success(t(page.props.flash.success));
-                } else if (page.props.flash.error) {
-                    toast.error(t(page.props.flash.error));
-                }
-            },
-            onError: (errors) => {
-                if (!globalSettings?.is_demo) {
-                    toast.dismiss();
-                }
-                if (typeof errors === 'string') {
-                    toast.error(t(errors));
-                } else {
-                    toast.error(t('Failed to reset password: {{errors}}', { errors: Object.values(errors).join(', ') }));
-                }
-            }
-        });
-    };
-
-    const handleToggleStatus = (company: any) => {
-        const newStatus = company.status === 'active' ? 'inactive' : 'active';
-        if (!globalSettings?.is_demo) {
-            toast.loading(`${newStatus === 'active' ? t('Activating') : t('Deactivating')} company...`);
-        }
-
-        router.put(route('companies.toggle-status', company.id), {}, {
-            onSuccess: (page) => {
-                if (!globalSettings?.is_demo) {
-                    toast.dismiss();
-                }
-                if (page.props.flash.success) {
-                    toast.success(t(page.props.flash.success));
-                } else if (page.props.flash.error) {
-                    toast.error(t(page.props.flash.error));
-                }
-            },
-            onError: (errors) => {
-                if (!globalSettings?.is_demo) {
-                    toast.dismiss();
-                }
-                if (typeof errors === 'string') {
-                    toast.error(t(errors));
-                } else {
-                    toast.error(t('Failed to update company status: {{errors}}', { errors: Object.values(errors).join(', ') }));
-                }
-            }
-        });
-    };
-
     const handlePageChange = (url: string) => {
         router.get(url, {}, { preserveState: true, preserveScroll: true });
     };
@@ -297,62 +213,6 @@ export default function Companies() {
             view: activeView,
         });
     };
-
-    const handleUpgradePlan = (company: any) => {
-        setCurrentCompany(company);
-
-        // Fetch available plans
-        if (!globalSettings?.is_demo) {
-            toast.loading(t('Loading plans...'));
-        }
-        fetch(route('companies.plans', company.id))
-            .then(res => res.json())
-            .then(data => {
-                setAvailablePlans(data.plans);
-                setIsUpgradePlanModalOpen(true);
-                if (!globalSettings?.is_demo) {
-                    toast.dismiss();
-                }
-            })
-            .catch(err => {
-                if (!globalSettings?.is_demo) {
-                    toast.dismiss();
-                }
-                toast.error(t('Failed to load plans'));
-            });
-    };
-
-    const handleUpgradePlanConfirm = (planId: number, duration: string) => {
-        if (!globalSettings?.is_demo) {
-            toast.loading(t('Upgrading plan...'));
-        }
-
-        // Use Inertia router to handle the request
-        router.put(route('companies.upgrade-plan', currentCompany.id), {
-            plan_id: planId,
-            duration: duration
-
-        }, {
-            onSuccess: () => {
-                setIsUpgradePlanModalOpen(false);
-                if (!globalSettings?.is_demo) {
-                    toast.dismiss();
-                }
-                toast.success(t('Plan upgraded successfully'));
-                router.reload();
-            },
-            onError: () => {
-                if (!globalSettings?.is_demo) {
-                    toast.dismiss();
-                }
-                toast.error(t('Failed to upgrade plan'));
-            }
-        });
-    };
-
-
-
-
 
     // Define page actions
     const pageActions = [
@@ -418,13 +278,8 @@ export default function Companies() {
     ];
 
     const actions = [
-        { label: t('Login as Company'), icon: 'ArrowUpRight', action: 'login-as', className: 'text-blue-500' },
-        { label: t('Company Info'), icon: 'Info', action: 'company-info', className: 'text-blue-500' },
-        { label: t('Upgrade Plan'), icon: 'CreditCard', action: 'upgrade-plan', className: 'text-amber-500' },
-        { label: t('Reset Password'), icon: 'KeyRound', action: 'reset-password', className: 'text-blue-500' },
-        { label: t('Toggle Status'), icon: 'Lock', action: 'toggle-status', className: 'text-amber-500' },
+        { label: t('View Details'), icon: 'Eye', action: 'company-info', className: 'text-blue-500' },
         { label: t('Edit'), icon: 'Edit', action: 'edit', className: 'text-amber-500' },
-        { label: t('Delete'), icon: 'Trash2', action: 'delete', className: 'text-red-500' },
     ];
 
     const [pageInitialState, setPageInitialState] = useState(true);
@@ -590,14 +445,6 @@ export default function Companies() {
                                                     {company.plan_name}
                                                 </span>
                                             </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleAction('upgrade-plan', company)}
-                                                className="h-6 px-2 text-xs text-primary hover:text-primary hover:bg-primary/10"
-                                            >
-                                                {t("Upgrade")}
-                                            </Button>
                                         </div>
                                         {company.plan_expiry_date && (
                                             <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -607,81 +454,34 @@ export default function Companies() {
                                     </div>
 
                                     {/* Quick Actions */}
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex space-x-1">
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className='h-8 w-8 text-gray-500'
-                                                        onClick={() => handleAction('login-as', company)}
-                                                    >
-                                                        <ArrowUpRight size={16} />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>{t("Login as Company")}</TooltipContent>
-                                            </Tooltip>
-
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className='h-8 w-8 text-gray-500'
-                                                        onClick={() => handleAction('company-info', company)}
-                                                    >
-                                                        <Info size={16} />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>{t("Company Info")}</TooltipContent>
-                                            </Tooltip>
-
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className='h-8 w-8 text-gray-500'
-                                                        onClick={() => handleAction('edit', company)}
-                                                    >
-                                                        <Edit size={16} />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>{t("Edit")}</TooltipContent>
-                                            </Tooltip>
-                                        </div>
-
-                                        {/* More Actions Dropdown */}
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <circle cx="12" cy="12" r="1"></circle>
-                                                        <circle cx="12" cy="5" r="1"></circle>
-                                                        <circle cx="12" cy="19" r="1"></circle>
-                                                    </svg>
+                                    <div className="flex items-center gap-2">
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                    onClick={() => handleAction('company-info', company)}
+                                                >
+                                                    <Eye size={16} />
                                                 </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-48 z-50" sideOffset={5}>
-                                                <DropdownMenuItem onClick={() => handleAction('reset-password', company)}>
-                                                    <KeyRound className="h-4 w-4 mr-2" />
-                                                    <span>{t("Reset Password")}</span>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleAction('toggle-status', company)}>
-                                                    {company.status === 'active' ?
-                                                        <Lock className="h-4 w-4 mr-2" /> :
-                                                        <Unlock className="h-4 w-4 mr-2" />
-                                                    }
-                                                    <span>{company.status === 'active' ? t("Disable Login") : t("Enable Login")}</span>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem onClick={() => handleAction('delete', company)} className="text-red-600 focus:text-red-600">
-                                                    <Trash2 className="h-4 w-4 mr-2" />
-                                                    <span>{t("Delete")}</span>
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                            </TooltipTrigger>
+                                            <TooltipContent>{t("View Details")}</TooltipContent>
+                                        </Tooltip>
+
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                    onClick={() => handleAction('edit', company)}
+                                                >
+                                                    <Edit size={16} />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>{t("Edit")}</TooltipContent>
+                                        </Tooltip>
                                     </div>
                                 </div>
 
@@ -723,11 +523,6 @@ export default function Companies() {
                     </div>
                 </div>
             )}
-
-            {/* View Modal */}
-            <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-                {currentCompany && <ViewPopup record={currentCompany} />}
-            </Dialog>
 
             {/* Form Modal */}
             <CrudFormModal
@@ -782,6 +577,20 @@ export default function Companies() {
                             : t('View Company')
                 }
                 mode={formMode}
+                footerActions={formMode === 'edit' && currentCompany ? (
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => {
+                            setIsFormModalOpen(false);
+                            setIsDeleteModalOpen(true);
+                        }}
+                        disabled={globalSettings?.is_demo}
+                    >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {t('Delete')}
+                    </Button>
+                ) : null}
             />
 
             {/* Delete Modal */}
@@ -792,33 +601,6 @@ export default function Companies() {
                 itemName={currentCompany?.name || ''}
                 entityName="company"
             />
-
-            {/* Reset Password Modal */}
-            <CrudFormModal
-                isOpen={isResetPasswordModalOpen}
-                onClose={() => setIsResetPasswordModalOpen(false)}
-                onSubmit={handleResetPasswordConfirm}
-                formConfig={{
-                    fields: [
-                        { name: 'password', label: t('New Password'), type: 'password', placeholder: 'Enter New Password', required: true }
-                    ],
-                    modalSize: 'sm'
-                }}
-                initialData={{}}
-                title={`Reset Password for ${currentCompany?.name || 'Company'}`}
-                mode="edit"
-            />
-
-            {/* Upgrade Plan Modal */}
-            <UpgradePlanModal
-                isOpen={isUpgradePlanModalOpen}
-                onClose={() => setIsUpgradePlanModalOpen(false)}
-                onConfirm={handleUpgradePlanConfirm}
-                plans={availablePlans}
-                currentPlanId={currentCompany?.plan_id}
-                companyName={currentCompany?.name || ''}
-            />
-
 
         </PageTemplate>
     );

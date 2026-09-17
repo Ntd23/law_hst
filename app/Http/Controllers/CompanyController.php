@@ -6,10 +6,14 @@ use App\Models\User;
 use App\Models\Plan;
 use App\Models\PlanOrder;
 use App\Models\Setting;
+use App\Models\CompanyProfile;
+use App\Models\CaseModel;
+use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class CompanyController extends Controller
 {
@@ -85,6 +89,161 @@ class CompanyController extends Controller
             'companies' => $companies,
             'plans' => $plans,
             'filters' => $request->only(['search', 'status', 'start_date', 'end_date', 'sort_field', 'sort_direction', 'per_page', 'view', 'page']),
+        ]);
+    }
+
+    public function show(User $company)
+    {
+        if ($company->type !== 'company') {
+            return redirect()->route('companies.index')->with('error', __('Invalid company record'));
+        }
+
+        $company->load('plan');
+        $companyUserIds = getAllCompanyUsers($company->id);
+        $companyAndUserIds = array_values(array_unique([...$companyUserIds, $company->id]));
+        $plan = $company->getCurrentPlan();
+        $storageUsedBytes = Media::whereIn('user_id', $companyAndUserIds)->sum('size');
+        $storageLimitBytes = $plan?->storage_limit ? $plan->storage_limit * 1024 * 1024 * 1024 : 0;
+        $profile = CompanyProfile::where('created_by', $company->id)->first();
+        $settings = Setting::where('user_id', $company->id)
+            ->whereIn('key', [
+                'titleText',
+                'footerText',
+                'defaultLanguage',
+                'defaultCurrency',
+                'dateFormat',
+                'timeFormat',
+                'defaultTimezone',
+            ])
+            ->pluck('value', 'key');
+
+        $paymentHistory = PlanOrder::with(['plan:id,name', 'processedBy:id,name,email'])
+            ->where('user_id', $company->id)
+            ->orderByDesc('ordered_at')
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get()
+            ->map(fn ($order) => [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'plan_name' => $order->plan?->name,
+                'billing_cycle' => $order->billing_cycle,
+                'original_price' => (float) $order->original_price,
+                'discount_amount' => (float) $order->discount_amount,
+                'final_price' => (float) $order->final_price,
+                'paid_amount' => $order->paid_amount !== null ? (float) $order->paid_amount : null,
+                'coupon_code' => $order->coupon_code,
+                'payment_method' => $order->payment_method,
+                'payment_id' => $order->payment_id,
+                'sepay_order_code' => $order->sepay_order_code,
+                'sepay_transaction_id' => $order->sepay_transaction_id,
+                'sepay_transaction_date' => $order->sepay_transaction_date,
+                'status' => $order->status,
+                'ordered_at' => $order->ordered_at,
+                'processed_at' => $order->processed_at,
+                'processed_by' => $order->processedBy ? [
+                    'id' => $order->processedBy->id,
+                    'name' => $order->processedBy->name,
+                    'email' => $order->processedBy->email,
+                ] : null,
+                'notes' => $order->notes,
+                'receipt_path' => $order->receipt_path,
+            ]);
+
+        return Inertia::render('companies/show', [
+            'company' => [
+                'id' => $company->id,
+                'avatar' => $company->avatar,
+                'name' => $company->name,
+                'email' => $company->email,
+                'status' => $company->status,
+                'lang' => $company->lang,
+                'created_at' => $company->created_at,
+                'updated_at' => $company->updated_at,
+                'email_verified_at' => $company->email_verified_at,
+                'plan_expiry_date' => $company->plan_expire_date,
+                'plan_is_active' => $company->plan_is_active,
+                'is_enable_login' => $company->is_enable_login,
+                'storage_limit' => $company->storage_limit,
+                'is_trial' => $company->is_trial,
+                'trial_day' => $company->trial_day,
+                'trial_expire_date' => $company->trial_expire_date,
+                'referral_code' => $company->referral_code,
+                'used_referral_code' => $company->used_referral_code,
+                'commission_amount' => $company->commission_amount,
+            ],
+            'profile' => $profile ? [
+                'id' => $profile->id,
+                'company_id' => $profile->company_id,
+                'name' => $profile->name,
+                'registration_number' => $profile->registration_number,
+                'address' => $profile->address,
+                'phone' => $profile->phone,
+                'email' => $profile->email,
+                'website' => $profile->website,
+                'logo' => $profile->logo,
+                'establishment_date' => $profile->establishment_date,
+                'company_size' => $profile->company_size,
+                'business_type' => $profile->business_type,
+                'status' => $profile->status,
+                'description' => $profile->description,
+                'advocate_name' => $profile->advocate_name,
+                'bar_registration_number' => $profile->bar_registration_number,
+                'years_of_experience' => $profile->years_of_experience,
+                'law_degree' => $profile->law_degree,
+                'university' => $profile->university,
+                'specialization' => $profile->specialization,
+                'court_jurisdictions' => $profile->court_jurisdictions,
+                'languages_spoken' => $profile->languages_spoken,
+                'consultation_fees' => $profile->consultation_fees !== null ? (float) $profile->consultation_fees : null,
+                'office_hours' => $profile->office_hours,
+                'success_rate' => $profile->success_rate,
+                'services_offered' => $profile->services_offered,
+                'notable_cases' => $profile->notable_cases,
+            ] : null,
+            'settings' => [
+                'titleText' => $settings->get('titleText'),
+                'footerText' => $settings->get('footerText'),
+                'defaultLanguage' => $settings->get('defaultLanguage'),
+                'defaultCurrency' => $settings->get('defaultCurrency'),
+                'dateFormat' => $settings->get('dateFormat'),
+                'timeFormat' => $settings->get('timeFormat'),
+                'defaultTimezone' => $settings->get('defaultTimezone'),
+            ],
+            'paymentHistory' => $paymentHistory,
+            'plan' => $plan ? [
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'description' => $plan->description,
+                'price' => $plan->price,
+                'yearly_price' => $plan->yearly_price,
+                'max_users' => $plan->max_users,
+                'max_cases' => $plan->max_cases,
+                'max_clients' => $plan->max_clients,
+                'storage_limit' => $plan->storage_limit,
+            ] : null,
+            'usage' => [
+                'users' => [
+                    'used' => User::whereIn('created_by', $companyAndUserIds)
+                        ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'client'))
+                        ->count(),
+                    'limit' => $plan?->max_users ?? 0,
+                ],
+                'cases' => [
+                    'used' => CaseModel::whereIn('created_by', $companyAndUserIds)->count(),
+                    'limit' => $plan?->max_cases ?? 0,
+                ],
+                'clients' => [
+                    'used' => Client::whereIn('created_by', $companyAndUserIds)->count(),
+                    'limit' => $plan?->max_clients ?? 0,
+                ],
+                'storage' => [
+                    'used' => $storageUsedBytes,
+                    'limit' => $storageLimitBytes,
+                    'used_gb' => round($storageUsedBytes / 1024 / 1024 / 1024, 2),
+                    'limit_gb' => (float) ($plan?->storage_limit ?? 0),
+                ],
+            ],
         ]);
     }
 

@@ -44,7 +44,7 @@ export function PlanSubscriptionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>{t('Subscribe to {{planName}}', { planName: plan.name })}</DialogTitle>
         </DialogHeader>

@@ -70,7 +70,12 @@ const customBackend = {
 
     const loadPath = window.route ? window.route('translations', actualLanguage) : `/translations/${actualLanguage}`;
 
-    fetch(loadPath)
+    fetch(loadPath, {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    })
       .then(response => response.json())
       .then(data => {
         // Extract translations from the structured response

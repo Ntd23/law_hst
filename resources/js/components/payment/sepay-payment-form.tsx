@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from '@/components/custom-toast';
 import { normalizeVietQrBankCode } from '@/utils/vietqr';
-import { CheckCircle, Copy, Loader2, QrCode } from 'lucide-react';
+import { Copy, QrCode } from 'lucide-react';
 
 interface SepayPaymentFormProps {
   planId: number;
@@ -38,7 +38,6 @@ export function SepayPaymentForm({
   onSuccess,
 }: SepayPaymentFormProps) {
   const { t } = useTranslation();
-  const [processing, setProcessing] = useState(false);
   const [previewChecked, setPreviewChecked] = useState(Boolean(orderCode || configuredTransferContent));
   const [preview, setPreview] = useState<any>(null);
   const [paymentReady, setPaymentReady] = useState(false);
@@ -132,7 +131,6 @@ export function SepayPaymentForm({
     if (!previewChecked || !qrUrl || startedRef.current) return;
 
     startedRef.current = true;
-    setProcessing(true);
 
     router.post(route('sepay.payment'), {
       plan_id: planId,
@@ -150,7 +148,6 @@ export function SepayPaymentForm({
           : Object.values(errors).flat().join(', ');
         toast.error(message || t('Failed to submit payment request'));
       },
-      onFinish: () => setProcessing(false),
     });
   }, [billingCycle, couponCode, planId, planPrice, previewChecked, qrUrl, referenceCode, t]);
 
@@ -179,7 +176,7 @@ export function SepayPaymentForm({
   }, [isPaid, onSuccess, paymentReady, referenceCode, t]);
 
   return (
-    <div className="space-y-4">
+    <div>
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-3">
@@ -188,16 +185,17 @@ export function SepayPaymentForm({
           </div>
 
           {qrUrl ? (
-            <div className="flex flex-col items-center gap-4">
-              <img
-                src={qrUrl}
-                alt={t('SePay QR Payment')}
-                className="w-56 max-w-full rounded-lg border bg-white p-2"
-              />
+            <div className="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)] md:items-start">
+              <div className="flex justify-center">
+                <img
+                  src={qrUrl}
+                  alt={t('SePay QR Payment')}
+                  className="w-60 max-w-full rounded-lg border bg-white p-2"
+                />
+              </div>
 
               <div className="w-full space-y-2 text-sm">
                 <PaymentInfoRow label={t('Bank Code')} value={vietQrBankCode} copyLabel={t('Copy')} onCopy={copyToClipboard} />
-                <PaymentInfoRow label={t('Bank Name')} value={effectiveBankCode} copyLabel={t('Copy')} onCopy={copyToClipboard} />
                 <PaymentInfoRow label={t('Account Number')} value={effectiveAccountNumber} copyLabel={t('Copy')} onCopy={copyToClipboard} />
                 <PaymentInfoRow label={t('Account Name')} value={effectiveAccountName} copyLabel={t('Copy')} onCopy={copyToClipboard} />
                 <PaymentInfoRow label={t('Amount')} value={formatAmount(planPrice)} copyValue={String(Math.round(Number(planPrice)))} copyLabel={t('Copy')} onCopy={copyToClipboard} />
@@ -212,32 +210,6 @@ export function SepayPaymentForm({
           )}
         </CardContent>
       </Card>
-
-      <Card className={isPaid ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'}>
-        <CardContent className="p-4">
-          <div className="flex items-start gap-2">
-            {isPaid ? <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" /> : <Loader2 className="h-5 w-5 animate-spin text-orange-600 mt-0.5" />}
-            <div className={isPaid ? 'text-sm text-green-800' : 'text-sm text-orange-800'}>
-              <p className="font-medium mb-1">
-                {isPaid ? t('Payment successful!') : t('Waiting for your payment...')}
-              </p>
-              {isPaid ? (
-                <p className="text-xs">{t('Your payment has been confirmed. Redirecting...')}</p>
-              ) : (
-                <ul className="space-y-1 text-xs">
-                  <li>• {t('Transfer the exact amount shown above')}</li>
-                  <li>• {t('Please keep the transfer content exactly as shown so the system can confirm your order automatically after 1-3 seconds.')}</li>
-                  <li>• {paymentReady ? t('The system is checking payment status automatically.') : t('Preparing payment request...')}</li>
-                </ul>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Button disabled className="w-full">
-        {isPaid ? t('Payment successful!') : processing ? t('Preparing payment request...') : t('Waiting for bank transfer confirmation')}
-      </Button>
     </div>
   );
 }

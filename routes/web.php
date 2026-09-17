@@ -992,10 +992,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('plan-orders/{planOrder}/reject', [PlanOrderController::class, 'reject'])->middleware('permission:reject-plan-orders')->name('plan-orders.reject');
         });
 
-        // Plan Requests routes (placeholder)
-        Route::get('yeu-cau-goi-dich-vu', function () {
-            return Inertia::render('plans/plan-requests');
-        })->name('plan-requests.index');
+        // Plan Requests routes
+        Route::get('yeu-cau-goi-dich-vu', [PlanRequestController::class, 'index'])
+            ->middleware('permission:manage-plan-requests')
+            ->name('plan-requests.index');
         Route::get('plan-requests', function () {
             return redirect()->route('plan-requests.index');
         });
@@ -1003,6 +1003,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Companies routes
         Route::middleware('permission:manage-companies')->group(function () {
             Route::get('cong-ty-thanh-vien', [CompanyController::class, 'index'])->middleware('permission:manage-companies')->name('companies.index');
+            Route::get('cong-ty-thanh-vien/{company}', [CompanyController::class, 'show'])->middleware('permission:manage-companies')->name('companies.show');
             Route::get('companies', function () {
                 return redirect()->route('companies.index');
             });
@@ -1030,9 +1031,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('coupons/{coupon}', [CouponController::class, 'destroy'])->middleware('permission:delete-coupons')->name('coupons.destroy');
         });
 
-        // Plan Requests routes
+        // Backward-compatible Plan Requests routes
         Route::middleware('permission:manage-plan-requests')->group(function () {
-            Route::get('plan-requests/all', [PlanRequestController::class, 'index'])->middleware('permission:manage-plan-requests')->name('plan-requests.all');
+            Route::get('plan-requests/all', function () {
+                return redirect()->route('plan-requests.index');
+            })->name('plan-requests.all');
             Route::post('plan-requests/{planRequest}/approve', [PlanRequestController::class, 'approve'])->middleware('permission:approve-plan-requests')->name('plan-requests.approve');
             Route::post('plan-requests/{planRequest}/reject', [PlanRequestController::class, 'reject'])->middleware('permission:reject-plan-requests')->name('plan-requests.reject');
         });

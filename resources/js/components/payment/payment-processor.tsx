@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -137,6 +137,25 @@ export function PaymentProcessor({
   };
 
   const enabledPaymentMethods = paymentMethods.filter(method => method.enabled);
+
+  useEffect(() => {
+    if (showPaymentForm) {
+      return;
+    }
+
+    if (enabledPaymentMethods.length === 1 && selectedPaymentMethod !== enabledPaymentMethods[0].id) {
+      setSelectedPaymentMethod(enabledPaymentMethods[0].id);
+      return;
+    }
+
+    if (
+      selectedPaymentMethod
+      && enabledPaymentMethods.length > 0
+      && !enabledPaymentMethods.some(method => method.id === selectedPaymentMethod)
+    ) {
+      setSelectedPaymentMethod('');
+    }
+  }, [enabledPaymentMethods, selectedPaymentMethod, showPaymentForm]);
 
   const renderPaymentForm = () => {
     const commonProps = {
